@@ -101,19 +101,19 @@ export default function Navigation() {
           <>
             {/* Backdrop Overlay */}
             <div
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
               onClick={() => setIsMenuOpen(false)}
             ></div>
             
-            {/* Sidebar from right */}
-            <div className="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl z-50 lg:hidden animate-slide-in-right">
+            {/* Sidebar from right with glassmorphism */}
+            <div className="fixed top-0 right-0 h-screen w-80 max-w-[85vw] bg-white/98 backdrop-blur-2xl shadow-2xl z-50 lg:hidden animate-slide-in-right border-l border-gray-200/80">
               <div className="flex flex-col h-full">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-bold text-gray-900">Menu</h2>
+                <div className="flex items-center justify-between p-6 border-b border-gray-200/60 bg-gradient-to-r from-white/90 to-white/70 backdrop-blur-md">
+                  <h2 className="text-xl font-bold text-gray-900">Menu</h2>
                   <button
                     onClick={() => setIsMenuOpen(false)}
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100/80 rounded-xl transition-all duration-200"
                     aria-label="Close menu"
                   >
                     <svg
@@ -125,7 +125,7 @@ export default function Navigation() {
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        strokeWidth={2}
+                        strokeWidth={2.5}
                         d="M6 18L18 6M6 6l12 12"
                       />
                     </svg>
@@ -133,17 +133,17 @@ export default function Navigation() {
                 </div>
                 
                 {/* Menu Items */}
-                <div className="p-6">
-                  <div className="flex flex-col space-y-2">
+                <div className="flex-1 p-6 pt-8 flex flex-col justify-start">
+                  <div className="flex flex-col space-y-3">
                     {navItems.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className={`px-4 py-4 text-base font-medium rounded-xl transition-all duration-200 ${
+                        className={`px-5 py-4 text-base font-semibold rounded-xl transition-all duration-200 ${
                           pathname === item.href
-                            ? "text-blue-600 bg-blue-50 shadow-sm"
-                            : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                            ? "text-blue-600 bg-blue-50 shadow-md border border-blue-100"
+                            : "text-gray-800 hover:bg-gray-100/80 hover:text-blue-600"
                         }`}
                       >
                         {item.label}
