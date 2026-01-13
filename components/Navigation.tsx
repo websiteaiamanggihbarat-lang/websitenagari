@@ -133,7 +133,7 @@ export default function Navigation() {
                 </div>
                 
                 {/* Menu Items */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="p-6">
                   <div className="flex flex-col space-y-2">
                     {navItems.map((item) => (
                       <Link
