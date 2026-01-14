@@ -22,7 +22,7 @@ export default function LayananInformasi() {
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
               Layanan Informasi
             </h1>
-            <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-blue-400 mx-auto rounded-full mb-6"></div>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] mx-auto rounded-full mb-6"></div>
             <p className="text-xl text-gray-600 font-normal">
               Informasi layanan dan persyaratan dokumen di Nagari Aia Manggih
               Barat
@@ -39,7 +39,7 @@ export default function LayananInformasi() {
                 {/* Kontak Pelayanan */}
                 <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 shadow-lg">
                   <div className="flex items-center mb-8">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 mr-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4">
                       <svg
                         className="w-6 h-6 text-white"
                         fill="none"
@@ -60,9 +60,9 @@ export default function LayananInformasi() {
                   </div>
                   <div className="space-y-6">
                     <div className="flex items-start group/item">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover/item:bg-blue-200 transition-colors">
+                      <div className="w-10 h-10 bg-[#e6ddcf] rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
                         <svg
-                          className="w-5 h-5 text-blue-600"
+                          className="w-5 h-5 text-[#2c1b01]"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -81,9 +81,9 @@ export default function LayananInformasi() {
                       </div>
                     </div>
                     <div className="flex items-start group/item">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover/item:bg-blue-200 transition-colors">
+                      <div className="w-10 h-10 bg-[#e6ddcf] rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
                         <svg
-                          className="w-5 h-5 text-blue-600"
+                          className="w-5 h-5 text-[#2c1b01]"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -104,9 +104,9 @@ export default function LayananInformasi() {
                       </div>
                     </div>
                     <div className="flex items-start group/item">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover/item:bg-blue-200 transition-colors">
+                      <div className="w-10 h-10 bg-[#e6ddcf] rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
                         <svg
-                          className="w-5 h-5 text-blue-600"
+                          className="w-5 h-5 text-[#2c1b01]"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -136,9 +136,9 @@ export default function LayananInformasi() {
                 </div>
 
                 {/* Waktu Pelayanan */}
-                <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-8 border border-blue-100 shadow-lg">
+                <div className="bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] shadow-lg">
                   <div className="flex items-center mb-8">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 mr-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4">
                       <svg
                         className="w-6 h-6 text-white"
                         fill="none"
@@ -192,11 +192,11 @@ export default function LayananInformasi() {
                 {dokumenList.map((dokumen, index) => (
                   <div
                     key={index}
-                    className="group bg-white border border-gray-200/50 rounded-xl p-6 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300"
+                    className="group bg-white border border-gray-200/50 rounded-xl p-6 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300"
                   >
                     <div className="flex items-start mb-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover:from-blue-200 group-hover:to-blue-100 transition-colors">
-                        <span className="text-blue-600 font-bold text-sm">{index + 1}</span>
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#e6ddcf] to-[#f0e8db] rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover:from-[#d1c2a0] group-hover:to-[#e6ddcf] transition-colors">
+                        <span className="text-[#2c1b01] font-bold text-sm">{index + 1}</span>
                       </div>
                       <h3 className="font-bold text-gray-900 text-lg pt-1.5">
                         {dokumen}
@@ -258,9 +258,9 @@ export default function LayananInformasi() {
                 </div>
 
                 {/* Google Form */}
-                <div className="group bg-gradient-to-br from-blue-50 to-white rounded-2xl p-8 border border-blue-100 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300">
+                <div className="group bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
                   <div className="flex items-center mb-6">
-                    <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 mr-4 group-hover:scale-110 transition-transform">
+                    <div className="w-14 h-14 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
                       <svg
                         className="w-7 h-7 text-white"
                         fill="none"
@@ -286,7 +286,7 @@ export default function LayananInformasi() {
                     href="#"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-semibold shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30"
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#2c1b01] to-[#1a1200] text-white rounded-full hover:from-[#3a2604] hover:to-[#100b00] transition-all duration-200 text-sm font-semibold shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)]"
                   >
                     <svg
                       className="w-5 h-5 mr-2"

@@ -18,13 +18,13 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50 shadow-sm">
+    <nav className="bg-white/85 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
             <div className="relative">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center group-hover:from-blue-700 group-hover:to-blue-800 transition-all duration-300 shadow-lg shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-500/30 group-hover:scale-105">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center group-hover:from-[#3a2604] group-hover:to-[#100b00] transition-all duration-300 shadow-lg shadow-[rgba(44,27,1,0.28)] group-hover:shadow-xl group-hover:shadow-[rgba(44,27,1,0.38)] group-hover:scale-105">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="none"
@@ -41,7 +41,7 @@ export default function Navigation() {
               </div>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 tracking-tight group-hover:text-blue-600 transition-colors">
+              <h1 className="text-lg font-bold text-gray-900 tracking-tight group-hover:text-[#2c1b01] transition-colors">
                 Nagari Aia Manggih Barat
               </h1>
               <p className="text-xs text-gray-500 font-medium">Pemerintahan Nagari</p>
@@ -56,8 +56,8 @@ export default function Navigation() {
                 href={item.href}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                   pathname === item.href
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                    ? "text-[#2c1b01] bg-[#f0e8db]"
+                    : "text-gray-700 hover:text-[#2c1b01] hover:bg-[#f7f2e8]"
                 }`}
               >
                 {item.label}
@@ -101,15 +101,15 @@ export default function Navigation() {
           <>
             {/* Backdrop Overlay */}
             <div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
+              className="fixed inset-0 bg-black/40 z-40 lg:hidden"
               onClick={() => setIsMenuOpen(false)}
             ></div>
             
             {/* Sidebar from right with glassmorphism */}
-            <div className="fixed top-0 right-0 h-screen w-80 max-w-[85vw] bg-white/98 backdrop-blur-2xl shadow-2xl z-50 lg:hidden animate-slide-in-right border-l border-gray-200/80">
+            <div className="fixed top-0 right-0 h-screen w-80 max-w-[85vw] bg-white/96 backdrop-blur-2xl shadow-2xl z-50 lg:hidden animate-slide-in-right border-l border-gray-200/80">
               <div className="flex flex-col h-full">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200/60 bg-gradient-to-r from-white/90 to-white/70 backdrop-blur-md">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200/60 bg-gradient-to-r from-white/92 to-[#f7f2e8]/90 backdrop-blur-md">
                   <h2 className="text-xl font-bold text-gray-900">Menu</h2>
                   <button
                     onClick={() => setIsMenuOpen(false)}
@@ -142,8 +142,8 @@ export default function Navigation() {
                         onClick={() => setIsMenuOpen(false)}
                         className={`px-5 py-4 text-base font-semibold rounded-xl transition-all duration-200 ${
                           pathname === item.href
-                            ? "text-blue-600 bg-blue-50 shadow-md border border-blue-100"
-                            : "text-gray-800 hover:bg-gray-100/80 hover:text-blue-600"
+                            ? "text-[#2c1b01] bg-[#f0e8db] shadow-md border border-[#d1c2a0]"
+                            : "text-gray-800 hover:bg-[#f7f2e8] hover:text-[#2c1b01]"
                         }`}
                       >
                         {item.label}

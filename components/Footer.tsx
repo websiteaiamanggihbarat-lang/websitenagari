@@ -2,13 +2,13 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="bg-blue-950 text-white mt-auto">
+    <footer className="bg-[#2c1b01] text-white mt-auto">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About */}
           <div>
             <h3 className="text-lg font-bold mb-4">Nagari Aia Manggih Barat</h3>
-            <p className="text-blue-200 text-sm">
+            <p className="text-[#e6ddcf] text-sm">
               Website resmi Pemerintahan Nagari Aia Manggih Barat. Menyediakan
               informasi dan layanan publik untuk masyarakat.
             </p>
@@ -19,14 +19,14 @@ export default function Footer() {
             <h3 className="text-lg font-bold mb-4">Tautan Cepat</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/" className="text-blue-200 hover:text-white">
+                <Link href="/" className="text-[#e6ddcf] hover:text-white">
                   Beranda
                 </Link>
               </li>
               <li>
                 <Link
                   href="/struktur-organisasi"
-                  className="text-blue-200 hover:text-white"
+                  className="text-[#e6ddcf] hover:text-white"
                 >
                   Struktur Organisasi
                 </Link>
@@ -34,13 +34,13 @@ export default function Footer() {
               <li>
                 <Link
                   href="/layanan-informasi"
-                  className="text-blue-200 hover:text-white"
+                  className="text-[#e6ddcf] hover:text-white"
                 >
                   Layanan Informasi
                 </Link>
               </li>
               <li>
-                <Link href="/berita" className="text-blue-200 hover:text-white">
+                <Link href="/berita" className="text-[#e6ddcf] hover:text-white">
                   Berita Nagari
                 </Link>
               </li>
@@ -54,7 +54,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/layanan-informasi"
-                  className="text-blue-200 hover:text-white"
+                  className="text-[#e6ddcf] hover:text-white"
                 >
                   Persyaratan Dokumen
                 </Link>
@@ -62,7 +62,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/layanan-informasi#pengaduan"
-                  className="text-blue-200 hover:text-white"
+                  className="text-[#e6ddcf] hover:text-white"
                 >
                   Informasi Pengaduan
                 </Link>
@@ -70,7 +70,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/ppid"
-                  className="text-blue-200 hover:text-white"
+                  className="text-[#e6ddcf] hover:text-white"
                 >
                   PPID Nagari
                 </Link>
@@ -81,7 +81,7 @@ export default function Footer() {
           {/* Contact */}
           <div>
             <h3 className="text-lg font-bold mb-4">Kontak</h3>
-            <ul className="space-y-2 text-sm text-blue-200">
+            <ul className="space-y-2 text-sm text-[#e6ddcf]">
               <li className="flex items-start">
                 <svg
                   className="w-5 h-5 mr-2 mt-0.5"
@@ -124,7 +124,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-blue-800 mt-8 pt-8 text-center text-sm text-blue-200">
+        <div className="border-t border-[#5a3b0d] mt-8 pt-8 text-center text-sm text-[#e6ddcf]">
           <p>
             © {new Date().getFullYear()} Nagari Aia Manggih Barat. Hak Cipta
             Dilindungi.

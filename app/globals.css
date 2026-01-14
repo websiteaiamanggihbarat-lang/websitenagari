@@ -3,10 +3,16 @@
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
-  --primary-blue: #2563eb;
-  --primary-blue-dark: #1e40af;
-  --primary-blue-light: #3b82f6;
-  --accent-blue: #60a5fa;
+
+  /* Brand palette */
+  --primary-main: #2c1b01; /* Mahogany */
+  --primary-main-dark: #1a1200;
+  --primary-main-soft: #5a3b0d;
+
+  --secondary-cream: #b6a587;
+  --secondary-cream-light: #e6ddcf;
+
+  /* Neutral palette */
   --gray-50: #f8fafc;
   --gray-100: #f1f5f9;
   --gray-200: #e2e8f0;
@@ -96,7 +102,7 @@ body {
 
 /* Focus states for accessibility */
 *:focus-visible {
-  outline: 2px solid var(--primary-blue);
+  outline: 2px solid var(--primary-main);
   outline-offset: 2px;
   border-radius: 4px;
 }
