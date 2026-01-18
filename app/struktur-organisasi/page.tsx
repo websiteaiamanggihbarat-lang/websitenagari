@@ -2,8 +2,8 @@ export default function StrukturOrganisasi() {
   return (
     <div className="min-h-screen bg-white">
       <div className="pt-24 pb-32 px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20 scroll-slide-left">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
               Struktur Organisasi
             </h1>
@@ -13,66 +13,147 @@ export default function StrukturOrganisasi() {
             </p>
           </div>
 
-          {/* Organizational Chart Placeholder */}
-          <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-12 lg:p-16 mb-12 border border-gray-200/50 shadow-xl">
-            <div className="flex flex-col items-center">
-              {/* Top Level - Wali Nagari */}
-              <div className="bg-gradient-to-br from-[#2c1b01] to-[#1a1200] text-white rounded-2xl p-8 mb-12 min-w-[300px] text-center shadow-2xl shadow-[rgba(44,27,1,0.3)] hover:shadow-3xl hover:shadow-[rgba(44,27,1,0.4)] transition-all duration-300 hover:scale-105">
-                <h3 className="text-2xl font-bold mb-2 tracking-tight">
-                  Wali Nagari
-                </h3>
-                <p className="text-[#e6ddcf] font-medium">Nama Wali Nagari</p>
-              </div>
-
-              {/* Second Level - Sekretaris & Kasi */}
-              <div className="flex flex-wrap justify-center gap-6 mb-12">
-                <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 min-w-[240px] text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
-                  <h4 className="font-bold mb-2 text-lg">Sekretaris</h4>
-                  <p className="text-sm text-[#f0e8db]">Nama Sekretaris</p>
-                </div>
-                <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 min-w-[240px] text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
-                  <h4 className="font-bold mb-2 text-lg">
-                    Kasi Pemerintahan
-                  </h4>
-                  <p className="text-sm text-[#f0e8db]">Nama Kasi</p>
-                </div>
-                <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 min-w-[240px] text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
-                  <h4 className="font-bold mb-2 text-lg">
-                    Kasi Kesejahteraan
-                  </h4>
-                  <p className="text-sm text-[#f0e8db]">Nama Kasi</p>
-                </div>
-                <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 min-w-[240px] text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
-                  <h4 className="font-bold mb-2 text-lg">Kasi Pelayanan</h4>
-                  <p className="text-sm text-[#f0e8db]">Nama Kasi</p>
+          {/* Organizational Structure */}
+          <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-8 lg:p-16 mb-12 border border-gray-200/50 shadow-xl scroll-scale">
+            <div className="relative flex flex-col items-center w-full min-h-[900px] py-8">
+              
+              {/* Level 1: WALI NAGARI - Top Center */}
+              <div className="relative z-20 mb-16 scroll-slide-bottom">
+                <div className="bg-gradient-to-br from-[#2c1b01] to-[#1a1200] text-white rounded-2xl p-8 w-[320px] text-center shadow-2xl shadow-[rgba(44,27,1,0.3)] hover:shadow-3xl hover:shadow-[rgba(44,27,1,0.4)] transition-all duration-300 hover:scale-105">
+                  <h3 className="text-2xl font-bold mb-2 tracking-tight">WALI NAGARI</h3>
+                  <p className="text-[#e6ddcf] font-medium">Afdel Haq, S.Pd.I</p>
                 </div>
               </div>
 
-              {/* Third Level - Staff */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
-                <div className="bg-gradient-to-br from-[#8a6a3a] to-[#4a3210] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(138,106,58,0.2)] hover:shadow-xl hover:shadow-[rgba(138,106,58,0.3)] transition-all duration-300 hover:scale-105">
-                  <h5 className="font-semibold mb-2">Staff Pemerintahan</h5>
-                  <p className="text-sm text-[#f0e8db]">Nama Staff</p>
+              {/* Main vertical line from WALI NAGARI down to branch point */}
+              <div className="absolute top-[11.5rem] left-1/2 transform -translate-x-1/2 w-0.5 h-20 bg-gray-400 z-10"></div>
+
+              {/* Horizontal branch line at middle level */}
+              <div className="absolute top-[13.5rem] left-1/2 transform -translate-x-1/2 w-96 h-0.5 bg-gray-400 z-10 hidden lg:block"></div>
+
+              {/* Level 2: Container for KASI and SEKRETARIS */}
+              <div className="relative z-20 w-full max-w-6xl flex flex-col lg:flex-row justify-center items-start gap-16 mt-8 mb-32">
+                
+                {/* Left Branch: KASI Sections */}
+                <div className="flex-1 flex flex-col items-center lg:items-end relative">
+                  {/* Vertical connector from horizontal branch to first KASI */}
+                  <div className="absolute top-[-2rem] left-1/2 lg:left-auto lg:right-[140px] transform -translate-x-1/2 lg:translate-x-0 w-0.5 h-8 bg-gray-400 z-10 hidden lg:block"></div>
+
+                  {/* KASI Kesejahteraan dan Pelayanan */}
+                  <div className="w-full max-w-[280px] mb-6 scroll-slide-left relative">
+                    <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
+                      <h4 className="font-bold mb-2 text-sm leading-tight">KASI KESEJAHTERAAN DAN PELAYANAN</h4>
+                      <p className="text-xs text-[#f0e8db] mb-3">Hengki Pratama Effendi, SH</p>
+                      {/* Vertical line to STAF */}
+                      <div className="w-0.5 h-4 bg-gray-300 mx-auto mb-2"></div>
+                      <div className="border-t border-white/20 pt-2 mt-2">
+                        <p className="text-xs text-[#e6ddcf] mb-1">STAF</p>
+                        <p className="text-xs text-[#f0e8db]">Muhammad Yefri, S.Pd</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vertical connector between KASI */}
+                  <div className="w-0.5 h-6 bg-gray-400 mb-6 mx-auto lg:mx-0 lg:mr-[140px]"></div>
+
+                  {/* KASI Pemerintahan */}
+                  <div className="w-full max-w-[280px] scroll-slide-left relative">
+                    {/* Vertical connector line */}
+                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-0.5 h-6 bg-gray-400"></div>
+                    <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
+                      <h4 className="font-bold mb-2 text-sm">KASI PEMERINTAHAN</h4>
+                      <p className="text-xs text-[#f0e8db] mb-3">Mahyeli Irawan</p>
+                      {/* Vertical line to STAF */}
+                      <div className="w-0.5 h-4 bg-gray-300 mx-auto mb-2"></div>
+                      <div className="border-t border-white/20 pt-2 mt-2">
+                        <p className="text-xs text-[#e6ddcf] mb-1">STAF</p>
+                        <p className="text-xs text-[#f0e8db]">Hasmaini, S.Pd</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-gradient-to-br from-[#8a6a3a] to-[#4a3210] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(138,106,58,0.2)] hover:shadow-xl hover:shadow-[rgba(138,106,58,0.3)] transition-all duration-300 hover:scale-105">
-                  <h5 className="font-semibold mb-2">Staff Kesejahteraan</h5>
-                  <p className="text-sm text-[#f0e8db]">Nama Staff</p>
+
+                {/* Right Branch: SEKRETARIS with KAUR */}
+                <div className="flex-1 flex flex-col items-center lg:items-start relative">
+                  {/* Vertical connector from horizontal branch to SEKRETARIS */}
+                  <div className="absolute top-[-2rem] left-1/2 lg:left-[140px] transform -translate-x-1/2 lg:translate-x-0 w-0.5 h-16 bg-gray-400 z-10 hidden lg:block"></div>
+
+                  {/* SEKRETARIS NAGARI */}
+                  <div className="w-full max-w-[280px] mb-6 scroll-slide-right relative">
+                    <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
+                      <h4 className="font-bold mb-2 text-sm">SEKRETARIS NAGARI</h4>
+                      <p className="text-xs text-[#f0e8db]">Riko Julhasra, S.Hum</p>
+                    </div>
+                  </div>
+
+                  {/* Vertical connector from SEKRETARIS to KAUR horizontal line */}
+                  <div className="w-0.5 h-6 bg-gray-400 mb-6 mx-auto lg:mx-0 lg:ml-[140px]"></div>
+
+                  {/* Horizontal line for KAUR branches */}
+                  <div className="relative w-full flex flex-col md:flex-row gap-4 justify-center lg:justify-start">
+                    {/* Horizontal connector line above KAUR */}
+                    <div className="absolute -top-6 left-0 right-0 h-0.5 bg-gray-400"></div>
+
+                    {/* KAUR Keuangan (Left) */}
+                    <div className="w-full md:w-[240px] relative scroll-slide-left">
+                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-0.5 h-6 bg-gray-400"></div>
+                      <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-5 text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
+                        <h4 className="font-bold mb-2 text-xs">KAUR KEUANGAN</h4>
+                        <p className="text-xs text-[#f0e8db] mb-3">Westi Mega Sari, S.Pd.I</p>
+                        {/* Vertical line to STAF */}
+                        <div className="w-0.5 h-3 bg-gray-300 mx-auto mb-2"></div>
+                        <div className="border-t border-white/20 pt-2 mt-2">
+                          <p className="text-xs text-[#e6ddcf] mb-1">STAF</p>
+                          <p className="text-xs text-[#f0e8db]">Rini, S.Pd</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KAUR Umum dan Perencanaan (Right) */}
+                    <div className="w-full md:w-[240px] relative scroll-slide-right">
+                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-0.5 h-6 bg-gray-400"></div>
+                      <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-5 text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
+                        <h4 className="font-bold mb-2 text-xs leading-tight">KAUR UMUM DAN PERENCANAAN</h4>
+                        <p className="text-xs text-[#f0e8db] mb-3">Syafrida</p>
+                        {/* Vertical line to STAF */}
+                        <div className="w-0.5 h-3 bg-gray-300 mx-auto mb-2"></div>
+                        <div className="border-t border-white/20 pt-2 mt-2">
+                          <p className="text-xs text-[#e6ddcf] mb-1">STAF</p>
+                          <p className="text-xs text-[#f0e8db]">Dian Rahmanita</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-gradient-to-br from-[#8a6a3a] to-[#4a3210] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(138,106,58,0.2)] hover:shadow-xl hover:shadow-[rgba(138,106,58,0.3)] transition-all duration-300 hover:scale-105">
-                  <h5 className="font-semibold mb-2">Staff Pelayanan</h5>
-                  <p className="text-sm text-[#f0e8db]">Nama Staff</p>
+              </div>
+
+              {/* Long vertical line from middle section down to JORONG level */}
+              <div className="absolute top-[13.5rem] left-1/2 transform -translate-x-1/2 w-0.5 h-[calc(100%-13.5rem-10rem)] bg-gray-400 z-10"></div>
+
+              {/* Horizontal line above JORONG */}
+              <div className="absolute bottom-[10rem] left-1/2 transform -translate-x-1/2 w-80 h-0.5 bg-gray-400 z-10 hidden lg:block"></div>
+
+              {/* Level 3: JORONG Positions (Bottom) */}
+              <div className="relative z-20 w-full max-w-4xl flex flex-col lg:flex-row justify-center items-center gap-8 mt-auto pt-8">
+                {/* KA. JORONG PADANG SARAI (Left) */}
+                <div className="w-full lg:w-[300px] relative scroll-slide-left">
+                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-400 hidden lg:block"></div>
+                  <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
+                    <h4 className="font-bold mb-2 text-sm">KA. JORONG PADANG SARAI</h4>
+                    <p className="text-xs text-[#f0e8db]">[Nama Kepala Jorong]</p>
+                  </div>
+                </div>
+
+                {/* KA. JORONG KP. PADANG PR. DAREH (Right) */}
+                <div className="w-full lg:w-[300px] relative scroll-slide-right">
+                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-400 hidden lg:block"></div>
+                  <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
+                    <h4 className="font-bold mb-2 text-sm leading-tight">KA. JORONG KP. PADANG PR. DAREH</h4>
+                    <p className="text-xs text-[#f0e8db]">[Nama Kepala Jorong]</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Information Note */}
-          <div className="bg-gray-50 border-l-4 border-[#2c1b01] p-6 rounded-lg">
-            <p className="text-gray-700 text-sm">
-              <strong className="font-semibold">Catatan:</strong> Struktur
-              organisasi lengkap dengan nama dan jabatan akan ditampilkan di
-              sini setelah data lengkap tersedia.
-            </p>
           </div>
         </div>
       </div>

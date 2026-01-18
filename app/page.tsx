@@ -21,7 +21,7 @@ export default function Home() {
       {/* Peta Section */}
       <section id="peta" className="py-28 px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50/50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16 scroll-slide-left">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
               Peta Nagari
             </h2>
@@ -29,7 +29,7 @@ export default function Home() {
               Lokasi dan batas wilayah Nagari Aia Manggih Barat
             </p>
           </div>
-          <div className="aspect-video bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-xl shadow-gray-200/50 border border-gray-200/50 hover:shadow-2xl transition-shadow duration-300 relative">
+          <div className="aspect-video bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-xl shadow-gray-200/50 border border-gray-200/50 hover:shadow-2xl transition-shadow duration-300 relative scroll-scale">
             <div className="absolute inset-0 opacity-5" style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
               backgroundSize: '60px 60px'
@@ -64,32 +64,103 @@ export default function Home() {
       {/* Profil Nagari Section */}
       <section id="profil" className="py-28 px-6 lg:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
+          <div className="text-center mb-20 scroll-slide-left">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
               Profil Nagari
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] mx-auto rounded-full"></div>
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Pengertian Nagari */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
-                  Pengertian Nagari
-                </h3>
+
+          {/* Sejarah Nagari - Full Width */}
+          <div className="mb-16 group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-10 lg:p-12 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-bottom">
+            <div className="flex items-center mb-8">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-              <p className="text-gray-600 leading-relaxed">
-                Konten tentang pengertian nagari akan ditampilkan di sini.
+              <h3 className="text-3xl font-bold text-gray-900 tracking-tight">
+                Sejarah Nagari
+              </h3>
+            </div>
+            <div className="text-gray-700 leading-relaxed space-y-4 text-base">
+              <p>
+                Nagari Aia Manggih Barat merupakan pemekaran nagari yang dilakukan oleh Pemerintah Kabupaten Pasaman melalui Peraturan Bupati Pasaman Nomor 21 Tahun 2017. Kebijakan ini menambah 25 nagari persiapan dari sebelumnya 37 nagari, salah satunya adalah Nagari Persiapan Aia Manggih Barat yang merupakan hasil pemekaran dari Nagari Induk Nagari Aia Manggih Barat Kecamatan Lubuk Sikaping. Kesepakatan pemekaran tersebut dihasilkan melalui Musyawarah Nagari pada 26 Oktober 2016 di MDTA Al Munawarah Aia Manggih Barat.
+              </p>
+              <p>
+                Sebagai tindak lanjut, Yomi Valentia, S.S., M.M. dilantik sebagai Penjabat (PJ) Wali Nagari Persiapan Aia Manggih Barat pada tahun 2017. Pada masa awal, nagari persiapan belum memiliki struktur organisasi lengkap dan hanya dibantu oleh perangkat dari nagari induk serta dua jorong, yaitu Jorong Kampung Padang Paraman Dareh dan Jorong Padang Sarai. Setelah melalui proses seleksi dan mendapat rekomendasi camat, perangkat nagari persiapan resmi dilantik pada 30 Mei 2018.
+              </p>
+              <p>
+                Pada akhir November 2019, jabatan PJ Wali Nagari Persiapan Aia Manggih Barat beralih kepada Amrizal, S.H., yang menjabat hingga Oktober 2022. Pada September 2022, berdasarkan penetapan nomor register dari Kementerian Dalam Negeri, Nagari Persiapan Aia Manggih Barat resmi menjadi nagari definitif. Selanjutnya, Ilham Syah, S.Pd., M.M. ditunjuk sebagai PJ Wali Nagari Definitif hingga terpilihnya wali nagari definitif.
+              </p>
+              <p>
+                Pemilihan Wali Nagari serentak dilaksanakan pada 10 Desember 2022. Dari 11 bakal calon yang mendaftar, melalui proses seleksi ditetapkan 4 calon wali nagari. Hasil pemilihan menetapkan Afdel Haq, S.Pd.I. sebagai peraih suara terbanyak, yang kemudian dilantik pada 26 Desember 2022. Dengan pelantikan tersebut, Afdel Haq, S.Pd.I. resmi menjabat sebagai Wali Nagari Aia Manggih Barat dan berakhir pula masa jabatan PJ Wali Nagari sebelumnya.
               </p>
             </div>
+          </div>
 
+          {/* Visi Misi - Below Sejarah */}
+          <div className="mb-16">
+            <div className="text-center mb-12 scroll-slide-left">
+              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
+                Visi & Misi
+              </h3>
+              <div className="w-20 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] mx-auto rounded-full"></div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Visi */}
+              <div className="group bg-white rounded-2xl p-10 border border-gray-200/50 shadow-xl hover:shadow-2xl hover:border-[#c0ae86] transition-all duration-300 hover:scale-[1.02] scroll-slide-left">
+                <div className="flex items-center mb-8">
+                  <div className="w-14 h-14 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-3xl font-bold text-gray-900 tracking-tight">Visi</h4>
+                </div>
+                <p className="text-lg leading-relaxed text-gray-700">
+                  Visi Nagari Aia Manggih Barat akan ditampilkan di sini.
+                </p>
+              </div>
+
+              {/* Misi */}
+              <div className="group bg-white rounded-2xl p-10 border border-gray-200/50 shadow-xl hover:shadow-2xl hover:border-[#c0ae86] transition-all duration-300 hover:scale-[1.02] scroll-slide-right">
+                <div className="flex items-center mb-8">
+                  <div className="w-14 h-14 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                  </div>
+                  <h4 className="text-3xl font-bold text-gray-900 tracking-tight">Misi</h4>
+                </div>
+                <ul className="space-y-5">
+                  <li className="flex items-start group/item">
+                    <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
+                      <span className="text-[#2c1b01] font-bold text-sm">1</span>
+                    </div>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Misi pertama akan ditampilkan di sini</span>
+                  </li>
+                  <li className="flex items-start group/item">
+                    <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
+                      <span className="text-[#2c1b01] font-bold text-sm">2</span>
+                    </div>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Misi kedua akan ditampilkan di sini</span>
+                  </li>
+                  <li className="flex items-start group/item">
+                    <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
+                      <span className="text-[#2c1b01] font-bold text-sm">3</span>
+                    </div>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Misi ketiga akan ditampilkan di sini</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
             {/* Batas Wilayah */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
+            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-left">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,24 +169,54 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Batas-Batas Wilayah</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed">Informasi batas-batas wilayah nagari akan ditampilkan di sini.</p>
+              <div className="text-gray-700 leading-relaxed space-y-3">
+                <p>
+                  Nagari Aia Manggih Barat merupakan daerah dataran dan perbukitan dengan luas wilayah lebih kurang ±9,38 km². Dengan batas-batas wilayah sebagai berikut:
+                </p>
+                <ul className="space-y-2 list-disc list-inside ml-2">
+                  <li>Sebelah Utara berbatasan dengan Nagari Aia Manggih Utara</li>
+                  <li>Sebelah Selatan berbatasan dengan Nagari Aia Manggih Selatan</li>
+                  <li>Sebelah Timur berbatasan dengan Nagari Aia Manggih (Induk)</li>
+                  <li>Sebelah Barat berbatasan dengan Nagari Sundata Selatan</li>
+                </ul>
+              </div>
             </div>
 
-            {/* Korong */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
+            {/* Jorong */}
+            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-right">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Korong</h3>
+                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Jorong</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed">Daftar korong di Nagari Aia Manggih Barat akan ditampilkan di sini.</p>
+              <div className="text-gray-700 leading-relaxed space-y-4">
+                <p>Nagari Aia Manggih Barat terdiri dari 2 jorong yaitu:</p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-semibold mb-2">Jorong Kampung Padang Paraman Dareh terdapat 2 kampung yaitu:</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Kampung Padang</li>
+                      <li>Kampung Paraman Dareh</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-2">Jorong Padang Sarai terdiri dari 4 kampung yaitu:</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Kampung Caniago</li>
+                      <li>Kampung Piliang</li>
+                      <li>Kampung Mandailing</li>
+                      <li>Kampung Tangah</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Informasi Penduduk */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
+            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-left">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,24 +225,80 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Informasi Penduduk</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed">Data kependudukan akan ditampilkan di sini.</p>
-            </div>
-
-            {/* Luas Wilayah */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                  </svg>
+              <div className="text-gray-700 leading-relaxed space-y-4">
+                <p>
+                  Pada tahun 2023 jumlah penduduk Aia Manggih Barat 3.199 Jiwa yang terdiri dari:
+                </p>
+                <ul className="space-y-2">
+                  <li><span className="font-semibold">Jumlah KK</span>: 969 KK</li>
+                  <li><span className="font-semibold">Laki-laki</span>: 1.592 Jiwa</li>
+                  <li><span className="font-semibold">Perempuan</span>: 1.613 Jiwa</li>
+                </ul>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="font-semibold mb-3">Jumlah penduduk menurut umur dan jenis kelamin pada tahun 2023:</p>
+                  <div className="overflow-x-auto scroll-slide-right">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-[#f0e8db] border-b border-gray-300">
+                          <th className="px-3 py-2 text-left font-semibold text-gray-900">No.</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-900">Kelompok Umur</th>
+                          <th className="px-3 py-2 text-center font-semibold text-gray-900">Laki-laki</th>
+                          <th className="px-3 py-2 text-center font-semibold text-gray-900">Perempuan</th>
+                          <th className="px-3 py-2 text-center font-semibold text-gray-900">Jumlah</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-gray-700">
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">1.</td>
+                          <td className="px-3 py-2">0-6 Tahun</td>
+                          <td className="px-3 py-2 text-center">172</td>
+                          <td className="px-3 py-2 text-center">147</td>
+                          <td className="px-3 py-2 text-center font-semibold">319</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">2.</td>
+                          <td className="px-3 py-2">7-18 Tahun</td>
+                          <td className="px-3 py-2 text-center">365</td>
+                          <td className="px-3 py-2 text-center">364</td>
+                          <td className="px-3 py-2 text-center font-semibold">729</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">3.</td>
+                          <td className="px-3 py-2">19-34 Tahun</td>
+                          <td className="px-3 py-2 text-center">239</td>
+                          <td className="px-3 py-2 text-center">242</td>
+                          <td className="px-3 py-2 text-center font-semibold">481</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">4.</td>
+                          <td className="px-3 py-2">35-54 Tahun</td>
+                          <td className="px-3 py-2 text-center">469</td>
+                          <td className="px-3 py-2 text-center">448</td>
+                          <td className="px-3 py-2 text-center font-semibold">917</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">5.</td>
+                          <td className="px-3 py-2">55-69 Tahun</td>
+                          <td className="px-3 py-2 text-center">155</td>
+                          <td className="px-3 py-2 text-center">148</td>
+                          <td className="px-3 py-2 text-center font-semibold">303</td>
+                        </tr>
+                        <tr>
+                          <td className="px-3 py-2">6.</td>
+                          <td className="px-3 py-2">Dari 70 Tahun</td>
+                          <td className="px-3 py-2 text-center">115</td>
+                          <td className="px-3 py-2 text-center">135</td>
+                          <td className="px-3 py-2 text-center font-semibold">250</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Luas Wilayah</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed">Informasi luas wilayah akan ditampilkan di sini.</p>
             </div>
 
             {/* Sarana Pendidikan */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
+            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-right">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,11 +307,41 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Sarana Pendidikan</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed">Informasi sarana pendidikan akan ditampilkan di sini.</p>
+              <div className="text-gray-700 leading-relaxed">
+                <p className="mb-4">Di Nagari Aia Manggih Barat terdapat sarana Pendidikan umum sebagai berikut:</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-[#f0e8db] border-b border-gray-300">
+                        <th className="px-3 py-2 text-left font-semibold text-gray-900">No.</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-900">Uraian</th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-900">Jumlah</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-gray-700">
+                      <tr className="border-b border-gray-200">
+                        <td className="px-3 py-2">1.</td>
+                        <td className="px-3 py-2">PAUD</td>
+                        <td className="px-3 py-2 text-center font-semibold">2</td>
+                      </tr>
+                      <tr className="border-b border-gray-200">
+                        <td className="px-3 py-2">2.</td>
+                        <td className="px-3 py-2">TK</td>
+                        <td className="px-3 py-2 text-center font-semibold">2</td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2">3.</td>
+                        <td className="px-3 py-2">SD</td>
+                        <td className="px-3 py-2 text-center font-semibold">2</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
             {/* Kehidupan Sosial Keagamaan */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
+            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-left">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,11 +350,21 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Kehidupan Sosial Keagamaan</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed">Informasi kehidupan sosial keagamaan akan ditampilkan di sini.</p>
+              <div className="text-gray-700 leading-relaxed space-y-4">
+                <p>
+                  Kehidupan sosial masyarakat nagari Aia Manggih Barat ditandai dengan kuatnya nilai kebersamaan, gotong royong, dan musyawarah. Masyarakat aktif dalam berbagai kegiatan sosial kemasyarakatan yang mempererat hubungan antarwarga serta menjaga keharmonisan hidup Bersama.
+                </p>
+                <p>
+                  Dalam kehidupan keagamaan, masyarakat nagari Aia Manggih Barat juga menjunjung tinggi nilai religius yang tercermin dalam pelaksanaan ibadah dan kegiatan keagamaan secara rutin seperti Jum'atan, Wirid Yasin Nagari, Maulid Nabi, Isra' Mijraj, dan Kegiatan Memasang Kaul Padi.
+                </p>
+                <p>
+                  Rumah ibadah tidak hanya berfungsi sebagai tempat ibadah, tetapi juga sebagai pusat pembinaan moral, pendidikan keagamaan, dan penguatan persaudaraan antarwarga. Terdapat 3 Masjid dan 9 Mushalla di Nagari Aia Manggih barat. Serta terdapat 3 MDTA dan 2 TPQ yang aktif sebagai sarana Pendidikan di Nagari ini.
+                </p>
+              </div>
             </div>
 
             {/* Kesehatan */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
+            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-right">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,94 +373,80 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Kesehatan</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed">Informasi kesehatan akan ditampilkan di sini.</p>
-            </div>
-
-            {/* Sejarah Nagari */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Sejarah Nagari Aia Manggih</h3>
-              </div>
-              <p className="text-gray-600 leading-relaxed">Sejarah nagari akan ditampilkan di sini.</p>
-            </div>
-
-            {/* Pemekaran */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Pemekaran</h3>
-              </div>
-              <p className="text-gray-600 leading-relaxed">Informasi tentang pemekaran nagari akan ditampilkan di sini.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Visi Misi Section */}
-      <section id="visi-misi" className="py-28 px-6 lg:px-8 bg-gradient-to-b from-[#f7f2e8] to-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
-              Visi & Misi
-            </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] mx-auto rounded-full"></div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Visi */}
-            <div className="group bg-white rounded-2xl p-10 border border-gray-200/50 shadow-xl hover:shadow-2xl hover:border-[#c0ae86] transition-all duration-300 hover:scale-[1.02]">
-              <div className="flex items-center mb-8">
-                <div className="w-14 h-14 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
-                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </div>
-                <h3 className="text-3xl font-bold text-gray-900 tracking-tight">Visi</h3>
-              </div>
-              <p className="text-lg leading-relaxed text-gray-700">
-                Visi Nagari Aia Manggih Barat akan ditampilkan di sini.
-              </p>
-            </div>
-
-            {/* Misi */}
-            <div className="group bg-white rounded-2xl p-10 border border-gray-200/50 shadow-xl hover:shadow-2xl hover:border-[#c0ae86] transition-all duration-300 hover:scale-[1.02]">
-              <div className="flex items-center mb-8">
-                <div className="w-14 h-14 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
-                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
-                </div>
-                <h3 className="text-3xl font-bold text-gray-900 tracking-tight">Misi</h3>
-              </div>
-              <ul className="space-y-5">
-                <li className="flex items-start group/item">
-                  <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
-                    <span className="text-[#2c1b01] font-bold text-sm">1</span>
+              <div className="text-gray-700 leading-relaxed space-y-4">
+                <div>
+                  <p className="mb-4">Di Nagari Aia Manggih Barat terdapat sarana Kesehatan sebagai berikut:</p>
+                  <div className="overflow-x-auto mb-6 scroll-slide-right">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-[#f0e8db] border-b border-gray-300">
+                          <th className="px-3 py-2 text-left font-semibold text-gray-900">No.</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-900">Uraian</th>
+                          <th className="px-3 py-2 text-center font-semibold text-gray-900">Jumlah</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-gray-700">
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">1.</td>
+                          <td className="px-3 py-2">Pustu</td>
+                          <td className="px-3 py-2 text-center font-semibold">1</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">2.</td>
+                          <td className="px-3 py-2">Posyandu</td>
+                          <td className="px-3 py-2 text-center font-semibold">4</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">3.</td>
+                          <td className="px-3 py-2">Praktek Bidan</td>
+                          <td className="px-3 py-2 text-center font-semibold">1</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">4.</td>
+                          <td className="px-3 py-2">Polindes</td>
+                          <td className="px-3 py-2 text-center font-semibold">1</td>
+                        </tr>
+                        <tr>
+                          <td className="px-3 py-2">5.</td>
+                          <td className="px-3 py-2">Kader Posyandu</td>
+                          <td className="px-3 py-2 text-center font-semibold">20</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
-                  <span className="text-gray-700 leading-relaxed pt-0.5">Misi pertama akan ditampilkan di sini</span>
-                </li>
-                <li className="flex items-start group/item">
-                  <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
-                    <span className="text-[#2c1b01] font-bold text-sm">2</span>
+                </div>
+                <div className="pt-4 border-t border-gray-200">
+                  <p className="mb-4">Sedangkan keadaan Kesehatan lingkungan Masyarakat dapat dilihat sebagai berikut:</p>
+                  <div className="overflow-x-auto scroll-slide-right">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-[#f0e8db] border-b border-gray-300">
+                          <th className="px-3 py-2 text-left font-semibold text-gray-900">No.</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-900">Uraian</th>
+                          <th className="px-3 py-2 text-center font-semibold text-gray-900">Jumlah</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-gray-700">
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">1.</td>
+                          <td className="px-3 py-2">Rumah memiliki WC, dengan septic tanah</td>
+                          <td className="px-3 py-2 text-center font-semibold">12</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2">2.</td>
+                          <td className="px-3 py-2">Rumah memiliki WC, tanpa septic tanah</td>
+                          <td className="px-3 py-2 text-center font-semibold">81</td>
+                        </tr>
+                        <tr>
+                          <td className="px-3 py-2">3.</td>
+                          <td className="px-3 py-2">Rumah memanfaatkan aliran Sungai untuk MCK</td>
+                          <td className="px-3 py-2 text-center font-semibold">451</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
-                  <span className="text-gray-700 leading-relaxed pt-0.5">Misi kedua akan ditampilkan di sini</span>
-                </li>
-                <li className="flex items-start group/item">
-                  <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
-                    <span className="text-[#2c1b01] font-bold text-sm">3</span>
-                  </div>
-                  <span className="text-gray-700 leading-relaxed pt-0.5">Misi ketiga akan ditampilkan di sini</span>
-                </li>
-              </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>

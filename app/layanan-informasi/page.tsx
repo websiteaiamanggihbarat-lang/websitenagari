@@ -18,7 +18,7 @@ export default function LayananInformasi() {
     <div className="min-h-screen bg-white">
       <div className="pt-24 pb-32 px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
+          <div className="text-center mb-20 scroll-slide-left">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
               Layanan Informasi
             </h1>
@@ -31,13 +31,13 @@ export default function LayananInformasi() {
 
           <div className="space-y-16">
             {/* Kontak Pelayanan & Waktu Pelayanan */}
-            <section id="kontak-pelayanan">
+            <section id="kontak-pelayanan" className="scroll-slide-left">
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-12 tracking-tight">
                 Kontak Pelayanan & Waktu Pelayanan
               </h2>
               <div className="grid md:grid-cols-2 gap-8">
                 {/* Kontak Pelayanan */}
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 shadow-lg">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 shadow-lg scroll-slide-left">
                   <div className="flex items-center mb-8">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4">
                       <svg
@@ -136,7 +136,7 @@ export default function LayananInformasi() {
                 </div>
 
                 {/* Waktu Pelayanan */}
-                <div className="bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] shadow-lg">
+                <div className="bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] shadow-lg scroll-slide-right">
                   <div className="flex items-center mb-8">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4">
                       <svg
@@ -180,7 +180,7 @@ export default function LayananInformasi() {
             </section>
 
             {/* Persyaratan Dokumen */}
-            <section id="persyaratan-dokumen">
+            <section id="persyaratan-dokumen" className="scroll-slide-right">
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6 tracking-tight">
                 Persyaratan Dokumen
               </h2>
@@ -192,7 +192,9 @@ export default function LayananInformasi() {
                 {dokumenList.map((dokumen, index) => (
                   <div
                     key={index}
-                    className="group bg-white border border-gray-200/50 rounded-xl p-6 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300"
+                    className={`group bg-white border border-gray-200/50 rounded-xl p-6 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 ${
+                      index % 2 === 0 ? "scroll-slide-left" : "scroll-slide-right"
+                    }`}
                   >
                     <div className="flex items-start mb-4">
                       <div className="w-10 h-10 bg-gradient-to-br from-[#e6ddcf] to-[#f0e8db] rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover:from-[#d1c2a0] group-hover:to-[#e6ddcf] transition-colors">
@@ -212,7 +214,7 @@ export default function LayananInformasi() {
             </section>
 
             {/* Informasi Pengaduan */}
-            <section id="pengaduan">
+            <section id="pengaduan" className="scroll-slide-bottom">
               <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-6 tracking-tight">
                 Informasi Pengaduan
               </h2>
@@ -222,7 +224,7 @@ export default function LayananInformasi() {
               </p>
               <div className="grid md:grid-cols-2 gap-8">
                 {/* WhatsApp */}
-                <div className="group bg-gradient-to-br from-green-50 to-white rounded-2xl p-8 border border-green-100 hover:border-green-200 hover:shadow-xl hover:shadow-green-100/50 transition-all duration-300">
+                <div className="group bg-gradient-to-br from-green-50 to-white rounded-2xl p-8 border border-green-100 hover:border-green-200 hover:shadow-xl hover:shadow-green-100/50 transition-all duration-300 scroll-slide-left">
                   <div className="flex items-center mb-6">
                     <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/20 mr-4 group-hover:scale-110 transition-transform">
                       <svg
@@ -258,7 +260,7 @@ export default function LayananInformasi() {
                 </div>
 
                 {/* Google Form */}
-                <div className="group bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300">
+                <div className="group bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-right">
                   <div className="flex items-center mb-6">
                     <div className="w-14 h-14 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
                       <svg

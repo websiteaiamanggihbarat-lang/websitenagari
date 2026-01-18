@@ -100,6 +100,175 @@ body {
   animation: slideInRight 0.3s ease-out;
 }
 
+/* Scroll animations - Hidden by default */
+.scroll-animate {
+  opacity: 0;
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.scroll-animate.animate-in {
+  opacity: 1;
+}
+
+/* Slide from left - Optimized for performance */
+.scroll-slide-left {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+/* Fallback: if no JS or observer fails, show after short delay */
+@supports (animation-name: test) {
+  .scroll-slide-left {
+    animation: fadeInFallback 0.01s 0.5s forwards;
+  }
+}
+
+@keyframes fadeInFallback {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.scroll-slide-left.animate-in {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+  will-change: auto;
+  animation: none !important;
+}
+
+/* Slide from right */
+.scroll-slide-right {
+  opacity: 0;
+  transform: translateX(30px);
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+@supports (animation-name: test) {
+  .scroll-slide-right {
+    animation: fadeInFallbackRight 0.01s 0.5s forwards;
+  }
+}
+
+@keyframes fadeInFallbackRight {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.scroll-slide-right.animate-in {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+  will-change: auto;
+  animation: none !important;
+}
+
+/* Slide from bottom */
+.scroll-slide-bottom {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+@supports (animation-name: test) {
+  .scroll-slide-bottom {
+    animation: fadeInFallbackBottom 0.01s 0.5s forwards;
+  }
+}
+
+@keyframes fadeInFallbackBottom {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scroll-slide-bottom.animate-in {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  will-change: auto;
+  animation: none !important;
+}
+
+/* Fade in */
+.scroll-fade {
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
+}
+
+@supports (animation-name: test) {
+  .scroll-fade {
+    animation: fadeInFallbackFade 0.01s 0.5s forwards;
+  }
+}
+
+@keyframes fadeInFallbackFade {
+  to {
+    opacity: 1;
+  }
+}
+
+.scroll-fade.animate-in {
+  opacity: 1 !important;
+  will-change: auto;
+  animation: none !important;
+}
+
+/* Scale + Fade */
+.scroll-scale {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+@supports (animation-name: test) {
+  .scroll-scale {
+    animation: fadeInFallbackScale 0.01s 0.5s forwards;
+  }
+}
+
+@keyframes fadeInFallbackScale {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.scroll-scale.animate-in {
+  opacity: 1 !important;
+  transform: scale(1) !important;
+  will-change: auto;
+  animation: none !important;
+}
+
+/* Stagger delay utilities */
+.scroll-delay-100 {
+  transition-delay: 0.1s;
+}
+
+.scroll-delay-200 {
+  transition-delay: 0.2s;
+}
+
+.scroll-delay-300 {
+  transition-delay: 0.3s;
+}
+
+.scroll-delay-400 {
+  transition-delay: 0.4s;
+}
+
+.scroll-delay-500 {
+  transition-delay: 0.5s;
+}
+
 /* Focus states for accessibility */
 *:focus-visible {
   outline: 2px solid var(--primary-main);

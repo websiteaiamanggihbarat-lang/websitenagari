@@ -28,7 +28,7 @@ export default function Berita() {
     <div className="min-h-screen bg-white">
       <div className="pt-24 pb-32 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
+          <div className="text-center mb-20 scroll-slide-left">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
               Berita Nagari
             </h1>
@@ -39,7 +39,7 @@ export default function Berita() {
           </div>
 
           {/* Filter Categories */}
-          <div className="flex flex-wrap gap-3 mb-16 justify-center">
+          <div className="flex flex-wrap gap-3 mb-16 justify-center scroll-fade">
             <button className="px-6 py-2.5 bg-gradient-to-r from-[#2c1b01] to-[#1a1200] text-white rounded-full hover:from-[#3a2604] hover:to-[#100b00] transition-all duration-200 text-sm font-semibold shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)]">
               Semua
             </button>
@@ -59,10 +59,12 @@ export default function Berita() {
 
           {/* Berita List */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {beritaList.map((berita) => (
+            {beritaList.map((berita, index) => (
                 <article
                   key={berita.id}
-                  className="group cursor-pointer bg-white rounded-2xl overflow-hidden border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-2xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300"
+                  className={`group cursor-pointer bg-white rounded-2xl overflow-hidden border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-2xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 ${
+                    index % 3 === 0 ? "scroll-slide-left" : index % 3 === 1 ? "scroll-slide-bottom" : "scroll-slide-right"
+                  }`}
                 >
                 {/* Image Placeholder */}
                 <div className="aspect-video bg-gradient-to-br from-[#4a3210] via-[#2c1b01] to-[#1a1200] relative overflow-hidden">
@@ -128,7 +130,7 @@ export default function Berita() {
           </div>
 
           {/* Pagination */}
-          <div className="mt-16 flex justify-center">
+          <div className="mt-16 flex justify-center scroll-fade">
             <nav className="flex space-x-2">
               <button className="px-5 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                 Sebelumnya
