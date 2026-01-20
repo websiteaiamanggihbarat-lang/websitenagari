@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
 import ScrollAnimations from "@/components/ScrollAnimations";
+import ConditionalLayout from "@/components/ConditionalLayout";
 
 export const metadata: Metadata = {
   title: "Nagari Aia Manggih Barat - Website Pemerintahan",
@@ -18,9 +17,7 @@ export default function RootLayout({
     <html lang="id">
       <body className="font-sans antialiased">
         <ScrollAnimations />
-        <Navigation />
-        <main className="min-h-screen">{children}</main>
-        <Footer />
+        <ConditionalLayout>{children}</ConditionalLayout>
       </body>
     </html>
   );

@@ -1,28 +1,41 @@
-export default function Berita() {
-  // Placeholder untuk berita
-  const beritaList = [
-    {
-      id: 1,
-      title: "Judul Berita Pertama",
-      date: "15 Januari 2024",
-      excerpt: "Ringkasan berita pertama akan ditampilkan di sini...",
-      category: "Umum",
-    },
-    {
-      id: 2,
-      title: "Judul Berita Kedua",
-      date: "10 Januari 2024",
-      excerpt: "Ringkasan berita kedua akan ditampilkan di sini...",
-      category: "Pemerintahan",
-    },
-    {
-      id: 3,
-      title: "Judul Berita Ketiga",
-      date: "5 Januari 2024",
-      excerpt: "Ringkasan berita ketiga akan ditampilkan di sini...",
-      category: "Kegiatan",
-    },
-  ];
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+
+type BeritaType = {
+  id: string | number;
+  judul: string;
+  konten: string;
+  created_at?: string | null;
+};
+
+const PER_PAGE = 6;
+
+async function getBerita(page: number) {
+  const from = (page - 1) * PER_PAGE;
+  const to = from + PER_PAGE - 1;
+
+  const { data, error, count } = await supabase
+    .from("berita")
+    .select("*", { count: "exact" })
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error("Gagal mengambil berita:", error);
+    return { data: [] as BeritaType[], count: 0 };
+  }
+
+  return { data: (data || []) as BeritaType[], count: count || 0 };
+}
+
+export default async function Berita({
+  searchParams,
+}: {
+  searchParams?: { page?: string };
+}) {
+  const page = Math.max(Number(searchParams?.page) || 1, 1);
+  const { data: beritaList, count } = await getBerita(page);
+  const totalPages = Math.max(Math.ceil(count / PER_PAGE), 1);
 
   return (
     <div className="min-h-screen bg-white">
@@ -36,25 +49,6 @@ export default function Berita() {
             <p className="text-xl text-gray-600 font-normal">
               Informasi dan berita terkini dari Nagari Aia Manggih Barat
             </p>
-          </div>
-
-          {/* Filter Categories */}
-          <div className="flex flex-wrap gap-3 mb-16 justify-center scroll-fade">
-            <button className="px-6 py-2.5 bg-gradient-to-r from-[#2c1b01] to-[#1a1200] text-white rounded-full hover:from-[#3a2604] hover:to-[#100b00] transition-all duration-200 text-sm font-semibold shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)]">
-              Semua
-            </button>
-            <button className="px-6 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 transition-all duration-200 text-sm font-medium border border-gray-200 hover:border-[#c0ae86] hover:text-[#2c1b01] shadow-sm hover:shadow-md">
-              Umum
-            </button>
-            <button className="px-6 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 transition-all duration-200 text-sm font-medium border border-gray-200 hover:border-[#c0ae86] hover:text-[#2c1b01] shadow-sm hover:shadow-md">
-              Pemerintahan
-            </button>
-            <button className="px-6 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 transition-all duration-200 text-sm font-medium border border-gray-200 hover:border-[#c0ae86] hover:text-[#2c1b01] shadow-sm hover:shadow-md">
-              Kegiatan
-            </button>
-            <button className="px-6 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 transition-all duration-200 text-sm font-medium border border-gray-200 hover:border-[#c0ae86] hover:text-[#2c1b01] shadow-sm hover:shadow-md">
-              Pengumuman
-            </button>
           </div>
 
           {/* Berita List */}
@@ -87,19 +81,26 @@ export default function Berita() {
                 </div>
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="px-3 py-1 bg-[#e6ddcf] text-[#2c1b01] rounded-full text-xs font-semibold uppercase tracking-wide">
-                      {berita.category}
+                    <span className="text-xs text-gray-500 font-medium">
+                      {berita.created_at
+                        ? new Date(berita.created_at).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                          })
+                        : ""}
                     </span>
-                    <span className="text-xs text-gray-500 font-medium">{berita.date}</span>
                   </div>
                   <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-[#2c1b01] transition-colors tracking-tight leading-tight">
-                    {berita.title}
+                    {berita.judul}
                   </h2>
                   <p className="text-gray-600 text-sm mb-5 line-clamp-3 leading-relaxed">
-                    {berita.excerpt}
+                    {berita.konten.length > 150
+                      ? berita.konten.slice(0, 150) + "…"
+                      : berita.konten}
                   </p>
-                  <a
-                    href="#"
+                  <Link
+                    href={`/berita/${berita.id}`}
                     className="text-[#2c1b01] hover:text-[#4a3210] font-semibold text-sm inline-flex items-center group/link"
                   >
                     Baca Selengkapnya
@@ -116,37 +117,40 @@ export default function Berita() {
                         d="M9 5l7 7-7 7"
                       />
                     </svg>
-                  </a>
+                  </Link>
                 </div>
               </article>
             ))}
           </div>
 
-          {/* Empty State Message */}
-          <div className="mt-16 text-center">
-            <p className="text-gray-500 text-sm">
-              Berita akan ditampilkan di sini setelah konten tersedia.
-            </p>
-          </div>
-
           {/* Pagination */}
           <div className="mt-16 flex justify-center scroll-fade">
             <nav className="flex space-x-2">
-              <button className="px-5 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+              <Link
+                href={`/berita?page=${page - 1}`}
+                className={`px-5 py-2 rounded-full text-sm font-medium border transition-colors ${
+                  page <= 1
+                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none"
+                    : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
+                }`}
+              >
                 Sebelumnya
-              </button>
-              <button className="px-5 py-2 bg-[#2c1b01] text-white rounded-full text-sm font-medium">
-                1
-              </button>
-              <button className="px-5 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors text-sm font-medium">
-                2
-              </button>
-              <button className="px-5 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors text-sm font-medium">
-                3
-              </button>
-              <button className="px-5 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors text-sm font-medium">
+              </Link>
+
+              <span className="px-5 py-2 bg-[#2c1b01] text-white rounded-full text-sm font-medium">
+                {page} / {totalPages}
+              </span>
+
+              <Link
+                href={`/berita?page=${page + 1}`}
+                className={`px-5 py-2 rounded-full text-sm font-medium border transition-colors ${
+                  page >= totalPages
+                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none"
+                    : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
+                }`}
+              >
                 Selanjutnya
-              </button>
+              </Link>
             </nav>
           </div>
         </div>
