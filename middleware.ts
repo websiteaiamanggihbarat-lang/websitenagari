@@ -23,10 +23,16 @@ export async function middleware(req: NextRequest) {
     },
   });
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const isLoggedIn = Boolean(session);
+  let isLoggedIn = false;
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    isLoggedIn = Boolean(session && session.access_token);
+  } catch (error) {
+    // Jika ada error saat cek session, anggap tidak login
+    isLoggedIn = false;
+  }
 
   // Proteksi semua route /admin
   if (pathname.startsWith("/admin")) {

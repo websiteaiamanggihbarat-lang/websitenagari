@@ -21,16 +21,27 @@ export default function TambahBerita() {
 
     const logout = async () => {
       try {
+        // Sign out dari Supabase client juga
+        await supabase.auth.signOut()
+        
+        // Panggil endpoint signout
         await fetch('/auth/signout', { method: 'POST', credentials: 'include' })
+        
+        // Clear storage
         if (typeof window !== 'undefined') {
           localStorage.clear()
           sessionStorage.clear()
         }
-        await new Promise(resolve => setTimeout(resolve, 100))
-        window.location.replace('/login')
+        
+        // Tunggu sebentar untuk memastikan cookie terhapus
+        await new Promise(resolve => setTimeout(resolve, 200))
+        
+        // Force redirect dengan timestamp untuk bypass cache
+        window.location.href = `/login?t=${Date.now()}`
       } catch (err) {
         console.error('Auto logout error:', err)
-        window.location.replace('/login')
+        // Tetap redirect meskipun ada error
+        window.location.href = `/login?t=${Date.now()}`
       }
     }
 
@@ -215,16 +226,27 @@ export default function TambahBerita() {
   const handleLogout = async () => {
     setLoading(true)
     try {
+      // Sign out dari Supabase client juga
+      await supabase.auth.signOut()
+      
+      // Panggil endpoint signout
       await fetch('/auth/signout', { method: 'POST', credentials: 'include' })
+      
+      // Clear storage
       if (typeof window !== 'undefined') {
         localStorage.clear()
         sessionStorage.clear()
       }
-      await new Promise(resolve => setTimeout(resolve, 100))
-      window.location.replace('/login')
+      
+      // Tunggu sebentar untuk memastikan cookie terhapus
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      // Force redirect dengan timestamp untuk bypass cache
+      window.location.href = `/login?t=${Date.now()}`
     } catch (err) {
       console.error('Logout error:', err)
-      window.location.replace('/login')
+      // Tetap redirect meskipun ada error
+      window.location.href = `/login?t=${Date.now()}`
     }
   }
 
