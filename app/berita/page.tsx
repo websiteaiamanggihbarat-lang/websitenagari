@@ -1,5 +1,12 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { unstable_noStore as noStore } from "next/cache";
+
+// Force dynamic rendering untuk memastikan data selalu fresh - tidak ada cache sama sekali
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+export const runtime = 'nodejs';
 
 type BeritaType = {
   id: string | number;
@@ -12,9 +19,13 @@ type BeritaType = {
 const PER_PAGE = 6;
 
 async function getBerita(page: number) {
+  // Pastikan tidak ada cache
+  noStore();
+  
   const from = (page - 1) * PER_PAGE;
   const to = from + PER_PAGE - 1;
 
+  // Query selalu fetch data terbaru dari Supabase
   const { data, error, count } = await supabase
     .from("berita")
     .select("*", { count: "exact" })
