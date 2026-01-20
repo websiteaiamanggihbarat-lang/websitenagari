@@ -24,24 +24,30 @@ export default function TambahBerita() {
         // Sign out dari Supabase client juga
         await supabase.auth.signOut()
         
-        // Panggil endpoint signout
-        await fetch('/auth/signout', { method: 'POST', credentials: 'include' })
-        
-        // Clear storage
+        // Clear storage dulu
         if (typeof window !== 'undefined') {
           localStorage.clear()
           sessionStorage.clear()
         }
         
-        // Tunggu sebentar untuk memastikan cookie terhapus
-        await new Promise(resolve => setTimeout(resolve, 200))
+        // Panggil endpoint signout yang akan redirect
+        const response = await fetch('/auth/signout', { 
+          method: 'POST', 
+          credentials: 'include',
+          redirect: 'follow'
+        })
         
-        // Force redirect dengan timestamp untuk bypass cache
-        window.location.href = `/login?t=${Date.now()}`
+        // Jika response redirect, ikuti redirect tersebut
+        if (response.redirected) {
+          window.location.href = response.url
+        } else {
+          // Fallback: redirect manual dengan query parameter logout
+          window.location.href = `/login?logout=success&t=${Date.now()}`
+        }
       } catch (err) {
         console.error('Auto logout error:', err)
         // Tetap redirect meskipun ada error
-        window.location.href = `/login?t=${Date.now()}`
+        window.location.href = `/login?logout=success&t=${Date.now()}`
       }
     }
 
@@ -229,24 +235,30 @@ export default function TambahBerita() {
       // Sign out dari Supabase client juga
       await supabase.auth.signOut()
       
-      // Panggil endpoint signout
-      await fetch('/auth/signout', { method: 'POST', credentials: 'include' })
-      
-      // Clear storage
+      // Clear storage dulu
       if (typeof window !== 'undefined') {
         localStorage.clear()
         sessionStorage.clear()
       }
       
-      // Tunggu sebentar untuk memastikan cookie terhapus
-      await new Promise(resolve => setTimeout(resolve, 200))
+      // Panggil endpoint signout yang akan redirect
+      const response = await fetch('/auth/signout', { 
+        method: 'POST', 
+        credentials: 'include',
+        redirect: 'follow'
+      })
       
-      // Force redirect dengan timestamp untuk bypass cache
-      window.location.href = `/login?t=${Date.now()}`
+      // Jika response redirect, ikuti redirect tersebut
+      if (response.redirected) {
+        window.location.href = response.url
+      } else {
+        // Fallback: redirect manual dengan query parameter logout
+        window.location.href = `/login?logout=success&t=${Date.now()}`
+      }
     } catch (err) {
       console.error('Logout error:', err)
       // Tetap redirect meskipun ada error
-      window.location.href = `/login?t=${Date.now()}`
+      window.location.href = `/login?logout=success&t=${Date.now()}`
     }
   }
 

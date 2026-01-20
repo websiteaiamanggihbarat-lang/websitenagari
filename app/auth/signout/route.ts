@@ -7,9 +7,9 @@ export async function POST(request: Request) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   const cookieStore = await cookies();
-  const res = NextResponse.json({ ok: true });
   
   const host = request.headers.get('host')?.split(':')[0];
+  const origin = request.headers.get('origin') || `https://${host}`;
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -20,15 +20,20 @@ export async function POST(request: Request) {
         }));
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          res.cookies.set(name, value, options);
-        });
+        // No-op karena kita akan handle sendiri
       },
     },
   });
 
   // Sign out dari Supabase
   await supabase.auth.signOut();
+
+  // Buat redirect response ke login dengan query parameter untuk bypass cache
+  const loginUrl = new URL('/login', origin);
+  loginUrl.searchParams.set('logout', 'success');
+  loginUrl.searchParams.set('t', Date.now().toString());
+  
+  const res = NextResponse.redirect(loginUrl);
 
   // Explicitly delete ALL Supabase-related cookies untuk semua browser compatibility
   const allCookies = cookieStore.getAll();
@@ -53,7 +58,7 @@ export async function POST(request: Request) {
     }
   });
 
-  // Tambahkan cookie names yang diketahui
+  // Tambahkan cookie names yang diketahui Supabase auth-helpers-nextjs
   const knownCookieNames = [
     'sb-access-token',
     'sb-refresh-token',
@@ -69,8 +74,8 @@ export async function POST(request: Request) {
     const paths = ['/', '/admin', '/login'];
     const domains: (string | undefined)[] = [undefined];
     
-    // Jika ada host, tambahkan domain
-    if (host && host !== 'localhost') {
+    // Jika ada host dan bukan localhost, tambahkan domain
+    if (host && host !== 'localhost' && !host.includes('127.0.0.1')) {
       domains.push(host);
       domains.push(`.${host}`);
     }
@@ -82,13 +87,13 @@ export async function POST(request: Request) {
           path: string;
           domain?: string;
           httpOnly: boolean;
-          sameSite: 'lax';
+          sameSite: 'lax' | 'strict' | 'none';
           secure: boolean;
           maxAge: number;
         } = {
           expires: new Date(0),
           path: path,
-          httpOnly: false, // Set false untuk memastikan bisa dihapus dari client juga
+          httpOnly: false,
           sameSite: 'lax',
           secure: process.env.NODE_ENV === 'production',
           maxAge: 0,
@@ -100,6 +105,11 @@ export async function POST(request: Request) {
       });
     });
   });
+
+  // Tambahkan header untuk memastikan tidak ada cache
+  res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.headers.set('Pragma', 'no-cache');
+  res.headers.set('Expires', '0');
 
   return res;
 }
