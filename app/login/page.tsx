@@ -122,7 +122,7 @@ export default async function LoginPage({
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-500 mt-6">
-          © 2024 Nagari Aia Manggih Barat
+          © 2026 Pemerintah Nagari Aia Manggih Barat
         </p>
       </div>
     </div>
