@@ -140,7 +140,7 @@ export default function StrukturOrganisasi() {
                   <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-400 hidden lg:block"></div>
                   <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
                     <h4 className="font-bold mb-2 text-sm">KA. JORONG PADANG SARAI</h4>
-                    <p className="text-xs text-[#f0e8db]">[Nama Kepala Jorong]</p>
+                    <p className="text-xs text-[#f0e8db]">Lahmizal Netri</p>
                   </div>
                 </div>
 
@@ -149,8 +149,31 @@ export default function StrukturOrganisasi() {
                   <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-400 hidden lg:block"></div>
                   <div className="bg-gradient-to-br from-[#4a3210] to-[#2c1b01] text-white rounded-xl p-6 text-center shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)] transition-all duration-300 hover:scale-105">
                     <h4 className="font-bold mb-2 text-sm leading-tight">KA. JORONG KP. PADANG PR. DAREH</h4>
-                    <p className="text-xs text-[#f0e8db]">[Nama Kepala Jorong]</p>
+                    <p className="text-xs text-[#f0e8db]">Israhayu, SE</p>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Petugas */}
+            <div className="relative z-20 w-full mt-16 pt-8 border-t border-gray-300">
+              <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center scroll-slide-bottom">Petugas</h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border border-gray-200/50 shadow-lg hover:shadow-xl hover:border-[#c0ae86] transition-all duration-300 scroll-slide-left">
+                  <h4 className="font-bold text-gray-900 mb-2 text-sm">Petugas Data</h4>
+                  <p className="text-gray-700 text-sm">Khairil Amri S.M</p>
+                </div>
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border border-gray-200/50 shadow-lg hover:shadow-xl hover:border-[#c0ae86] transition-all duration-300 scroll-slide-right">
+                  <h4 className="font-bold text-gray-900 mb-2 text-sm">Petugas Keamanan</h4>
+                  <p className="text-gray-700 text-sm">Herlina</p>
+                </div>
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border border-gray-200/50 shadow-lg hover:shadow-xl hover:border-[#c0ae86] transition-all duration-300 scroll-slide-left">
+                  <h4 className="font-bold text-gray-900 mb-2 text-sm">Petugas Keamanan</h4>
+                  <p className="text-gray-700 text-sm">Nugraha Candra M.F, S.Pt</p>
+                </div>
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border border-gray-200/50 shadow-lg hover:shadow-xl hover:border-[#c0ae86] transition-all duration-300 scroll-slide-right">
+                  <h4 className="font-bold text-gray-900 mb-2 text-sm">Petugas Keamanan</h4>
+                  <p className="text-gray-700 text-sm">Meri Oktavia</p>
                 </div>
               </div>
             </div>

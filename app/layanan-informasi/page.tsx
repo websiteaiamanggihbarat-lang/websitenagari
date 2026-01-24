@@ -1,17 +1,152 @@
 export default function LayananInformasi() {
   const dokumenList = [
-    "Surat Keterangan",
-    "Pengantar KK",
-    "NA/Pengantar Nikah",
-    "SKCK",
-    "SKTM",
-    "Surat Keterangan Meninggal Dunia",
-    "Surat Keterangan Domisili",
-    "Surat Keterangan Penghasilan",
-    "Surat Keterangan Perjalanan",
-    "Surat Keterangan Kesalahan Data",
-    "Surat Izin Keramaian",
-    "Surat Keterangan Usaha",
+    {
+      nama: "SK Miskin",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Kurang Mampu",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "NA",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB", "Surat izin kawin dari Ninik Mamak"],
+      waktu: "2 Hari",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "Surat Tanah",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB", "Surat Jual Beli/Hibah"],
+      waktu: "2 Hari",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "Surat Domisili",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB", "Minimal Berdomisili Selama 6 Bulan"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Domisili Partai Politik",
+      persyaratan: ["Identitas Partai Politik", "Fotocopy KK/KTP", "Bukti Lunas PBB"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Domisili Perusahaan",
+      persyaratan: ["Identitas Perusahaan", "Fotocopy KK/KTP", "Bukti Lunas PBB"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Domisili kantor",
+      persyaratan: ["Identitas Kantor", "Fotocopy KK/KTP", "Bukti Lunas PBB"],
+      waktu: "30 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Usaha",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB"],
+      waktu: "20 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Berperilaku Baik",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB"],
+      waktu: "20 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Ahli Waris",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB", "Identitas Ahli Waris"],
+      waktu: "30 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Meninggal",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB", "Keterangan Meninggal (Tempat & Waktu Pemakaman)"],
+      waktu: "20 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Janda/Duda",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB", "Buku Nikah", "Surat Keterangan Meninggal Suami/Istri"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "Surat Pengantar IMB",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB", "Fotocopy Sertifikat Tanah"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Memiliki Rumah",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB", "Fotocopy Sertifikat Tanah", "Identitas Rumah"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "Surat Pengantar Izin Keramaian",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB", "Permohonan 7 Rekomendasi dari Ninik Mamak", "Susunan Kepanitiaan", "Surat Izin Pemakaian Tempat", "Diajukan 4 Hari Sebelum Acara"],
+      waktu: "2 Hari",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Lain-Lain",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "Pengantar KTP",
+      persyaratan: ["Fotocopy KK", "SK Domisili", "Bukti Lunas PBB"],
+      waktu: "20 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "Pengantar KK",
+      persyaratan: ["Fotocopy Buku Nikah", "Ijazah Terakhir", "Fotocopy KTP", "Bukti Lunas PBB"],
+      waktu: "30 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Belum Menikah",
+      persyaratan: ["Fotocopy KK/KTP", "Bukti Lunas PBB"],
+      waktu: "25 Menit",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    },
+    {
+      nama: "SK Kelompok Masyarakat",
+      persyaratan: ["Data Kelompok yang Telah Disahkan", "Berita Acara Pembentukkan Kelompok", "Struktur Kepengurusan Kelompok"],
+      waktu: "2 Hari",
+      biaya: "Gratis",
+      sifat: "Final di Nagari"
+    }
   ];
 
   return (
@@ -77,7 +212,22 @@ export default function LayananInformasi() {
                       </div>
                       <div>
                         <p className="font-bold text-gray-900 mb-1">Telepon</p>
-                        <p className="text-gray-600">(0751) 123456</p>
+                        <p className="text-gray-600">082268789740 – 082172235321</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start group/item">
+                      <div className="w-10 h-10 bg-[#e6ddcf] rounded-lg flex items-center justify-center mr-4 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
+                        <svg
+                          className="w-5 h-5 text-[#2c1b01]"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 mb-1">WhatsApp</p>
+                        <p className="text-gray-600">082213165168</p>
                       </div>
                     </div>
                     <div className="flex items-start group/item">
@@ -97,9 +247,9 @@ export default function LayananInformasi() {
                         </svg>
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900 mb-1">Email</p>
+                        <p className="font-bold text-gray-900 mb-1">Gmail</p>
                         <p className="text-gray-600">
-                          layanan@aiamanggihbarat.go.id
+                          aiamanggihbarat02@gmail.com
                         </p>
                       </div>
                     </div>
@@ -128,7 +278,7 @@ export default function LayananInformasi() {
                       <div>
                         <p className="font-bold text-gray-900 mb-1">Alamat</p>
                         <p className="text-gray-600">
-                          Kantor Nagari Aia Manggih Barat
+                          Kantor Wali Nagari Aia Manggih Barat
                         </p>
                       </div>
                     </div>
@@ -160,19 +310,15 @@ export default function LayananInformasi() {
                   <div className="space-y-5">
                     <div className="pb-5 border-b border-gray-200 last:border-0">
                       <p className="font-bold text-gray-900 mb-1">Senin - Kamis</p>
-                      <p className="text-gray-600">08:00 - 15:00 WIB</p>
+                      <p className="text-gray-600">08.00 - 16.00</p>
                     </div>
                     <div className="pb-5 border-b border-gray-200 last:border-0">
-                      <p className="font-bold text-gray-900 mb-1">Jumat</p>
-                      <p className="text-gray-600">08:00 - 12:00 WIB</p>
-                    </div>
-                    <div className="pb-5 border-b border-gray-200 last:border-0">
-                      <p className="font-bold text-gray-900 mb-1">Sabtu</p>
-                      <p className="text-gray-600">08:00 - 13:00 WIB</p>
+                      <p className="font-bold text-gray-900 mb-1">Jum'at</p>
+                      <p className="text-gray-600">08.00 - 16.30</p>
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900 mb-1">Minggu</p>
-                      <p className="text-gray-600">Libur</p>
+                      <p className="font-bold text-gray-900 mb-1">Sabtu - Minggu</p>
+                      <p className="text-gray-600">Tutup</p>
                     </div>
                   </div>
                 </div>
@@ -201,13 +347,36 @@ export default function LayananInformasi() {
                         <span className="text-[#2c1b01] font-bold text-sm">{index + 1}</span>
                       </div>
                       <h3 className="font-bold text-gray-900 text-lg pt-1.5">
-                        {dokumen}
+                        {dokumen.nama}
                       </h3>
                     </div>
-                    <p className="text-sm text-gray-600 leading-relaxed ml-14">
-                      Persyaratan untuk {dokumen.toLowerCase()} akan ditampilkan
-                      di sini.
-                    </p>
+                    <div className="ml-14 space-y-3">
+                      <div>
+                        <p className="font-semibold text-gray-900 mb-2 text-sm">Persyaratan:</p>
+                        <ul className="space-y-1 text-sm text-gray-600">
+                          {dokumen.persyaratan.map((item, idx) => (
+                            <li key={idx} className="flex items-start">
+                              <span className="text-[#2c1b01] mr-2 font-bold">•</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200">
+                        <div>
+                          <p className="font-semibold text-gray-900 text-xs mb-1">Waktu</p>
+                          <p className="text-sm text-gray-600">{dokumen.waktu}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 text-xs mb-1">Biaya</p>
+                          <p className="text-sm text-gray-600">{dokumen.biaya}</p>
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-gray-200">
+                        <p className="font-semibold text-gray-900 text-xs mb-1">Sifat</p>
+                        <p className="text-sm text-gray-600">{dokumen.sifat}</p>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -243,7 +412,7 @@ export default function LayananInformasi() {
                     Kirim pengaduan melalui WhatsApp ke nomor berikut:
                   </p>
                   <a
-                    href="https://wa.me/6281234567890"
+                    href="https://wa.me/6282213165168"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-full hover:from-green-700 hover:to-green-800 transition-all duration-200 text-sm font-semibold shadow-lg shadow-green-500/20 hover:shadow-xl hover:shadow-green-500/30"
@@ -285,7 +454,7 @@ export default function LayananInformasi() {
                     Isi formulir pengaduan melalui Google Form:
                   </p>
                   <a
-                    href="#"
+                    href="https://docs.google.com/forms/d/e/1FAIpQLSfgd5c-xQ4WCc0k1dtOcaESdmc0g_UkRfKUdEefnPS63bkt0A/viewform?usp=publish-editor"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#2c1b01] to-[#1a1200] text-white rounded-full hover:from-[#3a2604] hover:to-[#100b00] transition-all duration-200 text-sm font-semibold shadow-lg shadow-[rgba(44,27,1,0.25)] hover:shadow-xl hover:shadow-[rgba(44,27,1,0.35)]"

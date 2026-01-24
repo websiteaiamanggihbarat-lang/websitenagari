@@ -29,34 +29,12 @@ export default function Home() {
               Lokasi dan batas wilayah Nagari Aia Manggih Barat
             </p>
           </div>
-          <div className="aspect-video bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-xl shadow-gray-200/50 border border-gray-200/50 hover:shadow-2xl transition-shadow duration-300 relative scroll-scale">
-            <div className="absolute inset-0 opacity-5" style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-              backgroundSize: '60px 60px'
-            }}></div>
-            <div className="w-full h-full flex items-center justify-center relative z-10">
-              <div className="text-center">
-                <div className="w-24 h-24 mx-auto mb-6 bg-white/90 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg border border-gray-200/50">
-                  <svg
-                    className="w-12 h-12 text-[#2c1b01]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                    />
-                  </svg>
-                </div>
-                <p className="text-lg font-semibold text-gray-700 mb-2">Peta akan ditampilkan di sini</p>
-                <p className="text-sm text-gray-500">
-                  Integrasikan dengan Google Maps atau peta interaktif
-                </p>
-              </div>
-            </div>
+          <div className="aspect-video bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-xl shadow-gray-200/50 border border-gray-200/50 hover:shadow-2xl transition-shadow duration-300 relative scroll-scale flex items-center justify-center">
+            <img
+              src="/image/peta-nagari.jpg"
+              alt="Peta Administrasi Nagari Aia Manggih Barat"
+              className="w-full h-full object-contain"
+            />
           </div>
         </div>
       </section>
@@ -120,7 +98,7 @@ export default function Home() {
                   <h4 className="text-3xl font-bold text-gray-900 tracking-tight">Visi</h4>
                 </div>
                 <p className="text-lg leading-relaxed text-gray-700">
-                  Visi Nagari Aia Manggih Barat akan ditampilkan di sini.
+                  Mewujudkan Nagari Aia Manggih Barat yang Berprestasi dan Berkualitas untuk menuju Nagari yang Berkeadilan, Inovatif, Agamis, dan Berbudaya
                 </p>
               </div>
 
@@ -139,19 +117,43 @@ export default function Home() {
                     <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
                       <span className="text-[#2c1b01] font-bold text-sm">1</span>
                     </div>
-                    <span className="text-gray-700 leading-relaxed pt-0.5">Misi pertama akan ditampilkan di sini</span>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Meningkatkan serta Memelihara Nilai/norma Agama, Adat dan Budaya sesuai dengan Falsafah Adat Basandi Syara', Syara' Basandi Kitabullah.</span>
                   </li>
                   <li className="flex items-start group/item">
                     <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
                       <span className="text-[#2c1b01] font-bold text-sm">2</span>
                     </div>
-                    <span className="text-gray-700 leading-relaxed pt-0.5">Misi kedua akan ditampilkan di sini</span>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Mewujudkan Pemerintahan yang Amanah, Transpran dan Taat Aturan serta Profesional dalam Pelayanan Publik.</span>
                   </li>
                   <li className="flex items-start group/item">
                     <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
                       <span className="text-[#2c1b01] font-bold text-sm">3</span>
                     </div>
-                    <span className="text-gray-700 leading-relaxed pt-0.5">Misi ketiga akan ditampilkan di sini</span>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Mewujudkan Pembangunan yang Berkualitas dan sesuai dengan Kebutuhan Masyarakat.</span>
+                  </li>
+                  <li className="flex items-start group/item">
+                    <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
+                      <span className="text-[#2c1b01] font-bold text-sm">4</span>
+                    </div>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Meningkatkan Kesejahteraan Masyarakat melalui Sumber Daya Nagari Berbasis Pemberdayaan Masyarakat.</span>
+                  </li>
+                  <li className="flex items-start group/item">
+                    <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
+                      <span className="text-[#2c1b01] font-bold text-sm">5</span>
+                    </div>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Meningkatkan Daya Saing Ekonomi Masyarakat melalui Sumber Daya Alam dan Sumber Daya Manusia yang ada.</span>
+                  </li>
+                  <li className="flex items-start group/item">
+                    <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
+                      <span className="text-[#2c1b01] font-bold text-sm">6</span>
+                    </div>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Menjadikan Pemuda sebagai "Agen of Change" (Pembawa Perubahan) dan Pemuda yang Kreatif.</span>
+                  </li>
+                  <li className="flex items-start group/item">
+                    <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
+                      <span className="text-[#2c1b01] font-bold text-sm">7</span>
+                    </div>
+                    <span className="text-gray-700 leading-relaxed pt-0.5">Terwujudnya Lingkungan yang Bersih dan Sehat.</span>
                   </li>
                 </ul>
               </div>
