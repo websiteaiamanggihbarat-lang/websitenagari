@@ -24,7 +24,6 @@ export default function Navigation() {
     { href: "/", label: "Beranda" },
     { href: "/struktur-organisasi", label: "Struktur Organisasi" },
     { href: "/lembaga-organisasi", label: "Lembaga & Organisasi" },
-    { href: "/ppid", label: "PPID Nagari" },
     { href: "/layanan-informasi", label: "Layanan Informasi" },
     { href: "/berita", label: "Berita Nagari" },
   ];
