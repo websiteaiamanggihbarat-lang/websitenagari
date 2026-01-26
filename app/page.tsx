@@ -1,3 +1,5 @@
+import PetaNagari from "@/components/PetaNagari";
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-white">
@@ -29,13 +31,7 @@ export default function Home() {
               Lokasi dan batas wilayah Nagari Aia Manggih Barat
             </p>
           </div>
-          <div className="aspect-video bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-xl shadow-gray-200/50 border border-gray-200/50 hover:shadow-2xl transition-shadow duration-300 relative scroll-scale flex items-center justify-center">
-            <img
-              src="/image/peta-nagari.jpg"
-              alt="Peta Administrasi Nagari Aia Manggih Barat"
-              className="w-full h-full object-contain"
-            />
-          </div>
+          <PetaNagari />
         </div>
       </section>
 
