@@ -14,9 +14,68 @@ export default function Home() {
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight mb-6 leading-tight">
             Nagari Aia Manggih Barat
           </h1>
-          <p className="text-xl md:text-2xl text-gray-600 font-normal max-w-3xl mx-auto leading-relaxed">
-            Melayani masyarakat dengan transparansi, akuntabilitas, dan pelayanan terbaik
+          <p className="text-3xl uppercase tracking-[0.3em] text-[#5a3b0d] mb-3">
+            RANCAK BANA
           </p>
+          <p className="text-base md:text-lg text-gray-700 max-w-3xl mx-auto">
+              "Ramah, Amanah, Normatif, Cepat, Akurat, Kreatif,
+              Bebas Biaya, Aman, Nyaman, dan Adil"
+            </p>
+        </div>
+      </section>
+
+      {/* Visi Misi Pelayanan */}
+      <section className="relative py-20 px-6 lg:px-8 overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="w-full h-full bg-[url('/image/peta-nagarii.jpg')] bg-cover bg-center opacity-40"></div>
+          <div className="absolute inset-0 bg-white/75"></div>
+        </div>
+        <div className="relative max-w-6xl mx-auto scroll-slide-bottom">
+          <div className="text-center mb-10">
+            <p className="text-2xl uppercase tracking-[0.3em] text-[#5a3b0d] mb-3">
+              Visi Misi Pelayanan
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Visi Pelayanan */}
+            <div className="group bg-white/90 backdrop-blur-md rounded-2xl p-8 border border-gray-200/60 shadow-lg hover:shadow-2xl hover:border-[#c0ae86] transition-all duration-300 hover:translate-y-[-2px]">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
+                  Visi Pelayanan
+                </h3>
+              </div>
+              <p className="text-gray-700 leading-relaxed text-base md:text-lg">
+                Memberikan pelayanan prima kepada masyarakat dengan menerapkan “RANCAK BANA”
+                (Ramah, Amanah, Normatif, Cepat, Akurat, Kreatif, Bebas Biaya, Aman, Nyaman, Adil).
+              </p>
+            </div>
+
+            {/* Misi Pelayanan */}
+            <div className="group bg-white/90 backdrop-blur-md rounded-2xl p-8 border border-gray-200/60 shadow-lg hover:shadow-2xl hover:border-[#c0ae86] transition-all duration-300 hover:translate-y-[-2px]">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
+                  Misi Pelayanan
+                </h3>
+              </div>
+              <ol className="space-y-3 text-gray-700 text-base md:text-lg list-decimal list-inside">
+                <li>Mewujudkan pelayanan yang “RANCAK BANA”.</li>
+                <li>Meningkatkan kualitas aparatur pelayanan yang profesional.</li>
+                <li>Memberikan pelayanan sesuai Standar Operasional Pelayanan di Aia Manggih Barat.</li>
+              </ol>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -445,6 +504,54 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Kesenian Tradisional */}
+            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-right">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10l12-3" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Kesenian Tradisional</h3>
+              </div>
+              <ol className="list-decimal list-inside space-y-1 text-sm md:text-base text-gray-700 leading-relaxed">
+                <li>Randai SDN 07 (Padang Sarai)</li>
+                <li>Deki Tuah Sakato (Padang Sarai)</li>
+                <li>Deki Pano Saiyo (Padang Sarai)</li>
+                <li>Rebana Musdalifah (Padang Sarai)</li>
+                <li>Rebana Masjid Raya (Padang Sarai)</li>
+                <li>Rebana Kampung Padang (Kampung Padang)</li>
+                <li>Rebana Paraman Dareh (Paraman Dareh)</li>
+                <li>Randai Kampung Padang (Kampung Padang)</li>
+                <li>Randai Paraman Dareh (Paraman Dareh)</li>
+                <li>Ronggeng (Paraman Dareh)</li>
+                <li>Deki Pano (Paraman Dareh)</li>
+                <li>Deki Pano (Kampung Padang)</li>
+              </ol>
+            </div>
+
+            {/* Kelompok Tani */}
+            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-left">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4h16M4 10h16M4 16h16" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Kelompok Tani</h3>
+              </div>
+              <ol className="list-decimal list-inside space-y-1 text-sm md:text-base text-gray-700 leading-relaxed">
+                <li>Kelompok Tani Cahaya Baru (Padang Sarai)</li>
+                <li>Kelompok Tani Alam Makmur (Padang Sarai)</li>
+                <li>Kelompok Tani Durian Banyak (Padang Sarai)</li>
+                <li>Kelompok Tani Ingin Maju (Padang Sarai)</li>
+                <li>Kelompok Tani Tapian Guntuang (Padang Sarai)</li>
+                <li>Kelompok Tani Pal-VII Saiyo (Kampung Padang)</li>
+                <li>Kelompok Tani Perisai Paraman Dareh Saiyo (Paraman Dareh)</li>
+              </ol>
             </div>
           </div>
         </div>

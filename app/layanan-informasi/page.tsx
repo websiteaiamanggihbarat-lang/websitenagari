@@ -330,10 +330,13 @@ export default function LayananInformasi() {
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6 tracking-tight">
                 Persyaratan Dokumen
               </h2>
-              <p className="text-lg text-gray-600 mb-12 leading-relaxed">
-                Berikut adalah daftar dokumen yang dapat dibuat di Nagari Aia
-                Manggih Barat beserta persyaratannya:
+              <p className="text-base text-gray-600 mb-6 leading-relaxed">
+                Berikut adalah daftar dokumen administrasi yang dilayani di Nagari Aia
+                Manggih Barat beserta persyaratan, waktu penyelesaian, biaya, dan sifat
+                pelayanannya. <br />Sebagian format dokumen telah disiapkan dalam bentuk template Word dan
+                disimpan pada Google Drive Pemerintah Nagari sebagai acuan pelayanan.
               </p>
+              
               <div className="grid md:grid-cols-2 gap-6">
                 {dokumenList.map((dokumen, index) => (
                   <div
@@ -379,6 +382,40 @@ export default function LayananInformasi() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </section>
+
+            {/* Pelayanan Administrasi Online */}
+            <section
+              id="pelayanan-administrasi-online"
+              className="scroll-slide-left bg-gradient-to-br from-[#f7f1e6] via-white to-white border border-[#e0d3be] rounded-2xl p-8 md:p-10 shadow-sm"
+            >
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div className="max-w-2xl">
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
+                    Pelayanan Administrasi Secara Online
+                  </h2>
+                  <p className="text-sm uppercase tracking-[0.25em] text-[#5a3b0d] mb-4">
+                    Formulir Pelayanan Administrasi Nagari
+                  </p>
+                  <p className="text-base text-gray-700 leading-relaxed">
+                    Untuk mempermudah masyarakat dalam mengajukan layanan administrasi
+                    tanpa harus selalu datang ke kantor nagari, Pemerintah Nagari Aia
+                    Manggih Barat menyediakan formulir pelayanan administrasi secara
+                    online. Permohonan yang masuk akan diverifikasi oleh petugas dan
+                    diproses sesuai standar pelayanan yang berlaku.
+                  </p>
+                </div>
+                <div className="flex md:flex-col gap-3 md:items-end">
+                  <a
+                    href="https://docs.google.com/forms/d/e/1FAIpQLSeySCRg8dkswLi9DZKlDOJL5w8iu8kYYxtMCfWVaEIZ4Quivw/viewform?usp=header"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#1a1200] text-white text-sm font-semibold shadow-md shadow-[rgba(44,27,1,0.25)] hover:shadow-lg hover:shadow-[rgba(44,27,1,0.35)] hover:from-[#3a2604] hover:to-[#100b00] transition-all duration-200"
+                  >
+                    Buka Formulir Pelayanan Administrasi
+                  </a>
+                </div>
               </div>
             </section>
 
