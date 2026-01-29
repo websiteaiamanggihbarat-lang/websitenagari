@@ -227,7 +227,7 @@ export default function LayananInformasi() {
                       </div>
                       <div>
                         <p className="font-bold text-gray-900 mb-1">WhatsApp</p>
-                        <p className="text-gray-600">082213165168</p>
+                        <p className="text-gray-600">+62 823-1586-3113</p>
                       </div>
                     </div>
                     <div className="flex items-start group/item">
@@ -449,7 +449,7 @@ export default function LayananInformasi() {
                     Kirim pengaduan melalui WhatsApp ke nomor berikut:
                   </p>
                   <a
-                    href="https://wa.me/6282213165168"
+                    href="https://wa.me/6282315863113"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-full hover:from-green-700 hover:to-green-800 transition-all duration-200 text-sm font-semibold shadow-lg shadow-green-500/20 hover:shadow-xl hover:shadow-green-500/30"
