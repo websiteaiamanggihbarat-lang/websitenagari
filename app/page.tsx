@@ -4,20 +4,27 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative pt-28 pb-36 px-6 lg:px-8 overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#f0e8db]/60 via-white to-white"></div>
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#b6a587]/25 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#f0e8db]/40 rounded-full blur-3xl"></div>
+      <section className="relative h-screen min-h-[600px] px-6 lg:px-8 overflow-hidden flex items-center justify-center">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <div 
+            className="w-full h-full bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: "url('/image/keluarga-besar-nagari.jpeg')"
+            }}
+          ></div>
+          {/* Dark overlay untuk readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/70"></div>
+        </div>
         
-        <div className="relative max-w-5xl mx-auto text-center animate-fade-in">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight mb-6 leading-tight">
+        <div className="relative max-w-5xl mx-auto text-center animate-fade-in z-10">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight mb-6 leading-tight drop-shadow-lg">
             Nagari Aia Manggih Barat
           </h1>
-          <p className="text-3xl uppercase tracking-[0.3em] text-[#5a3b0d] mb-3">
+          <p className="text-3xl uppercase tracking-[0.3em] text-[#f0e8db] mb-3 drop-shadow-md">
             RANCAK BANA
           </p>
-          <p className="text-base md:text-lg text-gray-700 max-w-3xl mx-auto">
+          <p className="text-base md:text-lg text-white/95 max-w-3xl mx-auto leading-relaxed drop-shadow-md">
               "Ramah, Amanah, Normatif, Cepat, Akurat, Kreatif,
               Bebas Biaya, Aman, Nyaman, dan Adil"
             </p>

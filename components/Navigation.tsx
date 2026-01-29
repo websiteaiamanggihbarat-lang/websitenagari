@@ -26,6 +26,7 @@ export default function Navigation() {
     { href: "/lembaga-organisasi", label: "Lembaga & Organisasi" },
     { href: "/layanan-informasi", label: "Layanan Informasi" },
     { href: "/berita", label: "Berita Nagari" },
+    { href: "/galeri", label: "Galeri" },
   ];
 
   return (
