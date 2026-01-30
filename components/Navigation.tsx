@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 
@@ -35,22 +36,14 @@ export default function Navigation() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center group-hover:from-[#3a2604] group-hover:to-[#100b00] transition-all duration-300 shadow-lg shadow-[rgba(44,27,1,0.28)] group-hover:shadow-xl group-hover:shadow-[rgba(44,27,1,0.38)] group-hover:scale-105">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
-              </div>
+            <div className="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden shadow-lg shadow-[rgba(44,27,1,0.28)] group-hover:shadow-xl group-hover:shadow-[rgba(44,27,1,0.38)] transition-all duration-300 group-hover:scale-105">
+              <Image
+                src="/image/logo-kkn.png"
+                alt="Logo Nagari Aia Manggih Barat"
+                width={48}
+                height={48}
+                className="w-full h-full object-contain bg-white"
+              />
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900 tracking-tight group-hover:text-[#2c1b01] transition-colors">

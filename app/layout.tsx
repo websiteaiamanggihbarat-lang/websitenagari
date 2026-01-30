@@ -6,6 +6,10 @@ import ConditionalLayout from "@/components/ConditionalLayout";
 export const metadata: Metadata = {
   title: "Nagari Aia Manggih Barat - Website Pemerintahan",
   description: "Website resmi Pemerintahan Nagari Aia Manggih Barat",
+  icons: {
+    icon: "/image/logo-kkn.png",
+    apple: "/image/logo-kkn.png",
+  },
 };
 
 export default function RootLayout({
