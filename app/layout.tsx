@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import ScrollAnimations from "@/components/ScrollAnimations";
 import ConditionalLayout from "@/components/ConditionalLayout";
 
@@ -22,6 +23,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ScrollAnimations />
         <ConditionalLayout>{children}</ConditionalLayout>
+        <GoogleAnalytics gaId="G-WSF5LTD7H1" />
       </body>
     </html>
   );
