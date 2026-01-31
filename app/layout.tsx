@@ -11,6 +11,9 @@ export const metadata: Metadata = {
     icon: "/image/logo-kkn.png",
     apple: "/image/logo-kkn.png",
   },
+  verification: {
+    google: "ikKTmiKtNGD1Sw_gsx48B1OVshRcAeqsNRGE2CLjfQo",
+  },
 };
 
 export default function RootLayout({

@@ -29,36 +29,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.9,
     },
-    {
-      url: `${BASE_URL}/berita`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/struktur-organisasi`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE_URL}/lembaga-organisasi`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE_URL}/layanan-informasi`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE_URL}/galeri`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
   ];
 
   let beritaRoutes: MetadataRoute.Sitemap = [];
@@ -73,12 +43,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       beritaRoutes = beritaList.map((item) => ({
         url: `${BASE_URL}/berita/${item.id}`,
         lastModified: item.created_at ? new Date(item.created_at) : new Date(),
-        changeFrequency: "monthly" as const,
+        changeFrequency: "daily" as const,
         priority: 0.8,
       }));
     }
   } catch {
-    // Jika Supabase gagal (env tidak ada atau jaringan), sitemap tetap berisi rute statis
+    // Jika fetch gagal (env tidak ada atau jaringan), sitemap tetap berisi rute statis
   }
 
   return [...staticRoutes, ...beritaRoutes];
