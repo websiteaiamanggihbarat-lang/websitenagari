@@ -29,7 +29,7 @@ export default function PetaNagari() {
     <>
       <div className="aspect-video bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-xl shadow-gray-200/50 border border-gray-200/50 hover:shadow-2xl transition-shadow duration-300 relative scroll-scale flex items-center justify-center cursor-pointer group" onClick={() => setIsModalOpen(true)}>
         <img
-          src="/image/peta-nagari.jpeg"
+          src="/image/map-nagari.jpeg"
           alt="Peta Administrasi Nagari Aia Manggih Barat"
           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
         />
@@ -85,7 +85,7 @@ export default function PetaNagari() {
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src="/image/peta-nagari.jpeg"
+              src="/image/map-nagari.jpeg"
               alt="Peta Administrasi Nagari Aia Manggih Barat - Fullscreen"
               className="max-w-full max-h-[95vh] object-contain rounded-lg shadow-2xl"
             />

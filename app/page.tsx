@@ -34,7 +34,7 @@ export default function Home() {
       {/* Visi Misi Pelayanan */}
       <section className="relative py-20 px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0">
-          <div className="w-full h-full bg-[url('/image/peta-nagarii.jpg')] bg-cover bg-center opacity-40"></div>
+          <div className="w-full h-full bg-[url('/image/map-nagari.jpeg')] bg-cover bg-center opacity-40"></div>
           <div className="absolute inset-0 bg-white/75"></div>
         </div>
         <div className="relative max-w-6xl mx-auto scroll-slide-bottom">
