@@ -400,4 +400,4 @@ Untuk pertanyaan atau informasi lebih lanjut tentang website ini, silakan hubung
 
 ---
 
-**Dibuat dengan ❤️ untuk Nagari Aia Manggih Barat**
+**© 2026 Kuliah Kerja Nyata Reguler 1 Universitas Andalas — All Rights Reserved.**
