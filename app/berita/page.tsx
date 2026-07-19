@@ -43,9 +43,16 @@ async function getBerita(page: number) {
 export default async function Berita({
   searchParams,
 }: {
-  searchParams?: { page?: string };
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
-  const page = Math.max(Number(searchParams?.page) || 1, 1);
+  const resolvedSearchParams = await searchParams;
+
+  const pageValue = Array.isArray(resolvedSearchParams.page)
+    ? resolvedSearchParams.page[0]
+    : resolvedSearchParams.page;
+
+  const page = Math.max(Number(pageValue) || 1, 1);
+
   const { data: beritaList, count } = await getBerita(page);
   const totalPages = Math.max(Math.ceil(count / PER_PAGE), 1);
 

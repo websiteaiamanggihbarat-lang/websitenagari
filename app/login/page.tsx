@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -44,11 +44,25 @@ async function loginAction(formData: FormData) {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { error?: string; redirectedFrom?: string };
+  searchParams: Promise<{
+    error?: string | string[];
+    redirectedFrom?: string | string[];
+  }>;
 }) {
-  const error = searchParams?.error ? decodeURIComponent(searchParams.error) : "";
-  const redirectedFrom = searchParams?.redirectedFrom || "";
+  const resolvedSearchParams = await searchParams;
 
+  const errorValue = Array.isArray(resolvedSearchParams.error)
+    ? resolvedSearchParams.error[0]
+    : resolvedSearchParams.error;
+
+  const redirectedFromValue = Array.isArray(
+    resolvedSearchParams.redirectedFrom
+  )
+    ? resolvedSearchParams.redirectedFrom[0]
+    : resolvedSearchParams.redirectedFrom;
+
+  const error = errorValue ? decodeURIComponent(errorValue) : "";
+  const redirectedFrom = redirectedFromValue || "";
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">

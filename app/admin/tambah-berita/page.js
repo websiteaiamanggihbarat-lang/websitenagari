@@ -116,7 +116,20 @@ export default function TambahBerita() {
 
     setLoading(true)
 
-    let fotoUrlToSave = existingFotoUrl
+// Cek apakah sesi admin terbaca oleh Supabase client di browser
+const {
+  data: { session },
+  error: sessionError,
+} = await supabase.auth.getSession()
+
+
+if (sessionError || !session) {
+  alert('Sesi admin tidak terbaca. Silakan login ulang.')
+  setLoading(false)
+  return
+}
+
+let fotoUrlToSave = existingFotoUrl
 
     if (fotoFile) {
       if (fotoFile.size > 2 * 1024 * 1024) {
