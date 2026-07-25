@@ -21,6 +21,7 @@ const FORM_SARANA_AWAL = {
   alamat: "",
   jumlah_siswa: "0",
   jumlah_guru: "0",
+  jumlah_staf: "0",
   status_operasional: "aktif",
   nomor_kontak: "",
   lokasi_peta: "",
@@ -28,6 +29,19 @@ const FORM_SARANA_AWAL = {
   urutan: "0",
   is_active: true,
 }
+
+const SARAN_FASILITAS = [
+  "Ruang Kelas",
+  "Kamar Mandi",
+  "Musala",
+  "Perpustakaan",
+  "UKS",
+  "Laboratorium",
+  "Kantin",
+  "Lapangan",
+  "Ruang Guru",
+  "Ruang Kepala Sekolah",
+]
 
 const PILIHAN_TINGKAT = [
   "PAUD",
@@ -177,6 +191,10 @@ export default function SaranaPendidikanAdmin() {
     FORM_SARANA_AWAL
   )
 
+  const [formFasilitasList, setFormFasilitasList] = useState([])
+  const [existingFasilitasIds, setExistingFasilitasIds] = useState([])
+  const [loadingFasilitas, setLoadingFasilitas] = useState(false)
+
   const [pendataanList, setPendataanList] = useState([])
   const [saranaList, setSaranaList] = useState([])
 
@@ -278,6 +296,16 @@ export default function SaranaPendidikanAdmin() {
       .reduce(
         (total, item) =>
           total + keAngka(item.jumlah_guru),
+        0
+      )
+  }, [saranaList])
+
+  const totalStaf = useMemo(() => {
+    return saranaList
+      .filter((item) => item.is_active)
+      .reduce(
+        (total, item) =>
+          total + keAngka(item.jumlah_staf),
         0
       )
   }, [saranaList])
@@ -571,12 +599,49 @@ export default function SaranaPendidikanAdmin() {
     })
 
     setEditingSaranaId(null)
+    setFormFasilitasList([])
+    setExistingFasilitasIds([])
+    setLoadingFasilitas(false)
     setFotoFile(null)
     setExistingFotoUrl("")
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
+  }
+
+  const tambahBarisFasilitas = () => {
+    const tempId =
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+    setFormFasilitasList((prev) => [
+      ...prev,
+      {
+        tempId,
+        nama_fasilitas: "",
+        jumlah: "1",
+        urutan: (prev.length + 1).toString(),
+        is_active: true,
+      },
+    ])
+  }
+
+  const ubahBarisFasilitas = (index, field, value) => {
+    setFormFasilitasList((prev) => {
+      const copy = [...prev]
+      copy[index] = {
+        ...copy[index],
+        [field]: value,
+      }
+      return copy
+    })
+  }
+
+  const hapusBarisFasilitas = (index) => {
+    setFormFasilitasList((prev) => prev.filter((_, i) => i !== index))
   }
 
   const simpanPendataan = async (event) => {
@@ -988,6 +1053,10 @@ export default function SaranaPendidikanAdmin() {
       formSarana.jumlah_guru
     )
 
+    const jumlahStaf = keAngka(
+      formSarana.jumlah_staf
+    )
+
     const urutan = keAngka(
       formSarana.urutan
     )
@@ -995,12 +1064,31 @@ export default function SaranaPendidikanAdmin() {
     if (
       jumlahSiswa < 0 ||
       jumlahGuru < 0 ||
+      jumlahStaf < 0 ||
       urutan < 0
     ) {
       alert(
-        "Jumlah siswa, jumlah guru, dan urutan tidak boleh kurang dari nol."
+        "Jumlah siswa, jumlah guru, jumlah staf, dan urutan tidak boleh kurang dari nol."
       )
       return
+    }
+
+    // Validasi Fasilitas (Cek Duplikat Nama)
+    const namaMap = new Set()
+    for (let i = 0; i < formFasilitasList.length; i++) {
+      const itemFas = formFasilitasList[i]
+      const namaTrim = (itemFas.nama_fasilitas || "").trim().toLowerCase()
+      const jml = keAngka(itemFas.jumlah)
+
+      if (namaTrim.length > 0 && jml >= 1) {
+        if (namaMap.has(namaTrim)) {
+          alert(
+            `Nama sarana/fasilitas "${itemFas.nama_fasilitas.trim()}" ditulis lebih dari satu kali. Mohon gabungkan atau ubah nama duplikat.`
+          )
+          return
+        }
+        namaMap.add(namaTrim)
+      }
     }
 
     if (
@@ -1070,6 +1158,9 @@ export default function SaranaPendidikanAdmin() {
         jumlah_guru:
           jumlahGuru,
 
+        jumlah_staf:
+          jumlahStaf,
+
         status_operasional:
           formSarana.status_operasional,
 
@@ -1094,6 +1185,8 @@ export default function SaranaPendidikanAdmin() {
           Boolean(formSarana.is_active),
       }
 
+      let errorFasilitas = false
+
       if (editingSaranaId) {
         const {
           error: updateError,
@@ -1105,15 +1198,117 @@ export default function SaranaPendidikanAdmin() {
         if (updateError) {
           throw updateError
         }
+
+        // Sinkronisasi Aman Fasilitas saat Edit
+        const fasilitasValidForm = formFasilitasList
+          .map((f, index) => ({
+            id: f.id || null,
+            nama_fasilitas: f.nama_fasilitas.trim(),
+            jumlah: keAngka(f.jumlah),
+            urutan: index + 1,
+            is_active: Boolean(f.is_active ?? true),
+          }))
+          .filter((f) => f.nama_fasilitas.length > 0 && f.jumlah >= 1)
+
+        const currentFormFasilitasIds = fasilitasValidForm
+          .map((f) => f.id)
+          .filter(Boolean)
+
+        // 1. Update fasilitas lama yang ada di form
+        const itemsToUpdate = fasilitasValidForm.filter((f) => Boolean(f.id))
+        for (const itemUpd of itemsToUpdate) {
+          const { error: errUpd } = await supabase
+            .from("fasilitas_sarana_pendidikan")
+            .update({
+              nama_fasilitas: itemUpd.nama_fasilitas,
+              jumlah: itemUpd.jumlah,
+              urutan: itemUpd.urutan,
+              is_active: itemUpd.is_active,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", itemUpd.id)
+            .eq("sarana_pendidikan_id", editingSaranaId)
+
+          if (errUpd) {
+            console.error("Error update fasilitas:", errUpd)
+            errorFasilitas = true
+          }
+        }
+
+        // 2. Insert fasilitas baru (belum punya ID)
+        const itemsToInsert = fasilitasValidForm
+          .filter((f) => !f.id)
+          .map((f) => ({
+            sarana_pendidikan_id: editingSaranaId,
+            nama_fasilitas: f.nama_fasilitas,
+            jumlah: f.jumlah,
+            urutan: f.urutan,
+            is_active: f.is_active,
+          }))
+
+        if (itemsToInsert.length > 0) {
+          const { error: errIns } = await supabase
+            .from("fasilitas_sarana_pendidikan")
+            .insert(itemsToInsert)
+
+          if (errIns) {
+            console.error("Error insert fasilitas baru:", errIns)
+            errorFasilitas = true
+          }
+        }
+
+        // 3. Hapus fasilitas lama yang sudah tidak ada di form (atau jumlah < 1)
+        const idsToDelete = existingFasilitasIds.filter(
+          (id) => !currentFormFasilitasIds.includes(id)
+        )
+
+        if (idsToDelete.length > 0 && !errorFasilitas) {
+          const { error: errDel } = await supabase
+            .from("fasilitas_sarana_pendidikan")
+            .delete()
+            .in("id", idsToDelete)
+            .eq("sarana_pendidikan_id", editingSaranaId)
+
+          if (errDel) {
+            console.error("Error hapus fasilitas lama:", errDel)
+            errorFasilitas = true
+          }
+        }
       } else {
         const {
+          data: sekolahBaru,
           error: insertError,
         } = await supabase
           .from("sarana_pendidikan")
           .insert([dataSarana])
+          .select("id")
+          .single()
 
         if (insertError) {
           throw insertError
+        }
+
+        const sekolahIdBaru = sekolahBaru.id
+
+        const fasilitasValid = formFasilitasList
+          .map((f, index) => ({
+            sarana_pendidikan_id: sekolahIdBaru,
+            nama_fasilitas: f.nama_fasilitas.trim(),
+            jumlah: keAngka(f.jumlah),
+            urutan: index + 1,
+            is_active: true,
+          }))
+          .filter((f) => f.nama_fasilitas.length > 0 && f.jumlah >= 1)
+
+        if (fasilitasValid.length > 0) {
+          const { error: errFas } = await supabase
+            .from("fasilitas_sarana_pendidikan")
+            .insert(fasilitasValid)
+
+          if (errFas) {
+            console.error("Gagal menyimpan fasilitas baru:", errFas)
+            errorFasilitas = true
+          }
         }
       }
 
@@ -1129,11 +1324,15 @@ export default function SaranaPendidikanAdmin() {
         )
       }
 
-      alert(
-        editingSaranaId
-          ? "Sarana pendidikan berhasil diperbarui!"
-          : "Sarana pendidikan berhasil ditambahkan!"
-      )
+      if (errorFasilitas) {
+        alert("Data sekolah berhasil disimpan, namun sebagian atau seluruh sarana/fasilitas gagal disimpan.")
+      } else {
+        alert(
+          editingSaranaId
+            ? "Sarana pendidikan berhasil diperbarui!"
+            : "Sarana pendidikan berhasil ditambahkan!"
+        )
+      }
 
       resetFormSarana()
 
@@ -1169,8 +1368,9 @@ export default function SaranaPendidikanAdmin() {
     }
   }
 
-  const mulaiEditSarana = (item) => {
+  const mulaiEditSarana = async (item) => {
     setEditingSaranaId(item.id)
+    setLoadingFasilitas(true)
 
     setFormSarana({
       nama_sarana:
@@ -1192,6 +1392,10 @@ export default function SaranaPendidikanAdmin() {
 
       jumlah_guru:
         item.jumlah_guru?.toString() ||
+        "0",
+
+      jumlah_staf:
+        item.jumlah_staf?.toString() ||
         "0",
 
       status_operasional:
@@ -1223,6 +1427,38 @@ export default function SaranaPendidikanAdmin() {
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
+    }
+
+    try {
+      const { data: fasilitasData, error: fasilitasError } = await supabase
+        .from("fasilitas_sarana_pendidikan")
+        .select("*")
+        .eq("sarana_pendidikan_id", item.id)
+        .order("urutan", { ascending: true })
+        .order("nama_fasilitas", { ascending: true })
+
+      if (fasilitasError) {
+        console.error("Gagal mengambil fasilitas:", fasilitasError)
+        setFormFasilitasList([])
+        setExistingFasilitasIds([])
+      } else {
+        const listFasilitas = (fasilitasData || []).map((f) => ({
+          id: f.id,
+          tempId: f.id,
+          nama_fasilitas: f.nama_fasilitas || "",
+          jumlah: (f.jumlah ?? 1).toString(),
+          urutan: (f.urutan ?? 1).toString(),
+          is_active: Boolean(f.is_active ?? true),
+        }))
+        setFormFasilitasList(listFasilitas)
+        setExistingFasilitasIds((fasilitasData || []).map((f) => f.id))
+      }
+    } catch (err) {
+      console.error("Error mengambil fasilitas sekolah:", err)
+      setFormFasilitasList([])
+      setExistingFasilitasIds([])
+    } finally {
+      setLoadingFasilitas(false)
     }
 
     window.scrollTo({
@@ -1707,6 +1943,13 @@ export default function SaranaPendidikanAdmin() {
                         )}{" "}
                         guru
                       </span>
+
+                      <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+                        {formatAngka(
+                          totalStaf
+                        )}{" "}
+                        staf
+                      </span>
                     </div>
                   </div>
 
@@ -1888,7 +2131,7 @@ export default function SaranaPendidikanAdmin() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       <div>
                         <label className="mb-2 block text-sm font-medium text-gray-700">
                           Jumlah Siswa
@@ -1919,6 +2162,25 @@ export default function SaranaPendidikanAdmin() {
                           name="jumlah_guru"
                           value={
                             formSarana.jumlah_guru
+                          }
+                          onChange={
+                            ubahFormSarana
+                          }
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
+                          Jumlah Staf
+                        </label>
+
+                        <input
+                          type="number"
+                          min="0"
+                          name="jumlah_staf"
+                          value={
+                            formSarana.jumlah_staf
                           }
                           onChange={
                             ubahFormSarana
@@ -1985,6 +2247,99 @@ export default function SaranaPendidikanAdmin() {
                           className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
                         />
                       </div>
+                    </div>
+
+                    {/* Seksi Daftar Sarana Sekolah (Fasilitas) */}
+                    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-900">
+                            Daftar Sarana Sekolah
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            Fasilitas pendukung seperti ruang kelas, laboratorium, perpustakaan, dll.
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={tambahBarisFasilitas}
+                          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#2c1b01] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3a2604] transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          <span>+ Tambah Sarana</span>
+                        </button>
+                      </div>
+
+                      <datalist id="saran-fasilitas-list">
+                        {SARAN_FASILITAS.map((saran) => (
+                          <option key={saran} value={saran} />
+                        ))}
+                      </datalist>
+
+                      {loadingFasilitas ? (
+                        <p className="py-4 text-center text-xs text-gray-500">
+                          Memuat sarana sekolah...
+                        </p>
+                      ) : formFasilitasList.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center">
+                          <p className="text-xs text-gray-500">
+                            Belum ada rincian sarana/fasilitas ditambahkan. Klik tombol "+ Tambah Sarana" untuk menambah.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {formFasilitasList.map((item, index) => (
+                            <div
+                              key={item.tempId || item.id || index}
+                              className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm"
+                            >
+                              <span className="text-xs font-bold text-gray-400 w-6 text-center">
+                                {index + 1}.
+                              </span>
+
+                              <div className="flex-1 min-w-[160px]">
+                                <input
+                                  type="text"
+                                  list="saran-fasilitas-list"
+                                  placeholder="Nama sarana (mis. Ruang Kelas)"
+                                  value={item.nama_fasilitas}
+                                  onChange={(e) =>
+                                    ubahBarisFasilitas(index, "nama_fasilitas", e.target.value)
+                                  }
+                                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
+                                />
+                              </div>
+
+                              <div className="w-28 flex items-center gap-1">
+                                <span className="text-xs text-gray-500">Jumlah:</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={item.jumlah}
+                                  onChange={(e) =>
+                                    ubahBarisFasilitas(index, "jumlah", e.target.value)
+                                  }
+                                  className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
+                                />
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => hapusBarisFasilitas(index)}
+                                className="rounded-md border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+                                title="Hapus baris ini"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -2211,27 +2566,39 @@ export default function SaranaPendidikanAdmin() {
                                 }
                               </p>
 
-                              <div className="mt-4 grid grid-cols-2 gap-3">
-                                <div className="rounded-lg bg-blue-50 p-3">
-                                  <p className="text-xs text-gray-500">
+                              <div className="mt-4 grid grid-cols-3 gap-2">
+                                <div className="rounded-lg bg-blue-50 p-2.5 text-center">
+                                  <p className="text-[11px] text-gray-500">
                                     Siswa
                                   </p>
 
-                                  <p className="mt-1 font-bold text-blue-700">
+                                  <p className="mt-0.5 font-bold text-blue-700">
                                     {formatAngka(
                                       item.jumlah_siswa
                                     )}
                                   </p>
                                 </div>
 
-                                <div className="rounded-lg bg-green-50 p-3">
-                                  <p className="text-xs text-gray-500">
+                                <div className="rounded-lg bg-green-50 p-2.5 text-center">
+                                  <p className="text-[11px] text-gray-500">
                                     Guru
                                   </p>
 
-                                  <p className="mt-1 font-bold text-green-700">
+                                  <p className="mt-0.5 font-bold text-green-700">
                                     {formatAngka(
                                       item.jumlah_guru
+                                    )}
+                                  </p>
+                                </div>
+
+                                <div className="rounded-lg bg-purple-50 p-2.5 text-center">
+                                  <p className="text-[11px] text-gray-500">
+                                    Staf
+                                  </p>
+
+                                  <p className="mt-0.5 font-bold text-purple-700">
+                                    {formatAngka(
+                                      item.jumlah_staf
                                     )}
                                   </p>
                                 </div>
