@@ -1,5 +1,7 @@
 import { connection } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import Link from "next/link"
+import { getSlugByTingkat } from "@/lib/saranaPendidikan"
 
 type PendataanSaranaPendidikan = {
   id: string
@@ -62,33 +64,6 @@ function formatTanggalWaktu(
     month: "long",
     year: "numeric",
   })
-}
-
-function formatStatusOperasional(nilai: string) {
-  const daftarStatus: Record<string, string> = {
-    aktif: "Aktif",
-    tidak_aktif: "Tidak Aktif",
-    dalam_pembangunan: "Dalam Pembangunan",
-    lainnya: "Lainnya",
-  }
-
-  return daftarStatus[nilai] || nilai
-}
-
-function kelasStatusOperasional(nilai: string) {
-  if (nilai === "aktif") {
-    return "bg-green-100 text-green-700"
-  }
-
-  if (nilai === "dalam_pembangunan") {
-    return "bg-yellow-100 text-yellow-700"
-  }
-
-  if (nilai === "tidak_aktif") {
-    return "bg-red-100 text-red-700"
-  }
-
-  return "bg-gray-100 text-gray-700"
 }
 
 async function ambilDataSaranaPendidikan(): Promise<HasilDataSarana> {
@@ -450,156 +425,58 @@ export default async function SaranaPendidikanDinamis() {
                   </thead>
 
                   <tbody>
-                    {ringkasanTingkat.map(
-                      (item, index) => (
+                    {ringkasanTingkat.map((item, index) => {
+                      const slug = getSlugByTingkat(item.tingkat)
+                      return (
                         <tr
                           key={item.tingkat}
-                          className="border-b border-gray-200 last:border-b-0"
+                          className="border-b border-gray-200 hover:bg-[#f7f2e8]/60 transition-colors group/row"
                         >
-                          <td className="px-3 py-2">
+                          <td className="px-3 py-2.5">
                             {index + 1}.
                           </td>
 
-                          <td className="px-3 py-2">
-                            {item.tingkat}
+                          <td className="px-3 py-2.5">
+                            <Link
+                              href={`/sarana-pendidikan/${slug}`}
+                              className="font-semibold text-gray-900 group-hover/row:text-[#2c1b01] flex items-center justify-between hover:underline"
+                            >
+                              <span>{item.tingkat}</span>
+                              <span className="text-xs text-[#5a3b0d] font-normal group-hover/row:translate-x-0.5 transition-transform">
+                                Lihat daftar &rarr;
+                              </span>
+                            </Link>
                           </td>
 
-                          <td className="px-3 py-2 text-center font-semibold">
-                            {formatAngka(
-                              item.jumlah
-                            )}
+                          <td className="px-3 py-2.5 text-center font-semibold">
+                            <Link
+                              href={`/sarana-pendidikan/${slug}`}
+                              className="inline-block px-2.5 py-0.5 rounded-md bg-white border border-gray-200 text-[#2c1b01] hover:bg-[#f0e8db] hover:border-[#b6a587] transition-all"
+                            >
+                              {formatAngka(item.jumlah)}
+                            </Link>
                           </td>
                         </tr>
                       )
-                    )}
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
           </div>
 
-          {/* Detail setiap sekolah */}
-          {sarana.length > 0 && (
-            <details className="rounded-xl border border-gray-200 bg-white/70">
-              <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-[#2c1b01] hover:bg-[#f7f2e8] rounded-xl">
-                Lihat daftar sarana pendidikan (
-                {formatAngka(sarana.length)})
-              </summary>
-
-              <div className="max-h-[520px] space-y-4 overflow-y-auto border-t border-gray-200 p-4">
-                {sarana.map((item) => {
-                  const nomorTelepon = String(
-                    item.nomor_kontak || ""
-                  ).replace(/[^0-9+]/g, "")
-
-                  return (
-                    <article
-                      key={item.id}
-                      className="overflow-hidden rounded-xl border border-gray-200 bg-white"
-                    >
-                      {item.foto_url && (
-                        <img
-                          src={item.foto_url}
-                          alt={`Foto ${item.nama_sarana}`}
-                          className="h-44 w-full object-cover"
-                        />
-                      )}
-
-                      <div className="p-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-[#f0e8db] px-2.5 py-1 text-xs font-semibold text-[#2c1b01]">
-                            {item.tingkat_pendidikan}
-                          </span>
-
-                          {item.jenis_pengelolaan && (
-                            <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                              {item.jenis_pengelolaan}
-                            </span>
-                          )}
-
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${kelasStatusOperasional(
-                              item.status_operasional
-                            )}`}
-                          >
-                            {formatStatusOperasional(
-                              item.status_operasional
-                            )}
-                          </span>
-                        </div>
-
-                        <h4 className="mt-3 text-base font-bold text-gray-900">
-                          {item.nama_sarana}
-                        </h4>
-
-                        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-gray-600">
-                          {item.alamat}
-                        </p>
-
-                        <div className="mt-4 grid grid-cols-2 gap-3">
-                          <div className="rounded-lg bg-blue-50 p-3">
-                            <p className="text-xs text-gray-500">
-                              Jumlah siswa
-                            </p>
-
-                            <p className="mt-1 font-bold text-blue-700">
-                              {formatAngka(
-                                item.jumlah_siswa
-                              )}
-                            </p>
-                          </div>
-
-                          <div className="rounded-lg bg-green-50 p-3">
-                            <p className="text-xs text-gray-500">
-                              Jumlah guru
-                            </p>
-
-                            <p className="mt-1 font-bold text-green-700">
-                              {formatAngka(
-                                item.jumlah_guru
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        {(item.nomor_kontak ||
-                          item.lokasi_peta) && (
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            {item.nomor_kontak && (
-                              <a
-                                href={`tel:${nomorTelepon}`}
-                                className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100"
-                              >
-                                Kontak:{" "}
-                                {item.nomor_kontak}
-                              </a>
-                            )}
-
-                            {item.lokasi_peta && (
-                              <a
-                                href={item.lokasi_peta}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
-                              >
-                                Buka lokasi peta
-                              </a>
-                            )}
-                          </div>
-                        )}
-
-                        {item.keterangan && (
-                          <p className="mt-4 whitespace-pre-line rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
-                            {item.keterangan}
-                          </p>
-                        )}
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            </details>
-          )}
+          {/* Tombol Utama Buka Katalog Sarana Pendidikan */}
+          <div className="pt-2">
+            <Link
+              href="/sarana-pendidikan"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#5a3b0d] px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-[#1a1200] hover:to-[#2c1b01] hover:shadow-lg"
+            >
+              <span>Lihat Semua Tingkat Sarana Pendidikan</span>
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </Link>
+          </div>
         </div>
       )}
     </div>
