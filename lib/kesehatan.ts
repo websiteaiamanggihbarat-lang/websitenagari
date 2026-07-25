@@ -297,3 +297,117 @@ export async function fetchHitungKaderPosyanduAktif(): Promise<number> {
 
   return totalKader
 }
+
+export interface RingkasanKesehatanBeranda {
+  pendataan: PendataanKesehatan | null
+  jumlahPerJenis: Record<JenisSlugKesehatan, number>
+  jumlahKaderPosyandu: number
+  error: string | null
+}
+
+/**
+ * Mengambil ringkasan data kesehatan publik yang aktif dan dipublikasikan satu kali
+ * untuk ditampilkan di komponen beranda (KesehatanDinamis.tsx).
+ */
+export async function fetchRingkasanKesehatanAktif(): Promise<RingkasanKesehatanBeranda> {
+  try {
+    const pendataanAktif = await fetchPendataanKesehatanAktif()
+    if (!pendataanAktif) {
+      return {
+        pendataan: null,
+        jumlahPerJenis: {
+          puskesmas: 0,
+          pustu: 0,
+          posyandu: 0,
+          "praktik-bidan": 0,
+          polindes: 0,
+          lainnya: 0,
+        },
+        jumlahKaderPosyandu: 0,
+        error: null,
+      }
+    }
+
+    const { data: listSarana, error: errSarana } = await supabase
+      .from("sarana_kesehatan")
+      .select("id, jenis_slug")
+      .eq("pendataan_id", pendataanAktif.id)
+      .eq("is_active", true)
+
+    if (errSarana) {
+      console.error("fetchRingkasanKesehatanAktif errSarana:", errSarana)
+      return {
+        pendataan: pendataanAktif,
+        jumlahPerJenis: {
+          puskesmas: 0,
+          pustu: 0,
+          posyandu: 0,
+          "praktik-bidan": 0,
+          polindes: 0,
+          lainnya: 0,
+        },
+        jumlahKaderPosyandu: 0,
+        error: errSarana.message,
+      }
+    }
+
+    const saranaList = listSarana || []
+    const saranaIds = saranaList.map((item) => item.id)
+
+    const jumlahPerJenis: Record<JenisSlugKesehatan, number> = {
+      puskesmas: 0,
+      pustu: 0,
+      posyandu: 0,
+      "praktik-bidan": 0,
+      polindes: 0,
+      lainnya: 0,
+    }
+
+    for (const item of saranaList) {
+      const slug = item.jenis_slug as JenisSlugKesehatan
+      if (slug in jumlahPerJenis) {
+        jumlahPerJenis[slug] = (jumlahPerJenis[slug] || 0) + 1
+      }
+    }
+
+    let jumlahKaderPosyandu = 0
+
+    if (saranaIds.length > 0) {
+      const { data: listTenaga, error: errTenaga } = await supabase
+        .from("tenaga_kesehatan_sarana")
+        .select("jenis_tenaga, jumlah")
+        .in("sarana_kesehatan_id", saranaIds)
+        .eq("is_active", true)
+
+      if (!errTenaga && listTenaga) {
+        jumlahKaderPosyandu = listTenaga
+          .filter(
+            (t) => (t.jenis_tenaga || "").trim().toLowerCase() === "kader posyandu"
+          )
+          .reduce((total, t) => total + (Number(t.jumlah) || 0), 0)
+      }
+    }
+
+    return {
+      pendataan: pendataanAktif,
+      jumlahPerJenis,
+      jumlahKaderPosyandu,
+      error: null,
+    }
+  } catch (err: any) {
+    console.error("fetchRingkasanKesehatanAktif catch error:", err)
+    return {
+      pendataan: null,
+      jumlahPerJenis: {
+        puskesmas: 0,
+        pustu: 0,
+        posyandu: 0,
+        "praktik-bidan": 0,
+        polindes: 0,
+        lainnya: 0,
+      },
+      jumlahKaderPosyandu: 0,
+      error: err?.message || "Gagal membaca data kesehatan.",
+    }
+  }
+}
