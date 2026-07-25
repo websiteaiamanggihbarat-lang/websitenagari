@@ -1,440 +1,608 @@
 "use client"
-import { useState, useEffect, useRef } from "react"
-import { supabase } from "@/lib/supabase"
+
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { supabase } from "@/lib/supabase"
+
+function formatTanggal(nilai) {
+  if (!nilai) {
+    return "Tanggal tidak tersedia"
+  }
+
+  return new Date(nilai).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })
+}
+
+function potongTeks(teks, batas = 180) {
+  if (!teks) {
+    return ""
+  }
+
+  if (teks.length <= batas) {
+    return teks
+  }
+
+  return `${teks.slice(0, batas).trim()}...`
+}
+
+async function keluarDariAdmin(labelError = "Logout error") {
+  try {
+    await supabase.auth.signOut()
+
+    if (typeof window !== "undefined") {
+      localStorage.clear()
+      sessionStorage.clear()
+    }
+
+    const response = await fetch("/auth/signout", {
+      method: "POST",
+      credentials: "include",
+      redirect: "follow",
+    })
+
+    if (response.redirected) {
+      window.location.href = response.url
+    } else {
+      window.location.href = `/login?logout=success&t=${Date.now()}`
+    }
+  } catch (error) {
+    console.error(labelError, error)
+    window.location.href = `/login?logout=success&t=${Date.now()}`
+  }
+}
 
 export default function TambahBerita() {
-  const [judul, setJudul] = useState('')
-  const [konten, setKonten] = useState('')
+  const [judul, setJudul] = useState("")
+  const [konten, setKonten] = useState("")
+  const [fotoFile, setFotoFile] = useState(null)
+  const [existingFotoUrl, setExistingFotoUrl] = useState("")
+
   const [beritaList, setBeritaList] = useState([])
   const [editingId, setEditingId] = useState(null)
+  const [searchQuery, setSearchQuery] = useState("")
+
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [fotoFile, setFotoFile] = useState(null)
-  const [existingFotoUrl, setExistingFotoUrl] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [hasBackfilledDate, setHasBackfilledDate] = useState(false)
+  const [loadingData, setLoadingData] = useState(true)
+  const [error, setError] = useState("")
+
   const fileInputRef = useRef(null)
 
-  // Auto logout jika idle 5 menit
-  useEffect(() => {
-    let timeoutId
+  const periksaSesi = async () => {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
 
-    const logout = async () => {
-      try {
-        // Sign out dari Supabase client juga
-        await supabase.auth.signOut()
-        
-        // Clear storage dulu
-        if (typeof window !== 'undefined') {
-          localStorage.clear()
-          sessionStorage.clear()
-        }
-        
-        // Panggil endpoint signout yang akan redirect
-        const response = await fetch('/auth/signout', { 
-          method: 'POST', 
-          credentials: 'include',
-          redirect: 'follow'
-        })
-        
-        // Jika response redirect, ikuti redirect tersebut
-        if (response.redirected) {
-          window.location.href = response.url
-        } else {
-          // Fallback: redirect manual dengan query parameter logout
-          window.location.href = `/login?logout=success&t=${Date.now()}`
-        }
-      } catch (err) {
-        console.error('Auto logout error:', err)
-        // Tetap redirect meskipun ada error
-        window.location.href = `/login?logout=success&t=${Date.now()}`
-      }
+    if (sessionError || !session) {
+      alert("Sesi admin tidak terbaca. Silakan login ulang.")
+      window.location.href = "/login"
+      return null
     }
 
-    const resetTimer = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-      timeoutId = window.setTimeout(logout, 5 * 60 * 1000)
-    }
-
-    const events = ['mousemove', 'keydown', 'mousedown', 'touchstart']
-    events.forEach((event) => window.addEventListener(event, resetTimer))
-    resetTimer()
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-      events.forEach((event) =>
-        window.removeEventListener(event, resetTimer)
-      )
-    }
-  }, [])
+    return session
+  }
 
   const fetchBerita = async () => {
-    setLoading(true)
-    setError('')
-    const { data, error } = await supabase
-      .from('berita')
-      .select('*')
-      .order('id', { ascending: false })
+    setLoadingData(true)
+    setError("")
 
-    if (error) {
-      console.error('fetchBerita error:', error?.message, error)
-      setError(error?.message || 'Gagal memuat data berita')
-    } else {
-      // Jika ada berita lama tanpa tanggal, isi dengan timestamp sekarang sekali saja
-      const missingDate = (data || []).some((item) => !item.created_at)
-      if (missingDate && !hasBackfilledDate) {
-        const nowIso = new Date().toISOString()
-        await supabase
-          .from('berita')
-          .update({ created_at: nowIso })
-          .is('created_at', null)
-        setHasBackfilledDate(true)
-        // Refetch untuk memastikan data terbarui
-        return fetchBerita()
-      }
-      setBeritaList(data || [])
+    const session = await periksaSesi()
+
+    if (!session) {
+      setLoadingData(false)
+      return
     }
-    setLoading(false)
+
+    const { data, error: fetchError } = await supabase
+      .from("berita")
+      .select("*")
+      .order("created_at", {
+        ascending: false,
+      })
+      .order("id", {
+        ascending: false,
+      })
+
+    if (fetchError) {
+      console.error("fetchBerita error:", fetchError)
+
+      setError(
+        fetchError.message ||
+          "Gagal memuat data berita."
+      )
+
+      setLoadingData(false)
+      return
+    }
+
+    setBeritaList(data || [])
+    setLoadingData(false)
   }
 
   useEffect(() => {
     fetchBerita()
   }, [])
 
-  const simpanBerita = async (e) => {
-    e.preventDefault()
+  // Logout otomatis jika admin tidak aktif selama 5 menit.
+  useEffect(() => {
+    let timeoutId
 
-    if (!judul.trim() || !konten.trim()) {
-      alert('Judul dan isi berita tidak boleh kosong')
+    const logoutOtomatis = async () => {
+      await keluarDariAdmin("Auto logout error")
+    }
+
+    const resetTimer = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+
+      timeoutId = window.setTimeout(
+        logoutOtomatis,
+        5 * 60 * 1000
+      )
+    }
+
+    const events = [
+      "mousemove",
+      "keydown",
+      "mousedown",
+      "touchstart",
+    ]
+
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimer)
+    })
+
+    resetTimer()
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimer)
+      })
+    }
+  }, [])
+
+  const filteredBeritaList = useMemo(() => {
+    const kataKunci = searchQuery
+      .trim()
+      .toLowerCase()
+
+    if (!kataKunci) {
+      return beritaList
+    }
+
+    return beritaList.filter((item) => {
+      const judulBerita = String(
+        item.judul || ""
+      ).toLowerCase()
+
+      const isiBerita = String(
+        item.konten || ""
+      ).toLowerCase()
+
+      return (
+        judulBerita.includes(kataKunci) ||
+        isiBerita.includes(kataKunci)
+      )
+    })
+  }, [beritaList, searchQuery])
+
+  const resetForm = () => {
+    setJudul("")
+    setKonten("")
+    setFotoFile(null)
+    setExistingFotoUrl("")
+    setEditingId(null)
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  const uploadFotoBerita = async () => {
+    if (!fotoFile) {
+      return existingFotoUrl || ""
+    }
+
+    if (!fotoFile.type.startsWith("image/")) {
+      throw new Error(
+        "File yang dipilih harus berupa gambar."
+      )
+    }
+
+    if (fotoFile.size > 2 * 1024 * 1024) {
+      throw new Error(
+        "Ukuran foto terlalu besar. Maksimal 2 MB."
+      )
+    }
+
+    const namaAman = fotoFile.name
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9._-]/g, "-")
+
+    const namaFile = `${Date.now()}-${namaAman}`
+
+    const { error: uploadError } = await supabase
+      .storage
+      .from("foto-berita")
+      .upload(namaFile, fotoFile, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: fotoFile.type,
+      })
+
+    if (uploadError) {
+      throw new Error(
+        `Gagal mengunggah foto: ${uploadError.message}`
+      )
+    }
+
+    const { data: publicData } = supabase
+      .storage
+      .from("foto-berita")
+      .getPublicUrl(namaFile)
+
+    return publicData?.publicUrl || ""
+  }
+
+  const simpanBerita = async (event) => {
+    event.preventDefault()
+
+    if (loading) {
+      return
+    }
+
+    if (!judul.trim()) {
+      alert("Judul berita wajib diisi.")
+      return
+    }
+
+    if (!konten.trim()) {
+      alert("Isi berita wajib diisi.")
       return
     }
 
     setLoading(true)
+    setError("")
 
-// Cek apakah sesi admin terbaca oleh Supabase client di browser
-const {
-  data: { session },
-  error: sessionError,
-} = await supabase.auth.getSession()
+    const session = await periksaSesi()
 
-
-if (sessionError || !session) {
-  alert('Sesi admin tidak terbaca. Silakan login ulang.')
-  setLoading(false)
-  return
-}
-
-let fotoUrlToSave = existingFotoUrl
-
-    if (fotoFile) {
-      if (fotoFile.size > 2 * 1024 * 1024) {
-        alert('Ukuran foto terlalu besar, maksimal 2 MB')
-        setLoading(false)
-        return
-      }
-
-      const safeName = fotoFile.name.replace(/\s+/g, '-')
-      const fileName = `${Date.now()}-${safeName}`
-
-      const { error: uploadError } = await supabase
-        .storage
-        .from('foto-berita')
-        .upload(fileName, fotoFile)
-
-      if (uploadError) {
-        console.error('Upload foto error:', uploadError)
-        alert('Gagal upload foto: ' + uploadError.message)
-        setLoading(false)
-        return
-      }
-
-      const { data: publicData } = supabase
-        .storage
-        .from('foto-berita')
-        .getPublicUrl(fileName)
-
-      fotoUrlToSave = publicData?.publicUrl || ''
+    if (!session) {
+      setLoading(false)
+      return
     }
 
-    let result
+    try {
+      const fotoUrlToSave =
+        await uploadFotoBerita()
 
-    if (editingId) {
-      result = await supabase
-        .from('berita')
-        .update({ 
-          judul, 
-          konten,
-          foto_url: fotoUrlToSave || null,
-        })
-        .eq('id', editingId)
-    } else {
-      result = await supabase
-        .from('berita')
-        .insert([{ 
-          judul, 
-          konten,
-          foto_url: fotoUrlToSave || null,
-          created_at: new Date().toISOString(), // pastikan ada timestamp saat berita baru ditambahkan
-        }])
-    }
+      let simpanError = null
 
-    const { error } = result
+      if (editingId) {
+        const { error: updateError } = await supabase
+          .from("berita")
+          .update({
+            judul: judul.trim(),
+            konten: konten.trim(),
+            foto_url: fotoUrlToSave || null,
+          })
+          .eq("id", editingId)
 
-    if (error) {
-      console.error('simpanBerita error:', error?.message, error)
-      alert('Gagal simpan: ' + error.message)
-    } else {
-      alert(editingId ? 'Berita berhasil diperbarui!' : 'Berita berhasil dipublikasikan!')
-      setJudul('')
-      setKonten('')
-      setEditingId(null)
-      setFotoFile(null)
-      setExistingFotoUrl('')
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+        simpanError = updateError
+      } else {
+        const { error: insertError } = await supabase
+          .from("berita")
+          .insert([
+            {
+              judul: judul.trim(),
+              konten: konten.trim(),
+              foto_url: fotoUrlToSave || null,
+              created_at: new Date().toISOString(),
+            },
+          ])
+
+        simpanError = insertError
       }
-      fetchBerita()
-    }
 
-    setLoading(false)
+      if (simpanError) {
+        throw simpanError
+      }
+
+      alert(
+        editingId
+          ? "Berita berhasil diperbarui!"
+          : "Berita berhasil dipublikasikan!"
+      )
+
+      resetForm()
+      await fetchBerita()
+    } catch (simpanError) {
+      console.error(
+        "simpanBerita error:",
+        simpanError
+      )
+
+      alert(
+        simpanError?.message ||
+          "Gagal menyimpan berita."
+      )
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleEdit = (item) => {
-    setJudul(item.judul)
-    setKonten(item.konten)
     setEditingId(item.id)
-    setExistingFotoUrl(item.foto_url || '')
+    setJudul(item.judul || "")
+    setKonten(item.konten || "")
+    setExistingFotoUrl(item.foto_url || "")
     setFotoFile(null)
+
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      fileInputRef.current.value = ""
     }
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    })
   }
 
   const handleCancelEdit = () => {
-    setJudul('')
-    setKonten('')
-    setEditingId(null)
-    setFotoFile(null)
-    setExistingFotoUrl('')
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
+    resetForm()
   }
 
-  const handleDelete = async (id) => {
-    const konfirmasi = confirm('Yakin ingin menghapus berita ini?')
-    if (!konfirmasi) return
-
-    const { error } = await supabase
-      .from('berita')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      alert('Gagal menghapus: ' + error.message)
-    } else {
-      alert('Berita berhasil dihapus')
-      setBeritaList((prev) => prev.filter((b) => b.id !== id))
-      if (editingId === id) {
-        handleCancelEdit()
-      }
+  const handleDelete = async (item) => {
+    if (loading) {
+      return
     }
-  }
 
-  // Filter berita berdasarkan search query
-  const filteredBeritaList = beritaList.filter((item) => {
-    if (!searchQuery.trim()) return true
-    const query = searchQuery.toLowerCase()
-    return (
-      item.judul.toLowerCase().includes(query) ||
-      item.konten.toLowerCase().includes(query)
+    const session = await periksaSesi()
+
+    if (!session) {
+      return
+    }
+
+    const konfirmasi = window.confirm(
+      `Yakin ingin menghapus berita "${item.judul}"?`
     )
-  })
+
+    if (!konfirmasi) {
+      return
+    }
+
+    setLoading(true)
+    setError("")
+
+    const { error: deleteError } = await supabase
+      .from("berita")
+      .delete()
+      .eq("id", item.id)
+
+    if (deleteError) {
+      console.error(
+        "hapus berita error:",
+        deleteError
+      )
+
+      alert(
+        `Gagal menghapus berita: ${deleteError.message}`
+      )
+
+      setLoading(false)
+      return
+    }
+
+    alert("Berita berhasil dihapus.")
+
+    if (editingId === item.id) {
+      resetForm()
+    }
+
+    await fetchBerita()
+    setLoading(false)
+  }
 
   const handleLogout = async () => {
     setLoading(true)
-    try {
-      // Sign out dari Supabase client juga
-      await supabase.auth.signOut()
-      
-      // Clear storage dulu
-      if (typeof window !== 'undefined') {
-        localStorage.clear()
-        sessionStorage.clear()
-      }
-      
-      // Panggil endpoint signout yang akan redirect
-      const response = await fetch('/auth/signout', { 
-        method: 'POST', 
-        credentials: 'include',
-        redirect: 'follow'
-      })
-      
-      // Jika response redirect, ikuti redirect tersebut
-      if (response.redirected) {
-        window.location.href = response.url
-      } else {
-        // Fallback: redirect manual dengan query parameter logout
-        window.location.href = `/login?logout=success&t=${Date.now()}`
-      }
-    } catch (err) {
-      console.error('Logout error:', err)
-      // Tetap redirect meskipun ada error
-      window.location.href = `/login?logout=success&t=${Date.now()}`
-    }
+    await keluarDariAdmin("Logout error")
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-8">
+      <div className="mx-auto max-w-7xl px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-8">
         {/* Header */}
         <div className="mb-4 sm:mb-6 md:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+          <div className="mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
               <Link
                 href="/admin"
-                className="p-2 hover:bg-white/50 rounded-lg transition-colors touch-manipulation"
-                title="Kembali ke Dashboard"
+                className="rounded-lg p-2 transition-colors hover:bg-white/50"
+                title="Kembali ke Admin Panel"
               >
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                <svg
+                  className="h-5 w-5 text-gray-700 sm:h-6 sm:w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
                 </svg>
               </Link>
+
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 break-words">
-                  {editingId ? 'Edit Berita' : 'Tambah Berita Baru'}
+                <h1 className="break-words text-lg font-bold text-gray-900 sm:text-xl md:text-2xl lg:text-3xl">
+                  {editingId
+                    ? "Edit Berita"
+                    : "Kelola Berita"}
                 </h1>
-                <p className="text-gray-600 text-xs sm:text-sm mt-1">Kelola konten berita Nagari</p>
+
+                <p className="mt-1 text-xs text-gray-600 sm:text-sm">
+                  Tambah, edit, dan hapus berita Nagari
+                </p>
               </div>
             </div>
+
             <button
               type="button"
               onClick={handleLogout}
-              className="px-4 py-2.5 sm:py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] touch-manipulation"
               disabled={loading}
+              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-red-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
             >
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <svg
+                className="h-4 w-4 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
               </svg>
-              <span>Logout</span>
+
+              Logout
             </button>
           </div>
-          <div className="w-20 sm:w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] rounded-full"></div>
+
+          <div className="h-1 w-20 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587] sm:w-24" />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 md:gap-6 items-stretch">
-          {/* Sidebar Navigasi Berita - Muncul jika ada lebih dari 5 berita */}
-          {beritaList.length > 5 && (
-            <div className="lg:col-span-2 hidden lg:block">
-              <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Navigasi Berita</h3>
-                <div className="space-y-2">
-                  {filteredBeritaList.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        document.getElementById(`berita-${item.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                        editingId === item.id
-                          ? 'bg-[#2c1b01] text-white'
-                          : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      <p className="font-medium truncate">{item.judul}</p>
-                      {item.created_at && (
-                        <p className="text-xs opacity-75 mt-0.5">
-                          {new Date(item.created_at).toLocaleDateString('id-ID', {
-                            day: '2-digit',
-                            month: 'short',
-                          })}
-                        </p>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="grid grid-cols-1 items-start gap-4 sm:gap-5 md:gap-6 lg:grid-cols-12">
+          {/* Form berita */}
+          <div className="lg:col-span-5">
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-lg sm:p-5 md:p-6">
+              <h2 className="mb-2 text-base font-semibold text-gray-900 sm:text-lg md:text-xl">
+                {editingId
+                  ? "Edit Data Berita"
+                  : "Form Berita Baru"}
+              </h2>
 
-          {/* Form Section */}
-          <div className={beritaList.length > 5 ? "lg:col-span-5" : "lg:col-span-6"} style={{ minHeight: 'fit-content' }}>
-            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-[350px] sm:min-h-[500px] md:min-h-[600px]">
-              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-3 sm:mb-4 md:mb-6">Form Berita</h2>
-              
-              <form onSubmit={simpanBerita} className="space-y-4 sm:space-y-5 flex-1 flex flex-col">
+              <p className="mb-5 text-xs text-gray-500 sm:text-sm">
+                Judul dan isi berita wajib diisi. Foto bersifat opsional.
+              </p>
+
+              <form
+                onSubmit={simpanBerita}
+                className="space-y-5"
+              >
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
                     Judul Berita
                   </label>
-                  <input 
-                    type="text" 
-                    placeholder="Masukkan judul berita" 
-                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
-                    value={judul}
-                    onChange={(e) => setJudul(e.target.value)}
-                    required
-                  />
-                </div>
 
-                <div className="flex-1 flex flex-col min-h-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Isi Berita
-                  </label>
-                  <textarea 
-                    placeholder="Tuliskan isi berita di sini..." 
-                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 h-32 sm:h-40 md:h-48 resize-none focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all text-base flex-1 min-h-[120px]"
-                    value={konten}
-                    onChange={(e) => setKonten(e.target.value)}
+                  <input
+                    type="text"
+                    placeholder="Masukkan judul berita"
+                    value={judul}
+                    onChange={(event) =>
+                      setJudul(event.target.value)
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#2c1b01] sm:px-4 sm:py-3"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Foto Berita <span className="text-gray-400 font-normal text-xs">(opsional, maks. 2 MB)</span>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Isi Berita
                   </label>
+
+                  <textarea
+                    placeholder="Tuliskan isi berita di sini..."
+                    value={konten}
+                    onChange={(event) =>
+                      setKonten(event.target.value)
+                    }
+                    rows={12}
+                    className="min-h-[240px] w-full resize-y rounded-lg border border-gray-300 px-3 py-2.5 text-base transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#2c1b01] sm:px-4 sm:py-3"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Foto Berita{" "}
+                    <span className="text-xs font-normal text-gray-400">
+                      (opsional, maksimal 2 MB)
+                    </span>
+                  </label>
+
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 text-xs sm:text-sm file:mr-2 sm:file:mr-4 file:py-2 sm:file:py-2.5 file:px-3 sm:file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-[#2c1b01] file:text-white hover:file:bg-[#3a2604] transition-colors file:cursor-pointer cursor-pointer touch-manipulation"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null
+                    onChange={(event) => {
+                      const file =
+                        event.target.files?.[0] ||
+                        null
+
                       setFotoFile(file)
                     }}
+                    className="w-full cursor-pointer rounded-lg border border-gray-300 px-2 py-2 text-xs file:mr-2 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#2c1b01] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-[#3a2604] sm:px-3 sm:py-2.5 sm:text-sm sm:file:mr-4 sm:file:px-4 sm:file:py-2.5 sm:file:text-sm"
                   />
-                  {existingFotoUrl && !fotoFile && (
-                    <p className="text-xs text-gray-500 mt-2 break-words">
-                      Foto saat ini akan tetap digunakan jika tidak memilih foto baru.
-                    </p>
-                  )}
+
                   {fotoFile && (
-                    <p className="text-xs text-green-600 mt-2 break-words">
-                      Foto baru dipilih: {fotoFile.name}
+                    <p className="mt-2 break-words text-xs text-green-700">
+                      Foto baru dipilih:{" "}
+                      <strong>{fotoFile.name}</strong>
                     </p>
                   )}
+
+                  {existingFotoUrl &&
+                    !fotoFile && (
+                      <div className="mt-3">
+                        <p className="mb-2 text-xs text-gray-500">
+                          Foto yang sedang digunakan:
+                        </p>
+
+                        <img
+                          src={existingFotoUrl}
+                          alt="Foto berita saat ini"
+                          className="h-36 w-full rounded-lg border border-gray-200 object-cover"
+                        />
+
+                        <p className="mt-2 text-xs text-gray-500">
+                          Foto lama akan tetap digunakan jika tidak memilih foto baru.
+                        </p>
+                      </div>
+                    )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
-                  <button 
-                    type="submit" 
-                    className="flex-1 bg-gradient-to-r from-[#2c1b01] to-[#1a1200] text-white font-semibold py-3 sm:py-2.5 rounded-lg hover:from-[#3a2604] hover:to-[#100b00] transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed text-sm sm:text-base min-h-[44px] touch-manipulation"
+                <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:gap-3">
+                  <button
+                    type="submit"
                     disabled={loading}
+                    className="min-h-[44px] flex-1 rounded-lg bg-gradient-to-r from-[#2c1b01] to-[#1a1200] py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-[#3a2604] hover:to-[#100b00] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 sm:py-2.5 sm:text-base"
                   >
-                    {loading ? 'Menyimpan...' : editingId ? 'Simpan Perubahan' : 'Publikasikan Berita'}
+                    {loading
+                      ? "Menyimpan..."
+                      : editingId
+                        ? "Simpan Perubahan"
+                        : "Publikasikan Berita"}
                   </button>
+
                   {editingId && (
                     <button
                       type="button"
                       onClick={handleCancelEdit}
-                      className="px-4 sm:px-6 py-3 sm:py-2.5 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm sm:text-base min-h-[44px] touch-manipulation"
+                      disabled={loading}
+                      className="min-h-[44px] rounded-lg bg-gray-200 px-4 py-3 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-300 disabled:opacity-60 sm:px-6 sm:py-2.5 sm:text-base"
                     >
                       Batal
                     </button>
@@ -444,49 +612,64 @@ let fotoUrlToSave = existingFotoUrl
             </div>
           </div>
 
-          {/* List Section */}
-          <div className={beritaList.length > 5 ? "lg:col-span-5" : "lg:col-span-6"} style={{ minHeight: 'fit-content' }}>
-            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-[350px] sm:min-h-[500px] md:min-h-[600px] max-h-[500px] sm:max-h-[600px] md:max-h-[800px]">
-              <div className="mb-3 sm:mb-4 md:mb-6 flex-shrink-0">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 md:gap-0 mb-3 sm:mb-4">
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900">Daftar Berita</h2>
-                    <p className="text-gray-500 text-xs sm:text-sm mt-1 break-words">
-                      {searchQuery ? (
-                        <>
-                          {filteredBeritaList.length} dari {beritaList.length} berita
-                        </>
-                      ) : (
-                        <>
-                          {beritaList.length} {beritaList.length === 1 ? 'berita' : 'berita'} tersedia
-                        </>
-                      )}
+          {/* Daftar berita */}
+          <div className="lg:col-span-7">
+            <div className="flex min-h-[650px] max-h-[950px] flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-lg sm:p-5 md:p-6">
+              <div className="mb-4 flex-shrink-0">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-base font-semibold text-gray-900 sm:text-lg md:text-xl">
+                      Daftar Berita
+                    </h2>
+
+                    <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+                      {searchQuery
+                        ? `${filteredBeritaList.length} dari ${beritaList.length} berita`
+                        : `${beritaList.length} berita tersedia`}
                     </p>
                   </div>
+
                   <button
                     type="button"
                     onClick={fetchBerita}
-                    className="px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60 w-full sm:w-auto min-h-[44px] touch-manipulation"
-                    disabled={loading}
+                    disabled={
+                      loading || loadingData
+                    }
+                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-gray-100 px-3 py-2.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60 sm:px-4 sm:text-sm"
                   >
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
-                    <span>Refresh</span>
+
+                    Refresh
                   </button>
                 </div>
-                
-                {/* Search Bar */}
+
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Cari berita..."
+                    placeholder="Cari judul atau isi berita..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-2 pl-9 sm:pl-10 focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all text-base sm:text-sm min-h-[44px]"
+                    onChange={(event) =>
+                      setSearchQuery(
+                        event.target.value
+                      )
+                    }
+                    className="min-h-[44px] w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-10 text-base transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#2c1b01] sm:text-sm"
                   />
+
                   <svg
-                    className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 pointer-events-none"
+                    className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -498,15 +681,28 @@ let fotoUrlToSave = existingFotoUrl
                       d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
                   </svg>
+
                   {searchQuery && (
                     <button
                       type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 touch-manipulation"
+                      onClick={() =>
+                        setSearchQuery("")
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700"
                       aria-label="Hapus pencarian"
                     >
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   )}
@@ -514,114 +710,168 @@ let fotoUrlToSave = existingFotoUrl
               </div>
 
               {error && (
-                <div className="mb-3 sm:mb-4 p-3 sm:p-4 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs sm:text-sm break-words flex-shrink-0">
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                   {error}
                 </div>
               )}
 
-              {loading && beritaList.length === 0 && (
-                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
-                  <div>
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-[#2c1b01]"></div>
-                    <p className="text-gray-500 text-xs sm:text-sm mt-4">Memuat data berita...</p>
-                  </div>
+              {loadingData && (
+                <div className="flex flex-1 flex-col items-center justify-center py-12">
+                  <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-[#2c1b01]" />
+
+                  <p className="mt-4 text-sm text-gray-500">
+                    Memuat data berita...
+                  </p>
                 </div>
               )}
 
-              {beritaList.length === 0 && !loading && (
-                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
-                  <div>
-                    <svg className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              {!loadingData &&
+                beritaList.length === 0 && (
+                  <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
+                    <svg
+                      className="h-12 w-12 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"
+                      />
                     </svg>
-                    <p className="text-gray-500 text-xs sm:text-sm mt-4">Belum ada berita.</p>
-                  </div>
-                </div>
-              )}
 
-              {filteredBeritaList.length === 0 && beritaList.length > 0 && !loading && (
-                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
-                  <div>
-                    <svg className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <p className="mt-4 text-sm text-gray-500">
+                      Belum ada berita.
+                    </p>
+                  </div>
+                )}
+
+              {!loadingData &&
+                beritaList.length > 0 &&
+                filteredBeritaList.length ===
+                  0 && (
+                  <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
+                    <svg
+                      className="h-12 w-12 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
                     </svg>
-                    <p className="text-gray-500 text-xs sm:text-sm mt-4 px-4">Tidak ada berita yang cocok dengan pencarian.</p>
-                  </div>
-                </div>
-              )}
 
-              <div className="space-y-3 sm:space-y-4 flex-1 overflow-y-auto min-h-0 pr-1 sm:pr-2 -mr-1 sm:-mr-2">
-                {filteredBeritaList.map((item) => (
-                  <div 
-                    id={`berita-${item.id}`}
-                    key={item.id} 
-                    className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-[#2c1b01] hover:shadow-md transition-all bg-white"
-                  >
-                    <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 mb-3">
-                      {/* Foto kecil di kiri */}
-                      {item.foto_url && (
-                        <div className="flex-shrink-0 w-full sm:w-20 md:w-24">
-                          <img
-                            src={item.foto_url}
-                            alt={item.judul}
-                            className="w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 rounded-lg border border-gray-200 object-cover"
-                            loading="lazy"
-                          />
-                        </div>
-                      )}
-                      
-                      {/* Konten di kanan */}
-                      <div className="flex-1 min-w-0 w-full">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-2">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm sm:text-base text-gray-900 mb-1 break-words">{item.judul}</h3>
-                            {item.created_at && (
-                              <p className="text-xs text-gray-500 flex items-start gap-1 flex-wrap">
-                                <svg className="w-3 h-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <span className="break-words">
-                                  {new Date(item.created_at).toLocaleDateString('id-ID', {
-                                    day: '2-digit',
-                                    month: 'long',
-                                    year: 'numeric',
-                                  })}
-                                </span>
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto">
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(item)}
-                              className="flex-1 sm:flex-none px-3 sm:px-3 md:px-4 py-2.5 sm:py-1.5 rounded-lg bg-yellow-500 text-white text-xs sm:text-sm font-medium hover:bg-yellow-600 transition-colors flex items-center justify-center gap-1.5 min-h-[44px] sm:min-h-0 touch-manipulation"
-                            >
-                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(item.id)}
-                              className="flex-1 sm:flex-none px-3 sm:px-3 md:px-4 py-2.5 sm:py-1.5 rounded-lg bg-red-600 text-white text-xs sm:text-sm font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5 min-h-[44px] sm:min-h-0 touch-manipulation"
-                            >
-                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                              <span>Hapus</span>
-                            </button>
-                          </div>
-                        </div>
-                        <p className="text-gray-700 text-xs sm:text-sm whitespace-pre-line line-clamp-2 sm:line-clamp-3 break-words">
-                          {item.konten.length > 100
-                            ? item.konten.slice(0, 100) + '…'
-                            : item.konten}
-                        </p>
-                      </div>
-                    </div>
+                    <p className="mt-4 text-sm text-gray-500">
+                      Tidak ada berita yang cocok dengan pencarian.
+                    </p>
                   </div>
-                ))}
+                )}
+
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 sm:pr-2">
+                {!loadingData &&
+                  filteredBeritaList.map(
+                    (item) => (
+                      <article
+                        id={`berita-${item.id}`}
+                        key={item.id}
+                        className={`rounded-xl border p-4 transition-all hover:shadow-md ${
+                          editingId === item.id
+                            ? "border-yellow-400 bg-yellow-50/40"
+                            : "border-gray-200 bg-white"
+                        }`}
+                      >
+                        <div className="flex flex-col gap-4 sm:flex-row">
+                          {item.foto_url && (
+                            <img
+                              src={item.foto_url}
+                              alt={item.judul}
+                              className="h-44 w-full flex-shrink-0 rounded-lg border border-gray-200 object-cover sm:h-32 sm:w-44"
+                            />
+                          )}
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0">
+                                <h3 className="break-words text-base font-bold text-gray-900 sm:text-lg">
+                                  {item.judul}
+                                </h3>
+
+                                <p className="mt-1 text-xs text-gray-500">
+                                  {formatTanggal(
+                                    item.created_at
+                                  )}
+                                </p>
+                              </div>
+
+                              <div className="flex w-full gap-2 sm:w-auto">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleEdit(item)
+                                  }
+                                  disabled={loading}
+                                  className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-yellow-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-yellow-600 disabled:opacity-60 sm:flex-none"
+                                >
+                                  <svg
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    />
+                                  </svg>
+
+                                  Edit
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDelete(item)
+                                  }
+                                  disabled={loading}
+                                  className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60 sm:flex-none"
+                                >
+                                  <svg
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+
+                                  Hapus
+                                </button>
+                              </div>
+                            </div>
+
+                            <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed text-gray-700">
+                              {potongTeks(
+                                item.konten
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
+                    )
+                  )}
               </div>
             </div>
           </div>

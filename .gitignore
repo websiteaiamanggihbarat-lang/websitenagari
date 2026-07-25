@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Backup database lokal
+backup-supabase/
+
+# File sementara Supabase CLI
+supabase/.temp/
