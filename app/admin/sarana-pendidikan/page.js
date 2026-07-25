@@ -43,6 +43,19 @@ const SARAN_FASILITAS = [
   "Ruang Kepala Sekolah",
 ]
 
+const SARAN_KEGIATAN = [
+  "Pramuka",
+  "Tahfiz",
+  "Sepak Bola",
+  "Bola Voli",
+  "Seni Tari",
+  "Paskibra",
+  "PMR",
+  "Drumband",
+  "Rohani Islam",
+  "English Club",
+]
+
 const PILIHAN_TINGKAT = [
   "PAUD",
   "TK",
@@ -194,6 +207,10 @@ export default function SaranaPendidikanAdmin() {
   const [formFasilitasList, setFormFasilitasList] = useState([])
   const [existingFasilitasIds, setExistingFasilitasIds] = useState([])
   const [loadingFasilitas, setLoadingFasilitas] = useState(false)
+
+  const [formKegiatanList, setFormKegiatanList] = useState([])
+  const [existingKegiatanIds, setExistingKegiatanIds] = useState([])
+  const [loadingKegiatan, setLoadingKegiatan] = useState(false)
 
   const [pendataanList, setPendataanList] = useState([])
   const [saranaList, setSaranaList] = useState([])
@@ -602,6 +619,9 @@ export default function SaranaPendidikanAdmin() {
     setFormFasilitasList([])
     setExistingFasilitasIds([])
     setLoadingFasilitas(false)
+    setFormKegiatanList([])
+    setExistingKegiatanIds([])
+    setLoadingKegiatan(false)
     setFotoFile(null)
     setExistingFotoUrl("")
 
@@ -642,6 +662,40 @@ export default function SaranaPendidikanAdmin() {
 
   const hapusBarisFasilitas = (index) => {
     setFormFasilitasList((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const tambahBarisKegiatan = () => {
+    const tempId =
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `temp-keg-${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+    setFormKegiatanList((prev) => [
+      ...prev,
+      {
+        tempId,
+        nama_kegiatan: "",
+        keterangan: "",
+        urutan: (prev.length + 1).toString(),
+        is_active: true,
+      },
+    ])
+  }
+
+  const ubahBarisKegiatan = (index, field, value) => {
+    setFormKegiatanList((prev) => {
+      const copy = [...prev]
+      copy[index] = {
+        ...copy[index],
+        [field]: value,
+      }
+      return copy
+    })
+  }
+
+  const hapusBarisKegiatan = (index) => {
+    setFormKegiatanList((prev) => prev.filter((_, i) => i !== index))
   }
 
   const simpanPendataan = async (event) => {
@@ -1091,6 +1145,27 @@ export default function SaranaPendidikanAdmin() {
       }
     }
 
+    // Validasi Kegiatan (Cek Nama Terisi & Duplikat)
+    const namaKegiatanMap = new Set()
+    for (let i = 0; i < formKegiatanList.length; i++) {
+      const itemKeg = formKegiatanList[i]
+      const namaTrim = (itemKeg.nama_kegiatan || "").trim()
+
+      if (!namaTrim) {
+        alert(`Nama kegiatan pada baris ke-${i + 1} wajib diisi.`)
+        return
+      }
+
+      const namaLower = namaTrim.toLowerCase()
+      if (namaKegiatanMap.has(namaLower)) {
+        alert(
+          `Nama kegiatan "${namaTrim}" ditulis lebih dari satu kali. Mohon gabungkan atau ubah nama duplikat.`
+        )
+        return
+      }
+      namaKegiatanMap.add(namaLower)
+    }
+
     if (
       formSarana.lokasi_peta.trim()
     ) {
@@ -1186,6 +1261,7 @@ export default function SaranaPendidikanAdmin() {
       }
 
       let errorFasilitas = false
+      let errorKegiatan = false
 
       if (editingSaranaId) {
         const {
@@ -1274,6 +1350,82 @@ export default function SaranaPendidikanAdmin() {
             errorFasilitas = true
           }
         }
+
+        // Sinkronisasi Aman Kegiatan saat Edit
+        const kegiatanValidForm = formKegiatanList
+          .map((k, index) => ({
+            id: k.id || null,
+            nama_kegiatan: k.nama_kegiatan.trim(),
+            keterangan: (k.keterangan || "").trim() || null,
+            urutan: index + 1,
+            is_active: Boolean(k.is_active ?? true),
+          }))
+          .filter((k) => k.nama_kegiatan.length > 0)
+
+        const currentFormKegiatanIds = kegiatanValidForm
+          .map((k) => k.id)
+          .filter(Boolean)
+
+        // 1. Update kegiatan lama yang ada di form
+        const kegiatanToUpdate = kegiatanValidForm.filter((k) => Boolean(k.id))
+        for (const itemUpd of kegiatanToUpdate) {
+          const { error: errUpdKeg } = await supabase
+            .from("kegiatan_sarana_pendidikan")
+            .update({
+              nama_kegiatan: itemUpd.nama_kegiatan,
+              keterangan: itemUpd.keterangan,
+              urutan: itemUpd.urutan,
+              is_active: itemUpd.is_active,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", itemUpd.id)
+            .eq("sarana_pendidikan_id", editingSaranaId)
+
+          if (errUpdKeg) {
+            console.error("Error update kegiatan:", errUpdKeg)
+            errorKegiatan = true
+          }
+        }
+
+        // 2. Insert kegiatan baru (belum punya ID)
+        const kegiatanToInsert = kegiatanValidForm
+          .filter((k) => !k.id)
+          .map((k) => ({
+            sarana_pendidikan_id: editingSaranaId,
+            nama_kegiatan: k.nama_kegiatan,
+            keterangan: k.keterangan,
+            urutan: k.urutan,
+            is_active: k.is_active,
+          }))
+
+        if (kegiatanToInsert.length > 0) {
+          const { error: errInsKeg } = await supabase
+            .from("kegiatan_sarana_pendidikan")
+            .insert(kegiatanToInsert)
+
+          if (errInsKeg) {
+            console.error("Error insert kegiatan baru:", errInsKeg)
+            errorKegiatan = true
+          }
+        }
+
+        // 3. Hapus kegiatan lama yang dihilangkan admin
+        const kegiatanIdsToDelete = existingKegiatanIds.filter(
+          (id) => !currentFormKegiatanIds.includes(id)
+        )
+
+        if (kegiatanIdsToDelete.length > 0 && !errorKegiatan) {
+          const { error: errDelKeg } = await supabase
+            .from("kegiatan_sarana_pendidikan")
+            .delete()
+            .in("id", kegiatanIdsToDelete)
+            .eq("sarana_pendidikan_id", editingSaranaId)
+
+          if (errDelKeg) {
+            console.error("Error hapus kegiatan lama:", errDelKeg)
+            errorKegiatan = true
+          }
+        }
       } else {
         const {
           data: sekolahBaru,
@@ -1310,6 +1462,27 @@ export default function SaranaPendidikanAdmin() {
             errorFasilitas = true
           }
         }
+
+        const kegiatanValid = formKegiatanList
+          .map((k, index) => ({
+            sarana_pendidikan_id: sekolahIdBaru,
+            nama_kegiatan: k.nama_kegiatan.trim(),
+            keterangan: (k.keterangan || "").trim() || null,
+            urutan: index + 1,
+            is_active: true,
+          }))
+          .filter((k) => k.nama_kegiatan.length > 0)
+
+        if (kegiatanValid.length > 0) {
+          const { error: errKeg } = await supabase
+            .from("kegiatan_sarana_pendidikan")
+            .insert(kegiatanValid)
+
+          if (errKeg) {
+            console.error("Gagal menyimpan kegiatan baru:", errKeg)
+            errorKegiatan = true
+          }
+        }
       }
 
       if (
@@ -1324,8 +1497,8 @@ export default function SaranaPendidikanAdmin() {
         )
       }
 
-      if (errorFasilitas) {
-        alert("Data sekolah berhasil disimpan, namun sebagian atau seluruh sarana/fasilitas gagal disimpan.")
+      if (errorFasilitas || errorKegiatan) {
+        alert("Data sekolah berhasil disimpan, namun terjadi kendala saat menyimpan fasilitas/kegiatan.")
       } else {
         alert(
           editingSaranaId
@@ -1371,6 +1544,7 @@ export default function SaranaPendidikanAdmin() {
   const mulaiEditSarana = async (item) => {
     setEditingSaranaId(item.id)
     setLoadingFasilitas(true)
+    setLoadingKegiatan(true)
 
     setFormSarana({
       nama_sarana:
@@ -1461,6 +1635,38 @@ export default function SaranaPendidikanAdmin() {
       setLoadingFasilitas(false)
     }
 
+    try {
+      const { data: kegiatanData, error: kegiatanError } = await supabase
+        .from("kegiatan_sarana_pendidikan")
+        .select("*")
+        .eq("sarana_pendidikan_id", item.id)
+        .order("urutan", { ascending: true })
+        .order("nama_kegiatan", { ascending: true })
+
+      if (kegiatanError) {
+        console.error("Gagal mengambil kegiatan:", kegiatanError)
+        setFormKegiatanList([])
+        setExistingKegiatanIds([])
+      } else {
+        const listKegiatan = (kegiatanData || []).map((k) => ({
+          id: k.id,
+          tempId: k.id,
+          nama_kegiatan: k.nama_kegiatan || "",
+          keterangan: k.keterangan || "",
+          urutan: (k.urutan ?? 1).toString(),
+          is_active: Boolean(k.is_active ?? true),
+        }))
+        setFormKegiatanList(listKegiatan)
+        setExistingKegiatanIds((kegiatanData || []).map((k) => k.id))
+      }
+    } catch (err) {
+      console.error("Error mengambil kegiatan sekolah:", err)
+      setFormKegiatanList([])
+      setExistingKegiatanIds([])
+    } finally {
+      setLoadingKegiatan(false)
+    }
+
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -1545,119 +1751,959 @@ export default function SaranaPendidikanAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-      <div className="mx-auto max-w-[1500px] px-3 py-3 sm:px-4 sm:py-5 md:px-6 md:py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/admin"
-                className="rounded-lg p-2 transition-colors hover:bg-white/60"
-                title="Kembali ke Admin Panel"
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] py-6 sm:py-8">
+      {/* Header */}
+      <div className="w-full max-w-5xl mx-auto px-4 mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin"
+              className="rounded-lg p-2 transition-colors hover:bg-white/60"
+              title="Kembali ke Admin Panel"
+            >
+              <svg
+                className="h-6 w-6 text-gray-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  className="h-6 w-6 text-gray-700"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
-              </Link>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </Link>
+
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 sm:text-2xl md:text-3xl">
+                Kelola Sarana Pendidikan
+              </h1>
+
+              <p className="mt-1 text-xs text-gray-600 sm:text-sm">
+                Kelola pendataan tahunan dan daftar sekolah Nagari
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loading}
+            className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-red-700 disabled:opacity-60"
+          >
+            Logout
+          </button>
+        </div>
+
+        <div className="mt-4 h-1 w-24 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587]" />
+
+        {error && (
+          <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 1: Form Tambah/Edit Pendataan (Full Width) */}
+      <div className="w-full max-w-5xl mx-auto px-4 mb-6">
+        <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
+          <h2 className="text-lg font-bold text-gray-900">
+            {editingPendataanId
+              ? "Edit Pendataan"
+              : "Tambah Pendataan"}
+          </h2>
+
+          <p className="mt-1 text-xs text-gray-500">
+            Satu pendataan digunakan untuk satu tahun.
+          </p>
+
+          <form
+            onSubmit={simpanPendataan}
+            className="mt-5 space-y-4"
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Tahun Pendataan
+                </label>
+
+                <input
+                  type="number"
+                  min="1900"
+                  max="2100"
+                  name="tahun_pendataan"
+                  value={
+                    formPendataan.tahun_pendataan
+                  }
+                  onChange={
+                    ubahFormPendataan
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                  required
+                />
+              </div>
 
               <div>
-                <h1 className="text-xl font-bold text-gray-900 sm:text-2xl md:text-3xl">
-                  Kelola Sarana Pendidikan
-                </h1>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Sumber Data
+                </label>
 
-                <p className="mt-1 text-xs text-gray-600 sm:text-sm">
-                  Kelola pendataan tahunan dan daftar sekolah Nagari
-                </p>
+                <input
+                  type="text"
+                  name="sumber_data"
+                  value={
+                    formPendataan.sumber_data
+                  }
+                  onChange={
+                    ubahFormPendataan
+                  }
+                  placeholder="Contoh: Pendataan Nagari 2026"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                  required
+                />
               </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Keterangan
+              </label>
+
+              <textarea
+                name="keterangan"
+                rows={2}
+                value={
+                  formPendataan.keterangan
+                }
+                onChange={
+                  ubahFormPendataan
+                }
+                placeholder="Keterangan tambahan pendataan (opsional)..."
+                className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-end">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Status Publikasi
+                </label>
+
+                <select
+                  name="status_publikasi"
+                  value={
+                    formPendataan.status_publikasi
+                  }
+                  onChange={
+                    ubahFormPendataan
+                  }
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                >
+                  <option value="draft">
+                    Draft
+                  </option>
+
+                  <option value="dipublikasikan">
+                    Dipublikasikan
+                  </option>
+                </select>
+              </div>
+
+              <label
+                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${
+                  formPendataan.status_publikasi ===
+                  "dipublikasikan"
+                    ? "cursor-pointer border-gray-300 bg-white"
+                    : "cursor-not-allowed border-gray-200 bg-gray-100 opacity-60"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  checked={
+                    formPendataan.is_active
+                  }
+                  onChange={
+                    ubahFormPendataan
+                  }
+                  disabled={
+                    formPendataan.status_publikasi !==
+                    "dipublikasikan"
+                  }
+                />
+
+                <span className="text-sm font-medium text-gray-700">
+                  Tampilkan sebagai data aktif di Beranda
+                </span>
+              </label>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="min-h-[44px] flex-1 sm:flex-none sm:min-w-[180px] rounded-lg bg-[#2c1b01] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#3a2604] disabled:opacity-60"
+              >
+                {loading
+                  ? "Menyimpan..."
+                  : editingPendataanId
+                    ? "Simpan Perubahan"
+                    : "Tambah Pendataan"}
+              </button>
+
+              {editingPendataanId && (
+                <button
+                  type="button"
+                  onClick={
+                    resetFormPendataan
+                  }
+                  className="rounded-lg bg-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+                >
+                  Batal
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* SECTION 2: Riwayat Pendataan (Full Width) */}
+      <div className="w-full max-w-5xl mx-auto px-4 mb-6">
+        <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">
+                Riwayat Pendataan
+              </h2>
+
+              <p className="mt-1 text-xs text-gray-500">
+                Pilih tahun pendataan di bawah ini untuk mengelola sarana sekolah.
+              </p>
             </div>
 
             <button
               type="button"
-              onClick={handleLogout}
-              disabled={loading}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-red-700 disabled:opacity-60"
+              onClick={() =>
+                fetchPendataan()
+              }
+              disabled={
+                loading ||
+                loadingPendataan
+              }
+              className="rounded-lg bg-gray-100 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60"
             >
-              Logout
+              Refresh
             </button>
           </div>
 
-          <div className="mt-4 h-1 w-24 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587]" />
+          {loadingPendataan ? (
+            <p className="py-8 text-center text-sm text-gray-500">
+              Memuat pendataan...
+            </p>
+          ) : pendataanList.length === 0 ? (
+            <p className="py-8 text-center text-sm text-gray-500">
+              Belum ada tahun pendataan.
+            </p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {pendataanList.map(
+                (item) => (
+                  <article
+                    key={item.id}
+                    className={`rounded-xl border p-4 transition-all ${
+                      item.id ===
+                      pendataanTerpilihId
+                        ? "border-[#6b4b1d] bg-[#f7f2e8] shadow-sm"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPendataanTerpilihId(
+                            item.id
+                          )
+                        }
+                        className="flex-1 text-left"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <strong className="text-base text-gray-900">
+                            Tahun{" "}
+                            {
+                              item.tahun_pendataan
+                            }
+                          </strong>
+
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              item.status_publikasi ===
+                              "dipublikasikan"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {item.status_publikasi ===
+                            "dipublikasikan"
+                              ? "Dipublikasikan"
+                              : "Draft"}
+                          </span>
+
+                          {item.is_active && (
+                            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+                              Aktif
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="mt-1.5 text-xs text-gray-600">
+                          Sumber:{" "}
+                          <strong>
+                            {
+                              item.sumber_data
+                            }
+                          </strong>
+                          {item.keterangan && (
+                            <span className="ml-2 text-gray-500">
+                              — {item.keterangan}
+                            </span>
+                          )}
+                        </p>
+                      </button>
+
+                      <div className="flex items-center gap-2 sm:shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPendataanTerpilihId(
+                              item.id
+                            )
+                          }
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                            item.id ===
+                            pendataanTerpilihId
+                              ? "bg-[#2c1b01] text-white"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          {item.id ===
+                          pendataanTerpilihId
+                            ? "Terpilih"
+                            : "Pilih"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            mulaiEditPendataan(
+                              item
+                            )
+                          }
+                          className="rounded-lg bg-yellow-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-yellow-600 transition-colors"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            hapusPendataan(
+                              item
+                            )
+                          }
+                          disabled={
+                            loading
+                          }
+                          className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                )
+              )}
+            </div>
+          )}
         </div>
+      </div>
 
-        {error && (
-          <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+      {/* SECTION 3: Detail Pendataan Terpilih & Form Sarana Pendidikan (Full Width) */}
+      <div className="w-full max-w-5xl mx-auto px-4 mb-6">
+        {!pendataanTerpilih ? (
+          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm">
+            <h2 className="font-bold text-gray-900">
+              Belum ada pendataan yang dipilih
+            </h2>
+
+            <p className="mt-2 text-sm text-gray-500">
+              Buat atau pilih tahun pendataan di atas untuk menambahkan sekolah.
+            </p>
           </div>
-        )}
+        ) : (
+          <div className="space-y-6">
+            {/* Ringkasan */}
+            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Pendataan Tahun{" "}
+                    {
+                      pendataanTerpilih.tahun_pendataan
+                    }
+                  </h2>
 
-        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
-          {/* Kolom pendataan */}
-          <div className="space-y-5 xl:col-span-4">
+                  <p className="mt-1 text-sm text-gray-600">
+                    Sumber:{" "}
+                    <strong>
+                      {
+                        pendataanTerpilih.sumber_data
+                      }
+                    </strong>
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full bg-[#f0e8db] px-3 py-1 text-xs font-semibold text-[#2c1b01]">
+                    {
+                      saranaList.length
+                    }{" "}
+                    sekolah
+                  </span>
+
+                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                    {formatAngka(
+                      totalSiswa
+                    )}{" "}
+                    siswa
+                  </span>
+
+                  <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                    {formatAngka(
+                      totalGuru
+                    )}{" "}
+                    guru
+                  </span>
+
+                  <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+                    {formatAngka(
+                      totalStaf
+                    )}{" "}
+                    staf
+                  </span>
+                </div>
+              </div>
+
+              {Object.keys(
+                ringkasanTingkat
+              ).length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-200 pt-4">
+                  {Object.entries(
+                    ringkasanTingkat
+                  ).map(
+                    ([
+                      tingkat,
+                      jumlah,
+                    ]) => (
+                      <span
+                        key={tingkat}
+                        className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700"
+                      >
+                        <strong>
+                          {tingkat}
+                        </strong>
+                        : {jumlah}
+                      </span>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Form sarana */}
             <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
               <h2 className="text-lg font-bold text-gray-900">
-                {editingPendataanId
-                  ? "Edit Pendataan"
-                  : "Tambah Pendataan"}
+                {editingSaranaId
+                  ? "Edit Sarana Pendidikan"
+                  : "Tambah Sarana Pendidikan"}
               </h2>
 
               <p className="mt-1 text-xs text-gray-500">
-                Satu pendataan digunakan untuk satu tahun.
+                Setiap sekolah disimpan sebagai satu data tersendiri.
               </p>
 
               <form
-                onSubmit={simpanPendataan}
-                className="mt-5 space-y-4"
+                onSubmit={simpanSarana}
+                className="mt-5 space-y-5"
               >
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Tahun Pendataan
-                  </label>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Nama Sarana
+                    </label>
 
-                  <input
-                    type="number"
-                    min="1900"
-                    max="2100"
-                    name="tahun_pendataan"
-                    value={
-                      formPendataan.tahun_pendataan
-                    }
-                    onChange={
-                      ubahFormPendataan
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                    required
-                  />
+                    <input
+                      type="text"
+                      name="nama_sarana"
+                      value={
+                        formSarana.nama_sarana
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      placeholder="Contoh: SD Negeri 01 Aia Manggih Barat"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Tingkat Pendidikan
+                    </label>
+
+                    <select
+                      name="tingkat_pendidikan"
+                      value={
+                        formSarana.tingkat_pendidikan
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    >
+                      {PILIHAN_TINGKAT.map(
+                        (tingkat) => (
+                          <option
+                            key={tingkat}
+                            value={tingkat}
+                          >
+                            {tingkat}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Jenis Pengelolaan
+                    </label>
+
+                    <select
+                      name="jenis_pengelolaan"
+                      value={
+                        formSarana.jenis_pengelolaan
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    >
+                      <option value="">
+                        Tidak dicantumkan
+                      </option>
+
+                      {PILIHAN_PENGELOLAAN.map(
+                        (jenis) => (
+                          <option
+                            key={jenis}
+                            value={jenis}
+                          >
+                            {jenis}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Kondisi/Status
+                    </label>
+
+                    <select
+                      name="status_operasional"
+                      value={
+                        formSarana.status_operasional
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    >
+                      {PILIHAN_STATUS_OPERASIONAL.map(
+                        (status) => (
+                          <option
+                            key={
+                              status.value
+                            }
+                            value={
+                              status.value
+                            }
+                          >
+                            {
+                              status.label
+                            }
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
                 </div>
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Sumber Data
+                    Alamat
+                  </label>
+
+                  <textarea
+                    name="alamat"
+                    rows={3}
+                    value={
+                      formSarana.alamat
+                    }
+                    onChange={
+                      ubahFormSarana
+                    }
+                    placeholder="Contoh: Jorong Padang Sarai..."
+                    className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Jumlah Siswa
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      name="jumlah_siswa"
+                      value={
+                        formSarana.jumlah_siswa
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Jumlah Guru
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      name="jumlah_guru"
+                      value={
+                        formSarana.jumlah_guru
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Jumlah Staf
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      name="jumlah_staf"
+                      value={
+                        formSarana.jumlah_staf
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Urutan Tampil
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      name="urutan"
+                      value={
+                        formSarana.urutan
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Nomor Kontak
+                    </label>
+
+                    <input
+                      type="text"
+                      name="nomor_kontak"
+                      value={
+                        formSarana.nomor_kontak
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      placeholder="Contoh: 08xx-xxxx-xxxx"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Tautan Google Maps
+                    </label>
+
+                    <input
+                      type="url"
+                      name="lokasi_peta"
+                      value={
+                        formSarana.lokasi_peta
+                      }
+                      onChange={
+                        ubahFormSarana
+                      }
+                      placeholder="https://maps.google.com/..."
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    />
+                  </div>
+                </div>
+
+                {/* Seksi Daftar Sarana Sekolah (Fasilitas) */}
+                <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">
+                        Daftar Sarana Sekolah
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        Fasilitas pendukung seperti ruang kelas, laboratorium, perpustakaan, dll.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={tambahBarisFasilitas}
+                      className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#2c1b01] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3a2604] transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>+ Tambah Sarana</span>
+                    </button>
+                  </div>
+
+                  <datalist id="saran-fasilitas-list">
+                    {SARAN_FASILITAS.map((saran) => (
+                      <option key={saran} value={saran} />
+                    ))}
+                  </datalist>
+
+                  {loadingFasilitas ? (
+                    <p className="py-4 text-center text-xs text-gray-500">
+                      Memuat sarana sekolah...
+                    </p>
+                  ) : formFasilitasList.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center">
+                      <p className="text-xs text-gray-500">
+                        Belum ada rincian sarana/fasilitas ditambahkan. Klik tombol "+ Tambah Sarana" untuk menambah.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {formFasilitasList.map((item, index) => (
+                        <div
+                          key={item.tempId || item.id || index}
+                          className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm"
+                        >
+                          <span className="text-xs font-bold text-gray-400 w-6 text-center">
+                            {index + 1}.
+                          </span>
+
+                          <div className="flex-1 min-w-[160px]">
+                            <input
+                              type="text"
+                              list="saran-fasilitas-list"
+                              placeholder="Nama sarana (mis. Ruang Kelas)"
+                              value={item.nama_fasilitas}
+                              onChange={(e) =>
+                                ubahBarisFasilitas(index, "nama_fasilitas", e.target.value)
+                              }
+                              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
+                            />
+                          </div>
+
+                          <div className="w-28 flex items-center gap-1">
+                            <span className="text-xs text-gray-500">Jumlah:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={item.jumlah}
+                              onChange={(e) =>
+                                ubahBarisFasilitas(index, "jumlah", e.target.value)
+                              }
+                              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => hapusBarisFasilitas(index)}
+                            className="rounded-md border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+                            title="Hapus baris ini"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Seksi Kegiatan / Ekstrakurikuler Sekolah */}
+                <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">
+                        Kegiatan / Ekstrakurikuler Sekolah
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        Ekstrakurikuler atau kegiatan pembinaan siswa (misal Pramuka, Tahfiz, Sepak Bola, dll).
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={tambahBarisKegiatan}
+                      className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#2c1b01] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3a2604] transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>+ Tambah Kegiatan</span>
+                    </button>
+                  </div>
+
+                  <datalist id="saran-kegiatan-list">
+                    {SARAN_KEGIATAN.map((saran) => (
+                      <option key={saran} value={saran} />
+                    ))}
+                  </datalist>
+
+                  {loadingKegiatan ? (
+                    <p className="py-4 text-center text-xs text-gray-500">
+                      Memuat kegiatan sekolah...
+                    </p>
+                  ) : formKegiatanList.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center">
+                      <p className="text-xs text-gray-500">
+                        Belum ada rincian kegiatan/ekstrakurikuler ditambahkan. Klik tombol "+ Tambah Kegiatan" untuk menambah.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {formKegiatanList.map((item, index) => (
+                        <div
+                          key={item.tempId || item.id || index}
+                          className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm"
+                        >
+                          <span className="text-xs font-bold text-gray-400 w-6 text-center">
+                            {index + 1}.
+                          </span>
+
+                          <div className="flex-1 min-w-[150px]">
+                            <input
+                              type="text"
+                              list="saran-kegiatan-list"
+                              placeholder="Nama kegiatan (mis. Pramuka)"
+                              value={item.nama_kegiatan}
+                              onChange={(e) =>
+                                ubahBarisKegiatan(index, "nama_kegiatan", e.target.value)
+                              }
+                              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
+                            />
+                          </div>
+
+                          <div className="flex-[1.5] min-w-[180px]">
+                            <input
+                              type="text"
+                              placeholder="Keterangan opsional (mis. Setiap Sabtu)"
+                              value={item.keterangan || ""}
+                              onChange={(e) =>
+                                ubahBarisKegiatan(index, "keterangan", e.target.value)
+                              }
+                              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => hapusBarisKegiatan(index)}
+                            className="rounded-md border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+                            title="Hapus baris ini"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Foto Sekolah
+                    <span className="ml-1 text-xs font-normal text-gray-400">
+                      (opsional, maksimal 2 MB)
+                    </span>
                   </label>
 
                   <input
-                    type="text"
-                    name="sumber_data"
-                    value={
-                      formPendataan.sumber_data
-                    }
-                    onChange={
-                      ubahFormPendataan
-                    }
-                    placeholder="Contoh: Pendataan Nagari 2026"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                    required
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={pilihFoto}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#2c1b01] file:px-4 file:py-2 file:font-semibold file:text-white"
                   />
+
+                  {previewFotoUrl && (
+                    <div className="mt-3">
+                      <img
+                        src={
+                          previewFotoUrl
+                        }
+                        alt="Pratinjau sarana pendidikan"
+                        className="h-52 w-full rounded-lg border border-gray-200 object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1669,69 +2715,34 @@ export default function SaranaPendidikanAdmin() {
                     name="keterangan"
                     rows={3}
                     value={
-                      formPendataan.keterangan
+                      formSarana.keterangan
                     }
                     onChange={
-                      ubahFormPendataan
+                      ubahFormSarana
                     }
+                    placeholder="Tambahkan informasi lain bila diperlukan..."
                     className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Status Publikasi
-                  </label>
-
-                  <select
-                    name="status_publikasi"
-                    value={
-                      formPendataan.status_publikasi
-                    }
-                    onChange={
-                      ubahFormPendataan
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                  >
-                    <option value="draft">
-                      Draft
-                    </option>
-
-                    <option value="dipublikasikan">
-                      Dipublikasikan
-                    </option>
-                  </select>
-                </div>
-
-                <label
-                  className={`flex items-center gap-3 rounded-lg border px-3 py-3 ${
-                    formPendataan.status_publikasi ===
-                    "dipublikasikan"
-                      ? "cursor-pointer border-gray-300 bg-white"
-                      : "cursor-not-allowed border-gray-200 bg-gray-100 opacity-60"
-                  }`}
-                >
+                <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-3 py-3">
                   <input
                     type="checkbox"
                     name="is_active"
                     checked={
-                      formPendataan.is_active
+                      formSarana.is_active
                     }
                     onChange={
-                      ubahFormPendataan
-                    }
-                    disabled={
-                      formPendataan.status_publikasi !==
-                      "dipublikasikan"
+                      ubahFormSarana
                     }
                   />
 
                   <span className="text-sm font-medium text-gray-700">
-                    Tampilkan sebagai data aktif di Beranda
+                    Aktifkan sarana ini untuk ditampilkan
                   </span>
                 </label>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     type="submit"
                     disabled={loading}
@@ -1739,18 +2750,18 @@ export default function SaranaPendidikanAdmin() {
                   >
                     {loading
                       ? "Menyimpan..."
-                      : editingPendataanId
+                      : editingSaranaId
                         ? "Simpan Perubahan"
-                        : "Tambah Pendataan"}
+                        : "Tambah Sarana"}
                   </button>
 
-                  {editingPendataanId && (
+                  {editingSaranaId && (
                     <button
                       type="button"
                       onClick={
-                        resetFormPendataan
+                        resetFormSarana
                       }
-                      className="rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+                      className="rounded-lg bg-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-300"
                     >
                       Batal
                     </button>
@@ -1758,931 +2769,144 @@ export default function SaranaPendidikanAdmin() {
                 </div>
               </form>
             </div>
-
-            {/* Riwayat pendataan */}
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="font-bold text-gray-900">
-                    Riwayat Pendataan
-                  </h2>
-
-                  <p className="mt-1 text-xs text-gray-500">
-                    Pilih tahun untuk mengelola sekolah.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    fetchPendataan()
-                  }
-                  disabled={
-                    loading ||
-                    loadingPendataan
-                  }
-                  className="rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-                >
-                  Refresh
-                </button>
-              </div>
-
-              {loadingPendataan ? (
-                <p className="py-8 text-center text-sm text-gray-500">
-                  Memuat pendataan...
-                </p>
-              ) : pendataanList.length === 0 ? (
-                <p className="py-8 text-center text-sm text-gray-500">
-                  Belum ada tahun pendataan.
-                </p>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  {pendataanList.map(
-                    (item) => (
-                      <article
-                        key={item.id}
-                        className={`rounded-lg border p-3 ${
-                          item.id ===
-                          pendataanTerpilihId
-                            ? "border-[#6b4b1d] bg-[#f7f2e8]"
-                            : "border-gray-200 bg-white"
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPendataanTerpilihId(
-                              item.id
-                            )
-                          }
-                          className="w-full text-left"
-                        >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <strong className="text-gray-900">
-                              Tahun{" "}
-                              {
-                                item.tahun_pendataan
-                              }
-                            </strong>
-
-                            <span
-                              className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
-                                item.status_publikasi ===
-                                "dipublikasikan"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-gray-100 text-gray-600"
-                              }`}
-                            >
-                              {item.status_publikasi ===
-                              "dipublikasikan"
-                                ? "Dipublikasikan"
-                                : "Draft"}
-                            </span>
-
-                            {item.is_active && (
-                              <span className="rounded-full bg-green-100 px-2 py-1 text-[11px] font-semibold text-green-700">
-                                Aktif
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="mt-2 text-xs text-gray-600">
-                            {
-                              item.sumber_data
-                            }
-                          </p>
-                        </button>
-
-                        <div className="mt-3 flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              mulaiEditPendataan(
-                                item
-                              )
-                            }
-                            className="flex-1 rounded-lg bg-yellow-500 px-3 py-2 text-xs font-semibold text-white hover:bg-yellow-600"
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              hapusPendataan(
-                                item
-                              )
-                            }
-                            disabled={loading}
-                            className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-                          >
-                            Hapus
-                          </button>
-                        </div>
-                      </article>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
           </div>
+        )}
+      </div>
 
-          {/* Kolom sarana */}
-          <div className="space-y-5 xl:col-span-8">
-            {!pendataanTerpilih ? (
-              <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm">
-                <h2 className="font-bold text-gray-900">
-                  Belum ada pendataan yang dipilih
+      {/* SECTION 4: Daftar Sarana Pendidikan (Full Width Table) */}
+      {pendataanTerpilih && (
+        <div className="w-full max-w-5xl mx-auto px-4 mb-6">
+          <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Daftar Sarana Pendidikan
                 </h2>
 
-                <p className="mt-2 text-sm text-gray-500">
-                  Buat atau pilih tahun pendataan untuk menambahkan sekolah.
+                <p className="mt-1 text-xs text-gray-500">
+                  {
+                    saranaTersaring.length
+                  }{" "}
+                  dari{" "}
+                  {
+                    saranaList.length
+                  }{" "}
+                  data
                 </p>
               </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  fetchSarana(
+                    pendataanTerpilihId
+                  )
+                }
+                disabled={
+                  loading ||
+                  loadingSarana
+                }
+                className="rounded-lg bg-gray-100 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+              >
+                Refresh
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) =>
+                setSearchQuery(
+                  event.target.value
+                )
+              }
+              placeholder="Cari nama, tingkat, alamat, atau status..."
+              className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+            />
+
+            {loadingSarana ? (
+              <p className="py-10 text-center text-sm text-gray-500">
+                Memuat sarana pendidikan...
+              </p>
+            ) : saranaTersaring.length ===
+              0 ? (
+              <p className="py-10 text-center text-sm text-gray-500">
+                Belum ada sarana pendidikan yang tersimpan.
+              </p>
             ) : (
-              <>
-                {/* Ringkasan */}
-                <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">
-                        Pendataan Tahun{" "}
-                        {
-                          pendataanTerpilih.tahun_pendataan
-                        }
-                      </h2>
-
-                      <p className="mt-1 text-sm text-gray-600">
-                        Sumber:{" "}
-                        <strong>
-                          {
-                            pendataanTerpilih.sumber_data
-                          }
-                        </strong>
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full bg-[#f0e8db] px-3 py-1 text-xs font-semibold text-[#2c1b01]">
-                        {
-                          saranaList.length
-                        }{" "}
-                        sekolah
-                      </span>
-
-                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                        {formatAngka(
-                          totalSiswa
-                        )}{" "}
-                        siswa
-                      </span>
-
-                      <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                        {formatAngka(
-                          totalGuru
-                        )}{" "}
-                        guru
-                      </span>
-
-                      <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
-                        {formatAngka(
-                          totalStaf
-                        )}{" "}
-                        staf
-                      </span>
-                    </div>
-                  </div>
-
-                  {Object.keys(
-                    ringkasanTingkat
-                  ).length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-200 pt-4">
-                      {Object.entries(
-                        ringkasanTingkat
-                      ).map(
-                        ([
-                          tingkat,
-                          jumlah,
-                        ]) => (
-                          <span
-                            key={tingkat}
-                            className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700"
-                          >
-                            <strong>
-                              {tingkat}
-                            </strong>
-                            : {jumlah}
-                          </span>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Form sarana */}
-                <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
-                  <h2 className="text-lg font-bold text-gray-900">
-                    {editingSaranaId
-                      ? "Edit Sarana Pendidikan"
-                      : "Tambah Sarana Pendidikan"}
-                  </h2>
-
-                  <p className="mt-1 text-xs text-gray-500">
-                    Setiap sekolah disimpan sebagai satu data tersendiri.
-                  </p>
-
-                  <form
-                    onSubmit={simpanSarana}
-                    className="mt-5 space-y-5"
-                  >
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Nama Sarana
-                        </label>
-
-                        <input
-                          type="text"
-                          name="nama_sarana"
-                          value={
-                            formSarana.nama_sarana
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          placeholder="Contoh: SD Negeri 01 Aia Manggih Barat"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Tingkat Pendidikan
-                        </label>
-
-                        <select
-                          name="tingkat_pendidikan"
-                          value={
-                            formSarana.tingkat_pendidikan
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+              <div className="mt-5 overflow-x-auto">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
+                      <th className="py-3 px-4 font-bold w-16 text-center">
+                        No.
+                      </th>
+                      <th className="py-3 px-4 font-bold">
+                        Nama Sekolah
+                      </th>
+                      <th className="py-3 px-4 font-bold text-center w-44">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {saranaTersaring.map(
+                      (item, index) => (
+                        <tr
+                          key={item.id}
+                          className={`transition-colors hover:bg-gray-50/80 ${
+                            editingSaranaId ===
+                            item.id
+                              ? "bg-yellow-50/50"
+                              : ""
+                          }`}
                         >
-                          {PILIHAN_TINGKAT.map(
-                            (tingkat) => (
-                              <option
-                                key={tingkat}
-                                value={tingkat}
-                              >
-                                {tingkat}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Jenis Pengelolaan
-                        </label>
-
-                        <select
-                          name="jenis_pengelolaan"
-                          value={
-                            formSarana.jenis_pengelolaan
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        >
-                          <option value="">
-                            Tidak dicantumkan
-                          </option>
-
-                          {PILIHAN_PENGELOLAAN.map(
-                            (jenis) => (
-                              <option
-                                key={jenis}
-                                value={jenis}
-                              >
-                                {jenis}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Kondisi/Status
-                        </label>
-
-                        <select
-                          name="status_operasional"
-                          value={
-                            formSarana.status_operasional
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        >
-                          {PILIHAN_STATUS_OPERASIONAL.map(
-                            (status) => (
-                              <option
-                                key={
-                                  status.value
+                          <td className="py-3 px-4 text-center font-medium text-gray-500">
+                            {index + 1}
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-gray-900">
+                            {item.nama_sarana}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  mulaiEditSarana(
+                                    item
+                                  )
                                 }
-                                value={
-                                  status.value
-                                }
+                                className="rounded-lg bg-yellow-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-yellow-600 transition-colors"
                               >
-                                {
-                                  status.label
-                                }
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700">
-                        Alamat
-                      </label>
-
-                      <textarea
-                        name="alamat"
-                        rows={3}
-                        value={
-                          formSarana.alamat
-                        }
-                        onChange={
-                          ubahFormSarana
-                        }
-                        placeholder="Contoh: Jorong Padang Sarai..."
-                        className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Jumlah Siswa
-                        </label>
-
-                        <input
-                          type="number"
-                          min="0"
-                          name="jumlah_siswa"
-                          value={
-                            formSarana.jumlah_siswa
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Jumlah Guru
-                        </label>
-
-                        <input
-                          type="number"
-                          min="0"
-                          name="jumlah_guru"
-                          value={
-                            formSarana.jumlah_guru
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Jumlah Staf
-                        </label>
-
-                        <input
-                          type="number"
-                          min="0"
-                          name="jumlah_staf"
-                          value={
-                            formSarana.jumlah_staf
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Urutan Tampil
-                        </label>
-
-                        <input
-                          type="number"
-                          min="0"
-                          name="urutan"
-                          value={
-                            formSarana.urutan
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Nomor Kontak
-                        </label>
-
-                        <input
-                          type="text"
-                          name="nomor_kontak"
-                          value={
-                            formSarana.nomor_kontak
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          placeholder="Contoh: 08xx-xxxx-xxxx"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                          Tautan Google Maps
-                        </label>
-
-                        <input
-                          type="url"
-                          name="lokasi_peta"
-                          value={
-                            formSarana.lokasi_peta
-                          }
-                          onChange={
-                            ubahFormSarana
-                          }
-                          placeholder="https://maps.google.com/..."
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Seksi Daftar Sarana Sekolah (Fasilitas) */}
-                    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-gray-900">
-                            Daftar Sarana Sekolah
-                          </h3>
-                          <p className="text-xs text-gray-500">
-                            Fasilitas pendukung seperti ruang kelas, laboratorium, perpustakaan, dll.
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={tambahBarisFasilitas}
-                          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#2c1b01] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3a2604] transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          <span>+ Tambah Sarana</span>
-                        </button>
-                      </div>
-
-                      <datalist id="saran-fasilitas-list">
-                        {SARAN_FASILITAS.map((saran) => (
-                          <option key={saran} value={saran} />
-                        ))}
-                      </datalist>
-
-                      {loadingFasilitas ? (
-                        <p className="py-4 text-center text-xs text-gray-500">
-                          Memuat sarana sekolah...
-                        </p>
-                      ) : formFasilitasList.length === 0 ? (
-                        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center">
-                          <p className="text-xs text-gray-500">
-                            Belum ada rincian sarana/fasilitas ditambahkan. Klik tombol "+ Tambah Sarana" untuk menambah.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {formFasilitasList.map((item, index) => (
-                            <div
-                              key={item.tempId || item.id || index}
-                              className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm"
-                            >
-                              <span className="text-xs font-bold text-gray-400 w-6 text-center">
-                                {index + 1}.
-                              </span>
-
-                              <div className="flex-1 min-w-[160px]">
-                                <input
-                                  type="text"
-                                  list="saran-fasilitas-list"
-                                  placeholder="Nama sarana (mis. Ruang Kelas)"
-                                  value={item.nama_fasilitas}
-                                  onChange={(e) =>
-                                    ubahBarisFasilitas(index, "nama_fasilitas", e.target.value)
-                                  }
-                                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
-                                />
-                              </div>
-
-                              <div className="w-28 flex items-center gap-1">
-                                <span className="text-xs text-gray-500">Jumlah:</span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={item.jumlah}
-                                  onChange={(e) =>
-                                    ubahBarisFasilitas(index, "jumlah", e.target.value)
-                                  }
-                                  className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
-                                />
-                              </div>
+                                Edit
+                              </button>
 
                               <button
                                 type="button"
-                                onClick={() => hapusBarisFasilitas(index)}
-                                className="rounded-md border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
-                                title="Hapus baris ini"
+                                onClick={() =>
+                                  hapusSarana(
+                                    item
+                                  )
+                                }
+                                disabled={
+                                  loading
+                                }
+                                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
+                                Hapus
                               </button>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700">
-                        Foto Sekolah
-                        <span className="ml-1 text-xs font-normal text-gray-400">
-                          (opsional, maksimal 2 MB)
-                        </span>
-                      </label>
-
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={pilihFoto}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#2c1b01] file:px-4 file:py-2 file:font-semibold file:text-white"
-                      />
-
-                      {previewFotoUrl && (
-                        <div className="mt-3">
-                          <img
-                            src={
-                              previewFotoUrl
-                            }
-                            alt="Pratinjau sarana pendidikan"
-                            className="h-52 w-full rounded-lg border border-gray-200 object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700">
-                        Keterangan
-                      </label>
-
-                      <textarea
-                        name="keterangan"
-                        rows={3}
-                        value={
-                          formSarana.keterangan
-                        }
-                        onChange={
-                          ubahFormSarana
-                        }
-                        placeholder="Tambahkan informasi lain bila diperlukan..."
-                        className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                      />
-                    </div>
-
-                    <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-3 py-3">
-                      <input
-                        type="checkbox"
-                        name="is_active"
-                        checked={
-                          formSarana.is_active
-                        }
-                        onChange={
-                          ubahFormSarana
-                        }
-                      />
-
-                      <span className="text-sm font-medium text-gray-700">
-                        Aktifkan sarana ini untuk ditampilkan
-                      </span>
-                    </label>
-
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="min-h-[44px] flex-1 rounded-lg bg-[#2c1b01] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#3a2604] disabled:opacity-60"
-                      >
-                        {loading
-                          ? "Menyimpan..."
-                          : editingSaranaId
-                            ? "Simpan Perubahan"
-                            : "Tambah Sarana"}
-                      </button>
-
-                      {editingSaranaId && (
-                        <button
-                          type="button"
-                          onClick={
-                            resetFormSarana
-                          }
-                          className="rounded-lg bg-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-300"
-                        >
-                          Batal
-                        </button>
-                      )}
-                    </div>
-                  </form>
-                </div>
-
-                {/* Daftar sarana */}
-                <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">
-                        Daftar Sarana Pendidikan
-                      </h2>
-
-                      <p className="mt-1 text-xs text-gray-500">
-                        {
-                          saranaTersaring.length
-                        }{" "}
-                        dari{" "}
-                        {
-                          saranaList.length
-                        }{" "}
-                        data
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        fetchSarana(
-                          pendataanTerpilihId
-                        )
-                      }
-                      disabled={
-                        loading ||
-                        loadingSarana
-                      }
-                      className="rounded-lg bg-gray-100 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-                    >
-                      Refresh
-                    </button>
-                  </div>
-
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(event) =>
-                      setSearchQuery(
-                        event.target.value
+                          </td>
+                        </tr>
                       )
-                    }
-                    placeholder="Cari nama, tingkat, alamat, atau status..."
-                    className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                  />
-
-                  {loadingSarana ? (
-                    <p className="py-10 text-center text-sm text-gray-500">
-                      Memuat sarana pendidikan...
-                    </p>
-                  ) : saranaTersaring.length ===
-                    0 ? (
-                    <p className="py-10 text-center text-sm text-gray-500">
-                      Belum ada sarana pendidikan pada pendataan ini.
-                    </p>
-                  ) : (
-                    <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                      {saranaTersaring.map(
-                        (item) => (
-                          <article
-                            key={item.id}
-                            className={`overflow-hidden rounded-xl border ${
-                              editingSaranaId ===
-                              item.id
-                                ? "border-yellow-400 bg-yellow-50/30"
-                                : "border-gray-200 bg-white"
-                            }`}
-                          >
-                            {item.foto_url ? (
-                              <img
-                                src={
-                                  item.foto_url
-                                }
-                                alt={
-                                  item.nama_sarana
-                                }
-                                className="h-44 w-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-32 items-center justify-center bg-gray-100 text-sm text-gray-400">
-                                Belum ada foto
-                              </div>
-                            )}
-
-                            <div className="p-4">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-full bg-[#f0e8db] px-2.5 py-1 text-xs font-semibold text-[#2c1b01]">
-                                  {
-                                    item.tingkat_pendidikan
-                                  }
-                                </span>
-
-                                <span
-                                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                    item.is_active
-                                      ? "bg-green-100 text-green-700"
-                                      : "bg-gray-100 text-gray-600"
-                                  }`}
-                                >
-                                  {item.is_active
-                                    ? "Aktif"
-                                    : "Tidak Aktif"}
-                                </span>
-
-                                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                                  {formatStatusOperasional(
-                                    item.status_operasional
-                                  )}
-                                </span>
-                              </div>
-
-                              <h3 className="mt-3 text-lg font-bold text-gray-900">
-                                {
-                                  item.nama_sarana
-                                }
-                              </h3>
-
-                              <p className="mt-1 text-xs text-gray-500">
-                                {item.jenis_pengelolaan ||
-                                  "Jenis pengelolaan tidak dicantumkan"}
-                              </p>
-
-                              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-gray-600">
-                                {
-                                  item.alamat
-                                }
-                              </p>
-
-                              <div className="mt-4 grid grid-cols-3 gap-2">
-                                <div className="rounded-lg bg-blue-50 p-2.5 text-center">
-                                  <p className="text-[11px] text-gray-500">
-                                    Siswa
-                                  </p>
-
-                                  <p className="mt-0.5 font-bold text-blue-700">
-                                    {formatAngka(
-                                      item.jumlah_siswa
-                                    )}
-                                  </p>
-                                </div>
-
-                                <div className="rounded-lg bg-green-50 p-2.5 text-center">
-                                  <p className="text-[11px] text-gray-500">
-                                    Guru
-                                  </p>
-
-                                  <p className="mt-0.5 font-bold text-green-700">
-                                    {formatAngka(
-                                      item.jumlah_guru
-                                    )}
-                                  </p>
-                                </div>
-
-                                <div className="rounded-lg bg-purple-50 p-2.5 text-center">
-                                  <p className="text-[11px] text-gray-500">
-                                    Staf
-                                  </p>
-
-                                  <p className="mt-0.5 font-bold text-purple-700">
-                                    {formatAngka(
-                                      item.jumlah_staf
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {item.nomor_kontak && (
-                                <p className="mt-3 text-sm text-gray-600">
-                                  Kontak:{" "}
-                                  <strong>
-                                    {
-                                      item.nomor_kontak
-                                    }
-                                  </strong>
-                                </p>
-                              )}
-
-                              {item.lokasi_peta && (
-                                <a
-                                  href={
-                                    item.lokasi_peta
-                                  }
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="mt-3 inline-flex text-sm font-semibold text-blue-600 hover:underline"
-                                >
-                                  Buka lokasi peta
-                                </a>
-                              )}
-
-                              {item.keterangan && (
-                                <p className="mt-3 whitespace-pre-line rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
-                                  {
-                                    item.keterangan
-                                  }
-                                </p>
-                              )}
-
-                              <p className="mt-3 text-xs text-gray-400">
-                                Urutan tampil:{" "}
-                                {
-                                  item.urutan
-                                }
-                              </p>
-
-                              <div className="mt-4 flex gap-2 border-t border-gray-200 pt-4">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    mulaiEditSarana(
-                                      item
-                                    )
-                                  }
-                                  className="flex-1 rounded-lg bg-yellow-500 px-3 py-2.5 text-xs font-semibold text-white hover:bg-yellow-600"
-                                >
-                                  Edit
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    hapusSarana(
-                                      item
-                                    )
-                                  }
-                                  disabled={
-                                    loading
-                                  }
-                                  className="flex-1 rounded-lg bg-red-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-                                >
-                                  Hapus
-                                </button>
-                              </div>
-                            </div>
-                          </article>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
