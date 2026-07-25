@@ -17,6 +17,7 @@ export type SaranaPendidikan = {
   alamat: string
   jumlah_siswa: number
   jumlah_guru: number
+  jumlah_staf: number
   status_operasional: string
   nomor_kontak: string | null
   lokasi_peta: string | null
@@ -24,6 +25,17 @@ export type SaranaPendidikan = {
   keterangan: string | null
   urutan: number
   is_active: boolean
+}
+
+export type FasilitasSaranaPendidikan = {
+  id: string
+  sarana_pendidikan_id: string
+  nama_fasilitas: string
+  jumlah: number
+  urutan: number
+  is_active: boolean
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export type TingkatPendidikanItem = {
@@ -153,6 +165,7 @@ export async function getAktifPendataanDanSarana(): Promise<{
         alamat,
         jumlah_siswa,
         jumlah_guru,
+        jumlah_staf,
         status_operasional,
         nomor_kontak,
         lokasi_peta,
@@ -171,9 +184,16 @@ export async function getAktifPendataanDanSarana(): Promise<{
       return { pendataan, sarana: [], error: saranaError.message }
     }
 
+    const saranaMapped = (dataSarana || []).map((item: any) => ({
+      ...item,
+      jumlah_siswa: Number(item.jumlah_siswa || 0),
+      jumlah_guru: Number(item.jumlah_guru || 0),
+      jumlah_staf: Number(item.jumlah_staf || 0),
+    })) as SaranaPendidikan[]
+
     return {
       pendataan,
-      sarana: (dataSarana as SaranaPendidikan[]) || [],
+      sarana: saranaMapped,
       error: null,
     }
   } catch (err: any) {
@@ -182,6 +202,61 @@ export async function getAktifPendataanDanSarana(): Promise<{
       pendataan: null,
       sarana: [],
       error: "Terjadi kesalahan saat membaca data sarana pendidikan.",
+    }
+  }
+}
+
+export async function getFasilitasBySaranaId(
+  saranaId: string
+): Promise<{
+  fasilitas: FasilitasSaranaPendidikan[]
+  error: string | null
+}> {
+  if (!saranaId) {
+    return { fasilitas: [], error: null }
+  }
+
+  const supabase = getSupabaseServerClient()
+  if (!supabase) {
+    return {
+      fasilitas: [],
+      error: "Konfigurasi Supabase belum tersedia.",
+    }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("fasilitas_sarana_pendidikan")
+      .select(`
+        id,
+        sarana_pendidikan_id,
+        nama_fasilitas,
+        jumlah,
+        urutan,
+        is_active,
+        created_at,
+        updated_at
+      `)
+      .eq("sarana_pendidikan_id", saranaId)
+      .eq("is_active", true)
+      .gte("jumlah", 1)
+      .order("urutan", { ascending: true })
+      .order("nama_fasilitas", { ascending: true })
+
+    if (error) {
+      console.error("Gagal mengambil fasilitas sarana pendidikan:", error)
+      return { fasilitas: [], error: error.message }
+    }
+
+    return {
+      fasilitas: (data as FasilitasSaranaPendidikan[]) || [],
+      error: null,
+    }
+  } catch (err: any) {
+    console.error("Kesalahan membaca data fasilitas sarana pendidikan:", err)
+    return {
+      fasilitas: [],
+      error: "Terjadi kesalahan saat membaca data fasilitas.",
     }
   }
 }

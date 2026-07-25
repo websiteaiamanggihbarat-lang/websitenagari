@@ -5,8 +5,6 @@ import {
   getTingkatBySlug,
   getAktifPendataanDanSarana,
   formatAngka,
-  formatStatusOperasional,
-  kelasStatusOperasional,
 } from "@/lib/saranaPendidikan"
 
 export const dynamic = "force-dynamic"
@@ -152,8 +150,6 @@ export default async function DaftarSekolahPerTingkatPage({ params }: PageProps)
           {daftarSekolahTingkat.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {daftarSekolahTingkat.map((sekolah) => {
-                const nomorTelepon = String(sekolah.nomor_kontak || "").replace(/[^0-9+]/g, "")
-
                 return (
                   <article
                     key={sekolah.id}
@@ -185,62 +181,17 @@ export default async function DaftarSekolahPerTingkatPage({ params }: PageProps)
                         </div>
                       )}
 
-                      {/* Konten Kartu */}
+                      {/* Konten Kartu: Nama & Alamat */}
                       <div className="p-6">
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                          <span className="rounded-full bg-[#f0e8db] px-2.5 py-1 text-xs font-semibold text-[#2c1b01]">
-                            {sekolah.tingkat_pendidikan}
-                          </span>
-
-                          {sekolah.jenis_pengelolaan && (
-                            <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                              {sekolah.jenis_pengelolaan}
-                            </span>
-                          )}
-
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${kelasStatusOperasional(
-                              sekolah.status_operasional
-                            )}`}
-                          >
-                            {formatStatusOperasional(sekolah.status_operasional)}
-                          </span>
-                        </div>
-
                         <h3 className="text-xl font-bold text-gray-900 group-hover:text-[#5a3b0d] transition-colors mb-2">
                           <Link href={`/sarana-pendidikan/${tingkatSlug}/${sekolah.id}`}>
                             {sekolah.nama_sarana}
                           </Link>
                         </h3>
 
-                        <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed mb-4">
+                        <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
                           {sekolah.alamat}
                         </p>
-
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="rounded-xl bg-blue-50/70 p-3">
-                            <p className="text-xs text-gray-500">Jumlah Siswa</p>
-                            <p className="text-base font-bold text-blue-700 mt-0.5">
-                              {formatAngka(sekolah.jumlah_siswa)}
-                            </p>
-                          </div>
-
-                          <div className="rounded-xl bg-green-50/70 p-3">
-                            <p className="text-xs text-gray-500">Jumlah Guru</p>
-                            <p className="text-base font-bold text-green-700 mt-0.5">
-                              {formatAngka(sekolah.jumlah_guru)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {sekolah.nomor_kontak && (
-                          <div className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
-                            <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h32a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" />
-                            </svg>
-                            <span>Kontak: {sekolah.nomor_kontak}</span>
-                          </div>
-                        )}
                       </div>
                     </div>
 
