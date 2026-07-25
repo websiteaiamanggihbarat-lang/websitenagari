@@ -88,25 +88,27 @@ export default async function DaftarSekolahPerTingkatPage({ params }: PageProps)
               </Link>
             </div>
 
-            {/* Rekap Ringkas Tingkat Ini */}
-            <div className="grid grid-cols-3 gap-4 mt-6 max-w-xl">
-              <div className="rounded-xl bg-[#f0e8db]/60 border border-[#d1c2a0]/40 p-3 text-center">
-                <p className="text-xs text-gray-600 font-medium">Jumlah Sekolah</p>
-                <p className="text-xl font-bold text-[#2c1b01] mt-0.5">
-                  {formatAngka(daftarSekolahTingkat.length)}
-                </p>
-              </div>
-              <div className="rounded-xl bg-blue-50/80 border border-blue-200/50 p-3 text-center">
-                <p className="text-xs text-blue-700 font-medium">Total Siswa</p>
-                <p className="text-xl font-bold text-blue-700 mt-0.5">
-                  {formatAngka(totalSiswa)}
-                </p>
-              </div>
-              <div className="rounded-xl bg-green-50/80 border border-green-200/50 p-3 text-center">
-                <p className="text-xs text-green-700 font-medium">Total Guru</p>
-                <p className="text-xl font-bold text-green-700 mt-0.5">
-                  {formatAngka(totalGuru)}
-                </p>
+            {/* Rekap Ringkas Tingkat Ini (Tepat di Tengah Halaman) */}
+            <div className="mt-8 max-w-2xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl bg-[#f0e8db]/60 border border-[#d1c2a0]/40 p-3 text-center">
+                  <p className="text-xs text-gray-600 font-medium">Jumlah Sekolah</p>
+                  <p className="text-xl font-bold text-[#2c1b01] mt-0.5">
+                    {formatAngka(daftarSekolahTingkat.length)}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-blue-50/80 border border-blue-200/50 p-3 text-center">
+                  <p className="text-xs text-blue-700 font-medium">Total Siswa</p>
+                  <p className="text-xl font-bold text-blue-700 mt-0.5">
+                    {formatAngka(totalSiswa)}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-green-50/80 border border-green-200/50 p-3 text-center">
+                  <p className="text-xs text-green-700 font-medium">Total Guru</p>
+                  <p className="text-xl font-bold text-green-700 mt-0.5">
+                    {formatAngka(totalGuru)}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
