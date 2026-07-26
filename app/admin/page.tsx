@@ -297,11 +297,14 @@ export default async function AdminPage() {
             </div>
           </Link>
 
-          {/* Menu Berikutnya */}
-          <div className="flex min-h-[220px] flex-col rounded-xl border-2 border-dashed border-gray-300 bg-white/60 p-6 opacity-60">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-200">
+          {/* Kelola Kesehatan */}
+          <Link
+            href="/admin/kesehatan"
+            className="group flex min-h-[220px] flex-col rounded-xl border-2 border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-red-500 hover:shadow-xl"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-red-600 shadow-md transition-transform group-hover:scale-110">
               <svg
-                className="h-6 w-6 text-gray-400"
+                className="h-6 w-6 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -310,24 +313,36 @@ export default async function AdminPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                 />
               </svg>
             </div>
 
-            <h2 className="text-xl font-semibold text-gray-400">
-              Menu Berikutnya
+            <h2 className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-red-700">
+              Kelola Kesehatan
             </h2>
 
-            <p className="mt-2 text-sm leading-relaxed text-gray-400">
-              Ruang untuk fitur pengelolaan
-              data website selanjutnya.
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Kelola pendataan tahunan, 3 indikator sanitasi lingkungan, sarana, dan tenaga kesehatan.
             </p>
 
-            <p className="mt-auto pt-5 text-xs font-medium text-gray-400">
-              Akan tersedia pada tahap berikutnya
-            </p>
-          </div>
+            <div className="mt-auto flex items-center gap-1 pt-5 text-sm font-semibold text-red-600">
+              Buka pengelolaan kesehatan
+              <svg
+                className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </Link>
         </div>
       </div>
     </div>
