@@ -88,6 +88,8 @@ export interface IndikatorTambahanKesehatan {
   sarana_kesehatan_id: string
   nama_indikator: string
   nilai_indikator: string
+  satuan?: string | null
+  keterangan?: string | null
   urutan: number
   is_active: boolean
   created_at: string
