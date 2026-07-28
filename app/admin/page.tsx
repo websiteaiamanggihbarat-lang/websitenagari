@@ -343,6 +343,53 @@ export default async function AdminPage() {
               </svg>
             </div>
           </Link>
+
+          {/* Kelola Kesenian Tradisional */}
+          <Link
+            href="/admin/kesenian-tradisional"
+            className="group flex min-h-[220px] flex-col rounded-xl border-2 border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-amber-600 hover:shadow-xl"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-[#4a3210] to-[#2c1b01] shadow-md transition-transform group-hover:scale-110">
+              <svg
+                className="h-6 w-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11.48 3.5a.562.562 0 011.04 0l2.125 5.11 5.518.4a.562.562 0 01.32.98l-4.204 3.6 1.285 5.39a.562.562 0 01-.84.61L12 17.77l-4.724 2.82a.562.562 0 01-.84-.61l1.285-5.39-4.204-3.6a.562.562 0 01.32-.98l5.518-.4 2.125-5.11z"
+                />
+              </svg>
+            </div>
+
+            <h2 className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-[#4a3210]">
+              Kelola Kesenian Tradisional
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Kelola daftar kesenian, sanggar, kelompok seni, deskripsi, lokasi, dan galeri foto.
+            </p>
+
+            <div className="mt-auto flex items-center gap-1 pt-5 text-sm font-semibold text-[#6b4b1d]">
+              Buka kesenian tradisional
+              <svg
+                className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </Link>
         </div>
       </div>
     </div>
