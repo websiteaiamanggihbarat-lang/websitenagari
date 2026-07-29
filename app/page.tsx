@@ -3,6 +3,7 @@ import InformasiPendudukDinamis from "@/components/InformasiPendudukDinamis";
 import SaranaPendidikanDinamis from "@/components/SaranaPendidikanDinamis";
 import KesehatanDinamis from "@/components/KesehatanDinamis";
 import KesenianDinamis from "@/components/KesenianDinamis";
+import KelompokTaniBumnagDinamis from "@/components/KelompokTaniBumnagDinamis";
 
 export default function Home() {
   return (
@@ -615,55 +616,8 @@ export default function Home() {
             {/* Kesenian Tradisional */}
             <KesenianDinamis />
 
-            {/* Kelompok Tani */}
-            <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-left">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
-                  <svg
-                    className="w-6 h-6 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4h16M4 10h16M4 16h16"
-                    />
-                  </svg>
-                </div>
-
-                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
-                  Kelompok Tani
-                </h3>
-              </div>
-
-              <ol className="list-decimal list-inside space-y-1 text-sm md:text-base text-gray-700 leading-relaxed">
-                <li>
-                  Kelompok Tani Cahaya Baru (Padang Sarai)
-                </li>
-                <li>
-                  Kelompok Tani Alam Makmur (Padang Sarai)
-                </li>
-                <li>
-                  Kelompok Tani Durian Banyak (Padang Sarai)
-                </li>
-                <li>
-                  Kelompok Tani Ingin Maju (Padang Sarai)
-                </li>
-                <li>
-                  Kelompok Tani Tapian Guntuang (Padang Sarai)
-                </li>
-                <li>
-                  Kelompok Tani Pal-VII Saiyo (Kampung Padang)
-                </li>
-                <li>
-                  Kelompok Tani Perisai Paraman Dareh Saiyo
-                  (Paraman Dareh)
-                </li>
-              </ol>
-            </div>
+            {/* Kelompok Tani dan BUMNag */}
+            <KelompokTaniBumnagDinamis />
           </div>
         </div>
       </section>

@@ -390,6 +390,53 @@ export default async function AdminPage() {
               </svg>
             </div>
           </Link>
+
+          {/* Kelola Kelompok Tani dan BUMNag */}
+          <Link
+            href="/admin/kelompok-tani-bumnag"
+            className="group flex min-h-[220px] flex-col rounded-xl border-2 border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-emerald-600 hover:shadow-xl"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-[#2c1b01] shadow-md transition-transform group-hover:scale-110">
+              <svg
+                className="h-6 w-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0V7m0 4h4m-4 0H7"
+                />
+              </svg>
+            </div>
+
+            <h2 className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-emerald-700">
+              Kelompok Tani dan BUMNag
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Kelola data utama, pimpinan, bidang, foto galeri, serta produk/unit usaha Kelompok Tani dan BUMNag.
+            </p>
+
+            <div className="mt-auto flex items-center gap-1 pt-5 text-sm font-semibold text-emerald-700">
+              Buka Kelompok Tani & BUMNag
+              <svg
+                className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </Link>
         </div>
       </div>
     </div>
