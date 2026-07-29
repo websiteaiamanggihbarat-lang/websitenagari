@@ -29,6 +29,21 @@ interface FormPetaState {
   is_active: boolean
 }
 
+export type CleanupTertunda = {
+  id: string
+  petaId: string
+  bucket: string
+  path: string
+  jenis: "gambar" | "dokumen"
+  pesan: string
+}
+
+export type HasilHapusFile = {
+  berhasil: boolean
+  sudahTidakAda: boolean
+  errorMessage: string | null
+}
+
 const FORM_AWAL: FormPetaState = {
   judul_peta: "",
   jenis_peta: "administrasi",
@@ -57,6 +72,35 @@ function buatNamaFileAman(namaFile: string): string {
 
   const finalBase = baseSanitized || "file-peta"
   return `${finalBase}${ext}`
+}
+
+/**
+ * Helper internal untuk menghapus file dari Storage secara aman
+ */
+async function hapusFileJikaAda(
+  bucket: string,
+  path: string | null
+): Promise<HasilHapusFile> {
+  if (!path || !path.trim()) {
+    return { berhasil: true, sudahTidakAda: true, errorMessage: null }
+  }
+
+  try {
+    const { error } = await supabase.storage.from(bucket).remove([path])
+    if (!error) {
+      return { berhasil: true, sudahTidakAda: false, errorMessage: null }
+    }
+
+    const msg = error.message.toLowerCase()
+    if (msg.includes("not found") || msg.includes("404")) {
+      return { berhasil: true, sudahTidakAda: true, errorMessage: null }
+    }
+
+    return { berhasil: false, sudahTidakAda: false, errorMessage: error.message }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { berhasil: false, sudahTidakAda: false, errorMessage: msg }
+  }
 }
 
 async function keluarDariAdmin(labelError = "Logout error") {
@@ -102,7 +146,33 @@ export default function AdminPetaNagariPage() {
 
   const [gambarFile, setGambarFile] = useState<File | null>(null)
   const [gambarPreviewUrl, setGambarPreviewUrl] = useState<string | null>(null)
+
   const [dokumenFile, setDokumenFile] = useState<File | null>(null)
+  const [hapusPdfExisting, setHapusPdfExisting] = useState(false)
+
+  const [processingToggleId, setProcessingToggleId] = useState<string | null>(null)
+  const [processingDeleteId, setProcessingDeleteId] = useState<string | null>(null)
+
+  const [retryDeleteIds, setRetryDeleteIds] = useState<string[]>([])
+  const [cleanupTertunda, setCleanupTertunda] = useState<CleanupTertunda[]>([])
+
+  const tambahCleanupTertunda = (
+    petaId: string,
+    bucket: string,
+    path: string,
+    jenis: "gambar" | "dokumen",
+    pesan: string
+  ) => {
+    const itemBaru: CleanupTertunda = {
+      id: crypto.randomUUID(),
+      petaId,
+      bucket,
+      path,
+      jenis,
+      pesan,
+    }
+    setCleanupTertunda((prev) => [...prev.filter((c) => c.path !== path), itemBaru])
+  }
 
   const periksaSesi = async () => {
     const {
@@ -165,6 +235,7 @@ export default function AdminPetaNagariPage() {
     setGambarFile(null)
     setGambarPreviewUrl(null)
     setDokumenFile(null)
+    setHapusPdfExisting(false)
     setPesanSukses(null)
     setPesanError(null)
     setIsFormOpen(true)
@@ -190,6 +261,7 @@ export default function AdminPetaNagariPage() {
     setGambarFile(null)
     setGambarPreviewUrl(null)
     setDokumenFile(null)
+    setHapusPdfExisting(false)
     setPesanSukses(null)
     setPesanError(null)
     setIsFormOpen(true)
@@ -207,6 +279,7 @@ export default function AdminPetaNagariPage() {
     setGambarFile(null)
     setGambarPreviewUrl(null)
     setDokumenFile(null)
+    setHapusPdfExisting(false)
   }
 
   const handleJudulChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,7 +351,16 @@ export default function AdminPetaNagariPage() {
     }
 
     setPesanError(null)
+    setHapusPdfExisting(false) // Memilih PDF baru otomatis membatalkan tanda hapus PDF existing
     setDokumenFile(file)
+  }
+
+  const handleHapusPdfExistingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = e.target.checked
+    setHapusPdfExisting(isChecked)
+    if (isChecked) {
+      setDokumenFile(null) // Menandai hapus PDF existing otomatis mereset file PDF baru
+    }
   }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -329,39 +411,162 @@ export default function AdminPetaNagariPage() {
     setLoadingForm(true)
 
     // ==========================================
-    // MODE EDIT METADATA (TAHAP 05A)
+    // MODE EDIT TERPADU (TAHAP 05B)
     // ==========================================
-    if (editingId) {
+    if (editingId && editingItem) {
       try {
+        const petaId = editingId
+        const timestamp = Date.now()
+        const randomSuffix = crypto.randomUUID().slice(0, 8)
+
+        const gambarUrlLama = editingItem.gambar_url
+        const gambarPathLama = editingItem.gambar_storage_path
+        const pdfUrlLama = editingItem.file_url
+        const pdfPathLama = editingItem.file_storage_path
+
+        let gambarUrlBaru = gambarUrlLama
+        let gambarPathBaru = gambarPathLama
+
+        let pdfUrlBaru = pdfUrlLama
+        let pdfPathBaru = pdfPathLama
+
+        // Step 1: Upload Gambar Baru jika dipilih
+        if (gambarFile) {
+          const namaGambarAman = buatNamaFileAman(gambarFile.name)
+          gambarPathBaru = `peta-nagari/${petaId}/gambar/${timestamp}-${randomSuffix}-${namaGambarAman}`
+
+          const { error: errUploadGambarBaru } = await supabase.storage
+            .from(BUCKET_GAMBAR_PETA_NAGARI)
+            .upload(gambarPathBaru, gambarFile, { upsert: false })
+
+          if (errUploadGambarBaru) {
+            setPesanError(`Gagal mengunggah gambar peta baru: ${errUploadGambarBaru.message}`)
+            setLoadingForm(false)
+            return
+          }
+
+          const { data: urlDataGambar } = supabase.storage
+            .from(BUCKET_GAMBAR_PETA_NAGARI)
+            .getPublicUrl(gambarPathBaru)
+          gambarUrlBaru = urlDataGambar.publicUrl
+        }
+
+        // Step 2: Handle PDF (Tambah Baru / Replace / Remove)
+        if (dokumenFile) {
+          const namaPdfAman = buatNamaFileAman(dokumenFile.name)
+          pdfPathBaru = `peta-nagari/${petaId}/dokumen/${timestamp}-${randomSuffix}-${namaPdfAman}`
+
+          const { error: errUploadPdfBaru } = await supabase.storage
+            .from(BUCKET_DOKUMEN_PETA_NAGARI)
+            .upload(pdfPathBaru, dokumenFile, { upsert: false })
+
+          if (errUploadPdfBaru) {
+            // Rollback Gambar Baru jika sempat diunggah
+            if (gambarFile && gambarPathBaru !== gambarPathLama) {
+              await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathBaru)
+            }
+            setPesanError(
+              `Gagal mengunggah PDF baru: ${errUploadPdfBaru.message}. Gambar baru yang sempat diunggah telah dibersihkan.`
+            )
+            setLoadingForm(false)
+            return
+          }
+
+          const { data: urlDataPdf } = supabase.storage
+            .from(BUCKET_DOKUMEN_PETA_NAGARI)
+            .getPublicUrl(pdfPathBaru)
+          pdfUrlBaru = urlDataPdf.publicUrl
+        } else if (hapusPdfExisting) {
+          pdfUrlBaru = null
+          pdfPathBaru = null
+        }
+
+        // Step 3: Update Database (Satu Payload Terpadu)
         const payloadEdit = {
           judul_peta: judulClean,
           jenis_peta: formData.jenis_peta,
           deskripsi: deskripsiClean || null,
           tahun_peta: tahunNum,
           sumber_peta: sumberClean,
+          gambar_url: gambarUrlBaru,
+          gambar_storage_path: gambarPathBaru,
+          file_url: pdfUrlBaru,
+          file_storage_path: pdfPathBaru,
           teks_alt: teksAltClean,
           urutan: urutanNum,
           is_active: formData.is_active,
         }
 
-        const { error: errEdit } = await supabase
+        const { error: errEditDb } = await supabase
           .from("peta_nagari")
           .update(payloadEdit)
-          .eq("id", editingId)
+          .eq("id", petaId)
 
-        if (errEdit) {
-          if (errEdit.code === "23505") {
+        if (errEditDb) {
+          // Rollback file baru jika DB Update Gagal
+          if (gambarFile && gambarPathBaru !== gambarPathLama) {
+            await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathBaru)
+          }
+          if (dokumenFile && pdfPathBaru !== pdfPathLama) {
+            await hapusFileJikaAda(BUCKET_DOKUMEN_PETA_NAGARI, pdfPathBaru)
+          }
+
+          if (errEditDb.code === "23505") {
             setPesanError(
-              "Peta dengan jenis, judul, tahun, dan sumber yang sama sudah tersedia."
+              "Peta dengan jenis, judul, tahun, dan sumber yang sama sudah tersedia. Perubahan dibatalkan."
             )
           } else {
-            setPesanError(`Gagal memperbarui metadata peta: ${errEdit.message}`)
+            setPesanError(
+              `Gagal memperbarui data peta pada database: ${errEditDb.message}. File baru telah dibersihkan.`
+            )
           }
           setLoadingForm(false)
           return
         }
 
-        setPesanSukses(`Metadata peta "${judulClean}" berhasil diperbarui!`)
+        // Step 4: Cleanup File Lama (Hanya Setelah DB Update Berhasil!)
+        const peringatanCleanup: string[] = []
+
+        // Cleanup Gambar Lama jika diganti
+        if (gambarFile && gambarPathLama && gambarPathBaru !== gambarPathLama) {
+          const resCleanGambar = await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathLama)
+          if (!resCleanGambar.berhasil) {
+            peringatanCleanup.push(`Gambar lama gagal dibersihkan (${resCleanGambar.errorMessage})`)
+            tambahCleanupTertunda(
+              petaId,
+              BUCKET_GAMBAR_PETA_NAGARI,
+              gambarPathLama,
+              "gambar",
+              `Gambar lama peta "${judulClean}" gagal dibersihkan`
+            )
+          }
+        }
+
+        // Cleanup PDF Lama jika diganti atau dihapus
+        if ((dokumenFile || hapusPdfExisting) && pdfPathLama && pdfPathBaru !== pdfPathLama) {
+          const resCleanPdf = await hapusFileJikaAda(BUCKET_DOKUMEN_PETA_NAGARI, pdfPathLama)
+          if (!resCleanPdf.berhasil) {
+            peringatanCleanup.push(`PDF lama gagal dibersihkan (${resCleanPdf.errorMessage})`)
+            tambahCleanupTertunda(
+              petaId,
+              BUCKET_DOKUMEN_PETA_NAGARI,
+              pdfPathLama,
+              "dokumen",
+              `PDF lama peta "${judulClean}" gagal dibersihkan`
+            )
+          }
+        }
+
+        if (peringatanCleanup.length > 0) {
+          setPesanSukses(
+            `Perubahan peta "${judulClean}" berhasil disimpan! Catatan: ${peringatanCleanup.join(
+              "; "
+            )}. Silakan bersihkan file tertunda jika diperlukan.`
+          )
+        } else {
+          setPesanSukses(`Perubahan peta "${judulClean}" berhasil disimpan!`)
+        }
+
         handleBatalForm()
         await muatDataPeta()
       } catch (err: unknown) {
@@ -374,7 +579,7 @@ export default function AdminPetaNagariPage() {
     }
 
     // ==========================================
-    // MODE TAMAH PETA BARU (SAFE CREATE FLOW)
+    // MODE TAMBAH PETA BARU (SAFE CREATE FLOW)
     // ==========================================
     if (!gambarFile) {
       setPesanError("Gambar Utama Peta wajib diunggah untuk peta baru.")
@@ -386,7 +591,6 @@ export default function AdminPetaNagariPage() {
     const timestamp = Date.now()
     const randomSuffix = crypto.randomUUID().slice(0, 8)
 
-    // Generate Safe Image Storage Path
     const namaGambarAman = buatNamaFileAman(gambarFile.name)
     const gambarStoragePath = `peta-nagari/${petaId}/gambar/${timestamp}-${randomSuffix}-${namaGambarAman}`
 
@@ -420,7 +624,6 @@ export default function AdminPetaNagariPage() {
           .upload(pdfStoragePath, dokumenFile, { upsert: false })
 
         if (errUploadPdf) {
-          // Rollback Gambar Baru jika Upload PDF Gagal
           const { error: errRollbackGambar } = await supabase.storage
             .from(BUCKET_GAMBAR_PETA_NAGARI)
             .remove([gambarStoragePath])
@@ -464,7 +667,6 @@ export default function AdminPetaNagariPage() {
         .insert(payloadInsert)
 
       if (errInsertDb) {
-        // Rollback Gambar & PDF dari Storage jika Database Gagal
         const rollbackErrors: string[] = []
 
         const { error: errRbImg } = await supabase.storage
@@ -502,7 +704,6 @@ export default function AdminPetaNagariPage() {
         return
       }
 
-      // Berhasil
       setPesanSukses(`Peta Nagari "${judulClean}" berhasil ditambahkan!`)
       handleBatalForm()
       await muatDataPeta()
@@ -511,6 +712,172 @@ export default function AdminPetaNagariPage() {
       setPesanError(`Terjadi kesalahan sistem saat menyimpan peta: ${msg}`)
     } finally {
       setLoadingForm(false)
+    }
+  }
+
+  // ==========================================
+  // TOGGLE STATUS AKTIF / NONAKTIF CEPAT
+  // ==========================================
+  const handleToggleStatus = async (item: PetaNagari) => {
+    setPesanSukses(null)
+    setPesanError(null)
+    setProcessingToggleId(item.id)
+
+    try {
+      const statusBaru = !item.is_active
+      const { error: errToggle } = await supabase
+        .from("peta_nagari")
+        .update({ is_active: statusBaru })
+        .eq("id", item.id)
+
+      if (errToggle) {
+        setPesanError(`Gagal mengubah status publikasi peta "${item.judul_peta}": ${errToggle.message}`)
+      } else {
+        setPesanSukses(
+          `Status publikasi peta "${item.judul_peta}" berhasil diubah menjadi ${
+            statusBaru ? "Aktif" : "Nonaktif"
+          }.`
+        )
+        await muatDataPeta()
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan: ${msg}`)
+    } finally {
+      setProcessingToggleId(null)
+    }
+  }
+
+  // ==========================================
+  // SAFE DELETE FLOW FINAL (HAPUS / RETRY)
+  // ==========================================
+  const handleHapusRecord = async (item: PetaNagari) => {
+    const isRetryMode = retryDeleteIds.includes(item.id)
+    const pesanKonfirmasi = isRetryMode
+      ? `Coba hapus kembali record database untuk peta "${item.judul_peta}"?`
+      : `Apakah Anda yakin ingin menghapus peta "${item.judul_peta}"?\n\nFile gambar utama dan dokumen PDF (jika ada) di Storage juga akan dihapus. Tindakan ini tidak dapat dibatalkan.`
+
+    if (!window.confirm(pesanKonfirmasi)) return
+
+    setPesanSukses(null)
+    setPesanError(null)
+    setProcessingDeleteId(item.id)
+
+    const petaId = item.id
+    const gambarPathLama = item.gambar_storage_path
+    const pdfPathLama = item.file_storage_path
+
+    try {
+      // Step 1: Penonaktifan DB Eksplisit
+      if (item.is_active) {
+        const { error: errNonaktif } = await supabase
+          .from("peta_nagari")
+          .update({ is_active: false })
+          .eq("id", petaId)
+
+        if (errNonaktif) {
+          setPesanError(`Gagal menonaktifkan peta sebelum dihapus: ${errNonaktif.message}`)
+          setProcessingDeleteId(null)
+          return
+        }
+      }
+
+      // Step 2: Hapus PDF jika record mempunyai PDF
+      if (pdfPathLama) {
+        // 2a. Update DB set PDF pair NULL terlebih dahulu
+        const { error: errNullPdf } = await supabase
+          .from("peta_nagari")
+          .update({ file_url: null, file_storage_path: null })
+          .eq("id", petaId)
+
+        if (errNullPdf) {
+          setPesanError(`Gagal memperbarui database pasangan PDF: ${errNullPdf.message}. Hapus dibatalkan.`)
+          setProcessingDeleteId(null)
+          return
+        }
+
+        // 2b. Hapus PDF dari Storage
+        const resPdf = await hapusFileJikaAda(BUCKET_DOKUMEN_PETA_NAGARI, pdfPathLama)
+        if (!resPdf.berhasil) {
+          tambahCleanupTertunda(
+            petaId,
+            BUCKET_DOKUMEN_PETA_NAGARI,
+            pdfPathLama,
+            "dokumen",
+            `File PDF peta "${item.judul_peta}" gagal dihapus dari Storage.`
+          )
+          setPesanError(
+            `Gagal menghapus file PDF dari Storage: ${resPdf.errorMessage}. Record peta telah dinonaktifkan di database dan pasangan PDF diatur NULL.`
+          )
+          await muatDataPeta()
+          setProcessingDeleteId(null)
+          return
+        }
+      }
+
+      // Step 3: Hapus Gambar Utama dari Storage
+      if (gambarPathLama) {
+        const resGambar = await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathLama)
+        if (!resGambar.berhasil) {
+          if (!retryDeleteIds.includes(petaId)) {
+            setRetryDeleteIds((prev) => [...prev, petaId])
+          }
+          setPesanError(
+            `Gagal menghapus gambar utama dari Storage: ${resGambar.errorMessage}. Record peta tetap dinonaktifkan di database. Silakan coba tombol "Retry Hapus".`
+          )
+          await muatDataPeta()
+          setProcessingDeleteId(null)
+          return
+        }
+      }
+
+      // Step 4: Hapus Record Database Utama
+      const { error: errDeleteDb } = await supabase
+        .from("peta_nagari")
+        .delete()
+        .eq("id", petaId)
+
+      if (errDeleteDb) {
+        if (!retryDeleteIds.includes(petaId)) {
+          setRetryDeleteIds((prev) => [...prev, petaId])
+        }
+        setPesanError(
+          `File gambar dan PDF di Storage telah berhasil dibersihkan, namun gagal menghapus record database: ${errDeleteDb.message}. Gunakan tombol "Retry Hapus" untuk mencoba menghapus record database kembali.`
+        )
+      } else {
+        setRetryDeleteIds((prev) => prev.filter((id) => id !== petaId))
+        setPesanSukses(`Peta "${item.judul_peta}" beserta seluruh filenya berhasil dihapus total.`)
+
+        // Jika item yang sedang dibuka di form adalah item yang dihapus, tutup form
+        if (editingId === petaId) {
+          handleBatalForm()
+        }
+      }
+
+      await muatDataPeta()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan saat menghapus peta: ${msg}`)
+    } finally {
+      setProcessingDeleteId(null)
+    }
+  }
+
+  // ==========================================
+  // RETRY CLEANUP FILE TERTUNDA
+  // ==========================================
+  const handleRetryCleanup = async (item: CleanupTertunda) => {
+    try {
+      const res = await hapusFileJikaAda(item.bucket, item.path)
+      if (res.berhasil) {
+        setCleanupTertunda((prev) => prev.filter((c) => c.id !== item.id))
+        setPesanSukses(`Pembersihan file tertunda (${item.path}) berhasil diselesaikan!`)
+      } else {
+        setPesanError(`Pembersihan file tertunda (${item.path}) gagal: ${res.errorMessage}`)
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Gagal membersihkan file tertunda: ${msg}`)
     }
   }
 
@@ -667,15 +1034,49 @@ export default function AdminPetaNagariPage() {
           </div>
         )}
 
+        {/* Pembersihan File Tertunda Alert */}
+        {cleanupTertunda.length > 0 && (
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-amber-900 flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>Pembersihan File Storage Tertunda ({cleanupTertunda.length})</span>
+              </h3>
+            </div>
+            <p className="text-xs text-amber-800">
+              Terdapat file lama di Storage yang belum berhasil dibersihkan secara otomatis saat pengeditan/penghapusan. Anda dapat mencoba membersihkannya kembali di bawah ini:
+            </p>
+            <div className="space-y-2">
+              {cleanupTertunda.map((item) => (
+                <div key={item.id} className="flex items-center justify-between bg-white/80 p-3 rounded-xl border border-amber-200 text-xs">
+                  <div className="min-w-0 pr-3">
+                    <span className="font-semibold text-gray-900 block truncate">{item.pesan}</span>
+                    <span className="text-gray-500 font-mono block text-[11px] truncate">Bucket: {item.bucket} | Path: {item.path}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRetryCleanup(item)}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-sm transition"
+                  >
+                    Coba Bersihkan Lagi
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Form Container (Tambah / Edit) */}
         {isFormOpen && (
           <div className="rounded-2xl border border-[#e6ddcf] bg-[#fdfbf7] p-6 sm:p-8 shadow-md">
             <div className="flex items-center justify-between border-b border-[#e6ddcf] pb-4 mb-6">
               <h2 className="text-xl font-bold text-gray-900">
-                {editingId ? "Edit Metadata Peta Nagari" : "Tambah Peta Nagari Baru"}
+                {editingId ? "Edit Peta Nagari" : "Tambah Peta Nagari Baru"}
               </h2>
               <span className="text-xs text-gray-500 font-medium">
-                {editingId ? "Mode Edit Metadata" : "Mode Tambah Baru"}
+                {editingId ? "Mode Edit Peta & File" : "Mode Tambah Baru"}
               </span>
             </div>
 
@@ -777,113 +1178,97 @@ export default function AdminPetaNagariPage() {
                 {/* Gambar Input / Preview */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-1">
-                    Gambar Utama Peta {!editingId && <span className="text-red-500">*</span>}
+                    {editingId ? "Ganti Gambar Utama Peta (Opsional)" : "Gambar Utama Peta *"}
                   </label>
 
-                  {!editingId ? (
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handleGambarFileChange}
-                        required
-                        className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#2c1b01] file:text-white hover:file:bg-[#4a3210] cursor-pointer"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Format: JPEG, PNG, WebP. Ukuran maksimal: 15 MB.
-                      </p>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleGambarFileChange}
+                    required={!editingId}
+                    className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#2c1b01] file:text-white hover:file:bg-[#4a3210] cursor-pointer"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    {editingId
+                      ? "Biarkan kosong untuk mempertahankan gambar yang sekarang (Format: JPEG, PNG, WebP, max 15 MB)."
+                      : "Format: JPEG, PNG, WebP. Ukuran maksimal: 15 MB."}
+                  </p>
 
-                      {gambarPreviewUrl && (
-                        <div className="mt-3 relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-1">
-                          <img
-                            src={gambarPreviewUrl}
-                            alt="Preview gambar baru"
-                            className="h-full w-full object-contain rounded-lg"
-                          />
-                        </div>
-                      )}
+                  {/* Preview Gambar Baru atau Existing */}
+                  {gambarPreviewUrl ? (
+                    <div className="mt-3 relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-1">
+                      <p className="text-[11px] font-semibold text-green-700 mb-1">✓ Preview Gambar Baru Terpilih:</p>
+                      <img
+                        src={gambarPreviewUrl}
+                        alt="Preview gambar baru"
+                        className="h-full w-full object-contain rounded-lg"
+                      />
                     </div>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-gray-300 bg-white/70 p-4">
-                      <p className="text-xs font-medium text-gray-600 mb-2">
-                        Gambar Peta Saat Ini:
-                      </p>
-                      {editingItem?.gambar_url && (
-                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-100 p-1 mb-2">
-                          <img
-                            src={editingItem.gambar_url}
-                            alt={editingItem.teks_alt || editingItem.judul_peta}
-                            className="h-full w-full object-contain rounded"
-                          />
-                        </div>
-                      )}
-                      <p className="text-xs text-amber-800 font-medium">
-                        ℹ Penggantian file gambar utama akan tersedia pada Tahap 05B.
-                      </p>
+                  ) : editingItem?.gambar_url ? (
+                    <div className="mt-3 relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-1">
+                      <p className="text-[11px] font-medium text-gray-500 mb-1">Gambar Utama Saat Ini:</p>
+                      <img
+                        src={editingItem.gambar_url}
+                        alt={editingItem.teks_alt || editingItem.judul_peta}
+                        className="h-full w-full object-contain rounded-lg"
+                      />
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
-                {/* PDF Input / Status */}
+                {/* PDF Input / Options */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-1">
-                    Dokumen PDF Peta (Opsional)
+                    {editingId ? "Kelola Dokumen PDF (Opsional)" : "Dokumen PDF Peta (Opsional)"}
                   </label>
 
-                  {!editingId ? (
-                    <div>
-                      <input
-                        type="file"
-                        accept="application/pdf"
-                        onChange={handleDokumenFileChange}
-                        className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#2c1b01] file:text-white hover:file:bg-[#4a3210] cursor-pointer"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Format: PDF. Ukuran maksimal: 30 MB. Untuk tombol unduhan publik.
-                      </p>
-                      {dokumenFile && (
-                        <p className="mt-2 text-xs font-semibold text-green-700 flex items-center gap-1">
-                          <span>✓ File PDF terpilih:</span>
-                          <span className="underline">{dokumenFile.name}</span>
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-gray-300 bg-white/70 p-4 h-full flex flex-col justify-center">
-                      <p className="text-xs font-medium text-gray-600 mb-1">
-                        Status Dokumen PDF:
-                      </p>
-                      {editingItem?.file_url ? (
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleDokumenFileChange}
+                    disabled={hapusPdfExisting}
+                    className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#2c1b01] file:text-white hover:file:bg-[#4a3210] cursor-pointer disabled:opacity-50"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    {editingId
+                      ? "Biarkan kosong untuk mempertahankan PDF yang sekarang (Format: PDF, max 30 MB)."
+                      : "Format: PDF. Ukuran maksimal: 30 MB."}
+                  </p>
+
+                  {/* Status & Options PDF Existing */}
+                  {editingItem?.file_url && (
+                    <div className="mt-3 rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-gray-700">PDF Terpasang Saat Ini:</span>
                         <a
                           href={editingItem.file_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center text-xs font-semibold text-[#2c1b01] hover:underline mb-2"
+                          className="font-semibold text-red-700 hover:underline flex items-center gap-1"
                         >
-                          <svg
-                            className="w-4 h-4 mr-1 text-red-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                            />
-                          </svg>
-                          Lihat PDF Tersedia ↗
+                          <span>Buka PDF ↗</span>
                         </a>
-                      ) : (
-                        <p className="text-xs text-gray-500 italic mb-2">
-                          Belum ada file PDF yang diunggah.
-                        </p>
-                      )}
-                      <p className="text-xs text-amber-800 font-medium">
-                        ℹ Pengolahan file PDF (tambah/ganti/hapus) akan tersedia pada Tahap 05B.
-                      </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-gray-100">
+                        <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-red-700 hover:text-red-900">
+                          <input
+                            type="checkbox"
+                            checked={hapusPdfExisting}
+                            onChange={handleHapusPdfExistingChange}
+                            className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                          />
+                          <span>Hapus dokumen PDF dari peta ini</span>
+                        </label>
+                      </div>
                     </div>
+                  )}
+
+                  {dokumenFile && (
+                    <p className="mt-2 text-xs font-semibold text-green-700 flex items-center gap-1">
+                      <span>✓ File PDF baru terpilih:</span>
+                      <span className="underline">{dokumenFile.name}</span>
+                    </p>
                   )}
                 </div>
               </div>
@@ -983,7 +1368,7 @@ export default function AdminPetaNagariPage() {
                       Menyimpan...
                     </span>
                   ) : editingId ? (
-                    "Simpan Perubahan Metadata"
+                    "Simpan Perubahan Peta"
                   ) : (
                     "Simpan Peta Baru"
                   )}
@@ -1056,7 +1441,7 @@ export default function AdminPetaNagariPage() {
               <button
                 type="button"
                 onClick={handleOpenTambah}
-                className="inline-flex items-center px-4 py-2 rounded-xl bg-[#2c1b01] text-white text-xs font-semibold shadow-md hover:bg-[#4a3210] transition"
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-[#2c1b01] text-white text-xs font-semibold shadow-md hover:bg-[#4a3210] transition cursor-pointer"
               >
                 + Tambah Peta Pertama
               </button>
@@ -1072,114 +1457,167 @@ export default function AdminPetaNagariPage() {
                     <th className="px-4 py-3.5">Dokumen PDF</th>
                     <th className="px-4 py-3.5 text-center">Status</th>
                     <th className="px-4 py-3.5 text-center w-20">Urutan</th>
-                    <th className="px-4 py-3.5 text-right w-24">Aksi</th>
+                    <th className="px-4 py-3.5 text-right w-64">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {listPeta.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-[#f7f2e8]/50 transition-colors"
-                    >
-                      {/* Preview */}
-                      <td className="px-4 py-3">
-                        <div className="relative aspect-video w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 p-0.5">
-                          <img
-                            src={item.gambar_url}
-                            alt={item.teks_alt || item.judul_peta}
-                            className="h-full w-full object-contain rounded"
-                          />
-                        </div>
-                      </td>
+                  {listPeta.map((item) => {
+                    const isProcessing =
+                      processingToggleId === item.id ||
+                      processingDeleteId === item.id ||
+                      (editingId === item.id && loadingForm)
 
-                      {/* Judul & Jenis */}
-                      <td className="px-4 py-3">
-                        <div className="font-bold text-gray-900">
-                          {item.judul_peta}
-                        </div>
-                        <div className="mt-1">
-                          <span className="inline-flex items-center rounded-md bg-[#f0e8db] px-2.5 py-0.5 text-xs font-semibold text-[#2c1b01] border border-[#e6ddcf]">
-                            {getLabelJenisPeta(item.jenis_peta)}
-                          </span>
-                        </div>
-                        {item.deskripsi && (
-                          <p className="mt-1 text-xs text-gray-500 line-clamp-1">
-                            {item.deskripsi}
-                          </p>
-                        )}
-                      </td>
+                    const isRetryMode = retryDeleteIds.includes(item.id)
 
-                      {/* Tahun & Sumber */}
-                      <td className="px-4 py-3">
-                        <div className="text-xs font-semibold text-gray-900">
-                          Tahun: {item.tahun_peta}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-0.5">
-                          {item.sumber_peta}
-                        </div>
-                      </td>
+                    return (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-[#f7f2e8]/50 transition-colors"
+                      >
+                        {/* Preview */}
+                        <td className="px-4 py-3">
+                          <div className="relative aspect-video w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 p-0.5">
+                            <img
+                              src={item.gambar_url}
+                              alt={item.teks_alt || item.judul_peta}
+                              className="h-full w-full object-contain rounded"
+                            />
+                          </div>
+                        </td>
 
-                      {/* Dokumen PDF */}
-                      <td className="px-4 py-3">
-                        {item.file_url ? (
-                          <a
-                            href={item.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 border border-red-200 hover:bg-red-100 transition"
-                          >
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                        {/* Judul & Jenis */}
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-gray-900">
+                            {item.judul_peta}
+                          </div>
+                          <div className="mt-1">
+                            <span className="inline-flex items-center rounded-md bg-[#f0e8db] px-2.5 py-0.5 text-xs font-semibold text-[#2c1b01] border border-[#e6ddcf]">
+                              {getLabelJenisPeta(item.jenis_peta)}
+                            </span>
+                          </div>
+                          {item.deskripsi && (
+                            <p className="mt-1 text-xs text-gray-500 line-clamp-1">
+                              {item.deskripsi}
+                            </p>
+                          )}
+                        </td>
+
+                        {/* Tahun & Sumber */}
+                        <td className="px-4 py-3">
+                          <div className="text-xs font-semibold text-gray-900">
+                            Tahun: {item.tahun_peta}
+                          </div>
+                          <div className="text-xs text-gray-600 mt-0.5">
+                            {item.sumber_peta}
+                          </div>
+                        </td>
+
+                        {/* Dokumen PDF */}
+                        <td className="px-4 py-3">
+                          {item.file_url ? (
+                            <a
+                              href={item.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Buka dokumen PDF untuk ${item.judul_peta}`}
+                              className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 border border-red-200 hover:bg-red-100 transition"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                              />
-                            </svg>
-                            <span>PDF Tersedia ↗</span>
-                          </a>
-                        ) : (
-                          <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">
-                            Tidak ada PDF
-                          </span>
-                        )}
-                      </td>
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <span>PDF Tersedia ↗</span>
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">
+                              Tidak ada PDF
+                            </span>
+                          )}
+                        </td>
 
-                      {/* Status */}
-                      <td className="px-4 py-3 text-center">
-                        {item.is_active ? (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-                            ● Aktif
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
-                            ○ Nonaktif
-                          </span>
-                        )}
-                      </td>
+                        {/* Status */}
+                        <td className="px-4 py-3 text-center">
+                          {item.is_active ? (
+                            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
+                              ● Aktif
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                              ○ Nonaktif
+                            </span>
+                          )}
+                        </td>
 
-                      {/* Urutan */}
-                      <td className="px-4 py-3 text-center font-bold text-gray-900">
-                        {item.urutan}
-                      </td>
+                        {/* Urutan */}
+                        <td className="px-4 py-3 text-center font-bold text-gray-900">
+                          {item.urutan}
+                        </td>
 
-                      {/* Aksi */}
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(item)}
-                          className="inline-flex items-center px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 text-xs font-semibold shadow-sm transition cursor-pointer"
-                        >
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        {/* Aksi (Edit, Aktifkan/Nonaktifkan, Hapus/Retry) */}
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Tombol Edit */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(item)}
+                              disabled={isProcessing}
+                              aria-label={`Edit ${item.judul_peta}`}
+                              className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
+                            >
+                              Edit
+                            </button>
+
+                            {/* Tombol Toggle Status Cepat */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(item)}
+                              disabled={isProcessing}
+                              aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.judul_peta}`}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer ${
+                                item.is_active
+                                  ? "bg-gray-200 hover:bg-gray-300 text-gray-800"
+                                  : "bg-green-600 hover:bg-green-700 text-white"
+                              }`}
+                            >
+                              {processingToggleId === item.id
+                                ? "..."
+                                : item.is_active
+                                ? "Nonaktifkan"
+                                : "Aktifkan"}
+                            </button>
+
+                            {/* Tombol Hapus / Retry Hapus */}
+                            <button
+                              type="button"
+                              onClick={() => handleHapusRecord(item)}
+                              disabled={isProcessing}
+                              aria-label={`${isRetryMode ? "Retry Hapus" : "Hapus"} ${item.judul_peta}`}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer ${
+                                isRetryMode
+                                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                                  : "bg-red-600 hover:bg-red-700 text-white"
+                              }`}
+                            >
+                              {processingDeleteId === item.id
+                                ? "..."
+                                : isRetryMode
+                                ? "Retry Hapus"
+                                : "Hapus"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
