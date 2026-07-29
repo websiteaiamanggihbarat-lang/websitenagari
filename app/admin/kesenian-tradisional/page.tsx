@@ -8,12 +8,16 @@ import {
   KategoriKesenian,
   KesenianTradisional,
   PILIHAN_KATEGORI_KESENIAN,
+  buatSlugJenisKesenian,
   getLabelKategoriKesenian,
+  isSlugJenisValid,
 } from "@/lib/kesenian"
 
 interface FormKesenianState {
   nama_kesenian: string
   kategori: KategoriKesenian
+  jenis_kesenian: string
+  jenis_slug: string
   deskripsi_singkat: string
   penjelasan_lengkap: string
   nama_kelompok_pengelola: string
@@ -28,6 +32,8 @@ interface FormKesenianState {
 const FORM_AWAL: FormKesenianState = {
   nama_kesenian: "",
   kategori: "tari",
+  jenis_kesenian: "",
+  jenis_slug: "",
   deskripsi_singkat: "",
   penjelasan_lengkap: "",
   nama_kelompok_pengelola: "",
@@ -81,6 +87,7 @@ export default function AdminKesenianTradisionalPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState<FormKesenianState>(FORM_AWAL)
+  const [isSlugAutoMode, setIsSlugAutoMode] = useState<boolean>(true)
 
   const handleLogout = async () => {
     setLoadingList(true)
@@ -159,6 +166,7 @@ export default function AdminKesenianTradisionalPage() {
   const handleOpenTambah = () => {
     setEditingId(null)
     setFormData(FORM_AWAL)
+    setIsSlugAutoMode(true)
     setPesanSukses(null)
     setPesanError(null)
     setNewCreatedId(null)
@@ -170,6 +178,8 @@ export default function AdminKesenianTradisionalPage() {
     setFormData({
       nama_kesenian: item.nama_kesenian || "",
       kategori: item.kategori || "tari",
+      jenis_kesenian: item.jenis_kesenian || "",
+      jenis_slug: item.jenis_slug || "",
       deskripsi_singkat: item.deskripsi_singkat || "",
       penjelasan_lengkap: item.penjelasan_lengkap || "",
       nama_kelompok_pengelola: item.nama_kelompok_pengelola || "",
@@ -180,6 +190,7 @@ export default function AdminKesenianTradisionalPage() {
       tautan_peta: item.tautan_peta || "",
       urutan: (item.urutan ?? 0).toString(),
     })
+    setIsSlugAutoMode(!item.jenis_slug)
     setPesanSukses(null)
     setPesanError(null)
     setNewCreatedId(null)
@@ -190,6 +201,26 @@ export default function AdminKesenianTradisionalPage() {
     setIsFormOpen(false)
     setEditingId(null)
     setFormData(FORM_AWAL)
+    setIsSlugAutoMode(true)
+  }
+
+  const handleJenisKesenianChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    const newFormData = { ...formData, jenis_kesenian: val }
+    if (isSlugAutoMode) {
+      newFormData.jenis_slug = buatSlugJenisKesenian(val)
+    }
+    setFormData(newFormData)
+  }
+
+  const handleJenisSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+    setIsSlugAutoMode(false)
+    setFormData({ ...formData, jenis_slug: val })
   }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -202,11 +233,28 @@ export default function AdminKesenianTradisionalPage() {
 
     // Validasi
     const namaClean = formData.nama_kesenian.trim()
+    const jenisClean = formData.jenis_kesenian.trim()
+    const slugClean = formData.jenis_slug.trim()
     const deskripsiClean = formData.deskripsi_singkat.trim()
     const petaClean = formData.tautan_peta.trim()
 
     if (!namaClean) {
       setPesanError("Nama kesenian wajib diisi.")
+      return
+    }
+
+    if (!jenisClean) {
+      setPesanError("Jenis Kesenian wajib diisi (contoh: Randai, Tari, Rebana, Ronggeng, Deki Pano).")
+      return
+    }
+
+    if (!slugClean) {
+      setPesanError("Slug Jenis wajib diisi (contoh: randai, tari, rebana, deki-pano).")
+      return
+    }
+
+    if (!isSlugJenisValid(slugClean)) {
+      setPesanError("Slug Jenis tidak valid. Gunakan huruf kecil, angka, dan tanda hubung (contoh: deki-pano).")
       return
     }
 
@@ -225,6 +273,8 @@ export default function AdminKesenianTradisionalPage() {
     const payload = {
       nama_kesenian: namaClean,
       kategori: formData.kategori,
+      jenis_kesenian: jenisClean,
+      jenis_slug: slugClean,
       deskripsi_singkat: deskripsiClean,
       penjelasan_lengkap: formData.penjelasan_lengkap.trim() || null,
       nama_kelompok_pengelola: formData.nama_kelompok_pengelola.trim() || null,
@@ -675,6 +725,46 @@ export default function AdminKesenianTradisionalPage() {
                   </select>
                 </div>
 
+                {/* Jenis Kesenian */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Jenis Kesenian <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.jenis_kesenian}
+                    onChange={handleJenisKesenianChange}
+                    placeholder="Contoh: Randai, Tari, Rebana, Ronggeng, Deki Pano"
+                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                  />
+                </div>
+
+                {/* Slug Jenis */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Slug Jenis <span className="text-red-500">*</span>
+                    </label>
+                    {isSlugAutoMode && (
+                      <span className="text-[11px] font-medium text-emerald-600">
+                        (Otomatis dari Jenis)
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={formData.jenis_slug}
+                    onChange={handleJenisSlugChange}
+                    placeholder="Contoh: randai atau deki-pano"
+                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-mono text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Digunakan untuk filter URL. Gunakan huruf kecil, angka, dan tanda hubung.
+                  </p>
+                </div>
+
                 {/* Deskripsi Singkat */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700">
@@ -870,6 +960,7 @@ export default function AdminKesenianTradisionalPage() {
                   <tr>
                     <th className="px-6 py-3.5">Urutan</th>
                     <th className="px-6 py-3.5">Nama Kesenian</th>
+                    <th className="px-6 py-3.5">Jenis Kesenian</th>
                     <th className="px-6 py-3.5">Kategori</th>
                     <th className="px-6 py-3.5">Alamat / Jorong</th>
                     <th className="px-6 py-3.5">Status Cover</th>
@@ -893,6 +984,24 @@ export default function AdminKesenianTradisionalPage() {
                             <div className="text-xs text-gray-500 line-clamp-1 max-w-xs mt-0.5">
                               {item.deskripsi_singkat}
                             </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {item.jenis_kesenian ? (
+                            <div>
+                              <div className="font-semibold text-gray-900">
+                                {item.jenis_kesenian}
+                              </div>
+                              {item.jenis_slug && (
+                                <div className="text-[11px] font-mono text-gray-500">
+                                  /{item.jenis_slug}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center rounded-md bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                              Belum dilengkapi
+                            </span>
                           )}
                         </td>
                         <td className="px-6 py-4">

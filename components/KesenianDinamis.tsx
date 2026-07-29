@@ -1,18 +1,15 @@
 import { connection } from "next/server"
 import Link from "next/link"
-import {
-  fetchDaftarKesenianAktif,
-  getLabelKategoriKesenian,
-} from "@/lib/kesenian"
+import { fetchRingkasanJenisKesenianAktif } from "@/lib/kesenian"
 
 export const dynamic = "force-dynamic"
 
 export default async function KesenianDinamis() {
   await connection()
 
-  // Ambil maksimal 5 kesenian tradisional aktif (urutan ascending, nama_kesenian ascending)
-  const listKesenianFull = await fetchDaftarKesenianAktif()
-  const listKesenian = listKesenianFull.slice(0, 5)
+  // Ambil ringkasan jenis kesenian tradisional aktif (maksimal 5 jenis)
+  const ringkasanFull = await fetchRingkasanJenisKesenianAktif()
+  const ringkasanList = ringkasanFull.slice(0, 5)
 
   return (
     <div className="group rounded-2xl border border-gray-200/50 bg-gradient-to-br from-white to-gray-50 p-6 sm:p-8 shadow-sm transition-all duration-300 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] scroll-slide-right">
@@ -44,11 +41,11 @@ export default async function KesenianDinamis() {
         </div>
       </div>
 
-      {/* Daftar Kesenian / Empty State */}
-      {listKesenian.length === 0 ? (
+      {/* Subheader & Tabel Ringkasan Jenis / Empty State */}
+      {ringkasanList.length === 0 ? (
         <div className="my-5 rounded-xl border border-dashed border-gray-300 bg-white/60 p-6 text-center text-sm text-gray-500">
           <p className="font-medium text-gray-700">
-            Belum ada kesenian tradisional yang dipublikasikan.
+            Belum ada jenis kesenian tradisional aktif.
           </p>
           <p className="mt-1 text-xs text-gray-400">
             Silakan kembali lagi nanti untuk melihat pembaruan data kesenian.
@@ -56,45 +53,67 @@ export default async function KesenianDinamis() {
         </div>
       ) : (
         <div className="my-5 space-y-3">
-          {listKesenian.map((item) => {
-            const kategoriLabel = getLabelKategoriKesenian(item.kategori)
-            const subtext =
-              item.alamat && item.alamat.trim() !== ""
-                ? `${kategoriLabel} · ${item.alamat.trim()}`
-                : kategoriLabel
+          <p className="text-sm font-semibold text-gray-800">
+            Daftar jenis kesenian tradisional aktif:
+          </p>
 
-            return (
-              <Link
-                key={item.id}
-                href={`/kesenian-tradisional/${item.id}`}
-                className="group/item flex items-center justify-between rounded-xl border border-[#e6ddcf] bg-[#fdfbf7] p-4 transition-all duration-200 hover:border-[#b6a587] hover:bg-[#f7f2e8] hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#5a3b0d]"
-              >
-                <div className="flex flex-col justify-center min-w-0 pr-4">
-                  <span className="font-semibold text-gray-900 group-hover/item:text-[#2c1b01] truncate text-base">
-                    {item.nama_kesenian}
-                  </span>
-                  <span className="text-xs text-gray-600 mt-0.5 truncate">
-                    {subtext}
-                  </span>
-                </div>
-                <div className="flex-shrink-0 text-gray-400 group-hover/item:text-[#2c1b01] group-hover/item:translate-x-0.5 transition-all">
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+          <div className="overflow-x-auto rounded-xl border border-gray-200">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-[#f0e8db] border-b border-gray-300">
+                  <th className="px-3.5 py-2.5 text-left font-semibold text-gray-900 w-12">
+                    No.
+                  </th>
+                  <th className="px-3.5 py-2.5 text-left font-semibold text-gray-900">
+                    Jenis Kesenian
+                  </th>
+                  <th className="px-3.5 py-2.5 text-right font-semibold text-gray-900 w-24">
+                    Jumlah
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {ringkasanList.map((item, index) => (
+                  <tr
+                    key={item.jenis_slug}
+                    className="hover:bg-[#f7f2e8]/60 transition-colors group/row"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </div>
-              </Link>
-            )
-          })}
+                    <td className="px-3.5 py-2.5 text-gray-600 font-medium">
+                      {index + 1}.
+                    </td>
+                    <td className="px-3.5 py-2.5">
+                      <Link
+                        href={`/kesenian-tradisional?jenis=${item.jenis_slug}`}
+                        aria-label={`Lihat kesenian jenis ${item.jenis_kesenian}`}
+                        className="font-semibold text-gray-900 group-hover/row:text-[#2c1b01] flex items-center justify-between hover:underline focus:outline-none focus:ring-2 focus:ring-[#5a3b0d] rounded-md px-1 py-0.5"
+                      >
+                        <span>{item.jenis_kesenian}</span>
+                        <span className="text-xs text-[#5a3b0d] font-normal group-hover/row:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                          <span>Lihat</span>
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </span>
+                      </Link>
+                    </td>
+                    <td className="px-3.5 py-2.5 text-right font-bold text-[#2c1b01]">
+                      {item.jumlah}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
