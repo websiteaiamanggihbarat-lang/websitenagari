@@ -437,6 +437,53 @@ export default async function AdminPage() {
               </svg>
             </div>
           </Link>
+
+          {/* Kelola Peta Nagari */}
+          <Link
+            href="/admin/peta-nagari"
+            className="group flex min-h-[220px] flex-col rounded-xl border-2 border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#4a3210] hover:shadow-xl"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-[#4a3210] to-[#2c1b01] shadow-md transition-transform group-hover:scale-110">
+              <svg
+                className="h-6 w-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                />
+              </svg>
+            </div>
+
+            <h2 className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-[#4a3210]">
+              Kelola Peta Nagari
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Tambah dan kelola peta administrasi, kebencanaan, serta peta tematik Nagari.
+            </p>
+
+            <div className="mt-auto flex items-center gap-1 pt-5 text-sm font-semibold text-[#6b4b1d]">
+              Buka pengelolaan peta
+              <svg
+                className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

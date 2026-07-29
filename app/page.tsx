@@ -1,4 +1,4 @@
-import PetaNagari from "@/components/PetaNagari";
+import PetaNagariDinamis from "@/components/PetaNagariDinamis";
 import InformasiPendudukDinamis from "@/components/InformasiPendudukDinamis";
 import SaranaPendidikanDinamis from "@/components/SaranaPendidikanDinamis";
 import KesehatanDinamis from "@/components/KesehatanDinamis";
@@ -151,7 +151,7 @@ export default function Home() {
             </p>
           </div>
 
-          <PetaNagari />
+          <PetaNagariDinamis />
         </div>
       </section>
 
