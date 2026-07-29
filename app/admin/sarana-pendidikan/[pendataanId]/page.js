@@ -1002,18 +1002,19 @@ export default function KelolaSaranaDetailAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] py-6 sm:py-8">
-      {/* Header */}
-      <div className="w-full max-w-5xl mx-auto px-4 mb-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-6">
+        <div className="max-w-5xl mx-auto px-4 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
             <Link
               href="/admin/sarana-pendidikan"
-              className="rounded-lg p-2 transition-colors hover:bg-white/60"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
               title="Kembali ke Daftar Pendataan"
+              aria-label="Kembali ke Daftar Pendataan"
             >
               <svg
-                className="h-6 w-6 text-gray-700"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1028,36 +1029,47 @@ export default function KelolaSaranaDetailAdmin() {
             </Link>
 
             <div>
-              <h1 className="text-xl font-bold text-gray-900 sm:text-2xl md:text-3xl">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
                 Kelola Sekolah Sarana Pendidikan
               </h1>
 
-              <p className="mt-1 text-xs text-gray-600 sm:text-sm">
+              <p className="text-xs sm:text-sm text-amber-200/80">
                 Kelola sekolah, fasilitas, dan kegiatan untuk periode pendataan terpilih
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={loading}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-red-700 disabled:opacity-60"
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loading}
+            className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            <svg
+              className="w-4 h-4 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Logout
-            </button>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+            <span>Logout</span>
+          </button>
         </div>
+      </div>
 
-        <div className="mt-4 h-1 w-24 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587]" />
-
-        {error && (
-          <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      {error && (
+        <div className="w-full max-w-5xl mx-auto px-4 mb-6">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Kondisi Jika Pendataan Tidak Ditemukan / Error */}
       {loadingPendataan ? (

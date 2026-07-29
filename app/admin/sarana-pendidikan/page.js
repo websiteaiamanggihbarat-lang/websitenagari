@@ -71,6 +71,7 @@ export default function SaranaPendidikanAdminIndex() {
   const [formPendataan, setFormPendataan] = useState(FORM_PENDATAAN_AWAL)
   const [pendataanList, setPendataanList] = useState([])
   const [editingPendataanId, setEditingPendataanId] = useState(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [loadingPendataan, setLoadingPendataan] = useState(true)
@@ -179,6 +180,16 @@ export default function SaranaPendidikanAdminIndex() {
     setEditingPendataanId(null)
   }
 
+  const handleOpenTambah = () => {
+    resetFormPendataan()
+    setIsFormOpen(true)
+  }
+
+  const handleBatalForm = () => {
+    resetFormPendataan()
+    setIsFormOpen(false)
+  }
+
   const simpanPendataan = async (event) => {
     event.preventDefault()
 
@@ -248,6 +259,7 @@ export default function SaranaPendidikanAdminIndex() {
       )
 
       resetFormPendataan()
+      setIsFormOpen(false)
       await fetchPendataan()
     } catch (simpanError) {
       console.error("simpan pendataan error:", simpanError)
@@ -279,10 +291,14 @@ export default function SaranaPendidikanAdminIndex() {
       is_active: Boolean(item.is_active),
     })
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    })
+    setIsFormOpen(true)
+
+    if (typeof window !== "undefined") {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      })
+    }
   }
 
   const hapusPendataan = async (item) => {
@@ -342,7 +358,7 @@ export default function SaranaPendidikanAdminIndex() {
       alert("Pendataan sarana pendidikan berhasil dihapus.")
 
       if (editingPendataanId === item.id) {
-        resetFormPendataan()
+        handleBatalForm()
       }
 
       await fetchPendataan()
@@ -365,18 +381,19 @@ export default function SaranaPendidikanAdminIndex() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] py-6 sm:py-8">
-      {/* Header */}
-      <div className="w-full max-w-5xl mx-auto px-4 mb-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-6">
+        <div className="max-w-5xl mx-auto px-4 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
             <Link
               href="/admin"
-              className="rounded-lg p-2 transition-colors hover:bg-white/60"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
               title="Kembali ke Dashboard Admin"
+              aria-label="Kembali ke Dashboard Admin"
             >
               <svg
-                className="h-6 w-6 text-gray-700"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -391,169 +408,233 @@ export default function SaranaPendidikanAdminIndex() {
             </Link>
 
             <div>
-              <h1 className="text-xl font-bold text-gray-900 sm:text-2xl md:text-3xl">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
                 Kelola Periode Pendataan Sarana Pendidikan
               </h1>
 
-              <p className="mt-1 text-xs text-gray-600 sm:text-sm">
+              <p className="text-xs sm:text-sm text-amber-200/80">
                 Kelola periode tahun pendataan dan pilih tahun untuk mengelola sekolah
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            {!isFormOpen && (
+              <button
+                type="button"
+                onClick={handleOpenTambah}
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
+              >
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                + Tambah Periode Pendataan
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleLogout}
               disabled={loading}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-red-700 disabled:opacity-60"
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              Logout
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              <span>Logout</span>
             </button>
           </div>
         </div>
+      </div>
 
-        <div className="mt-4 h-1 w-24 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587]" />
-
+      {/* Main Content Area */}
+      <div className="max-w-5xl mx-auto px-4 space-y-6">
         {error && (
-          <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
           </div>
         )}
-      </div>
 
-      {/* SECTION 1: Form Tambah / Edit Pendataan (Full Width) */}
-      <div className="w-full max-w-5xl mx-auto px-4 mb-6">
-        <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
-          <h2 className="text-lg font-bold text-gray-900">
-            {editingPendataanId ? "Edit Periode Pendataan" : "Tambah Periode Pendataan"}
-          </h2>
-
-          <p className="mt-1 text-xs text-gray-500">
-            Buat atau ubah periode tahun pendataan sarana pendidikan Nagari.
-          </p>
-
-          <form onSubmit={simpanPendataan} className="mt-5 space-y-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Tahun Pendataan
-              </label>
-
-              <input
-                type="number"
-                min="1900"
-                max="2100"
-                name="tahun_pendataan"
-                value={formPendataan.tahun_pendataan}
-                onChange={ubahFormPendataan}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Sumber Data
-              </label>
-
-              <input
-                type="text"
-                name="sumber_data"
-                value={formPendataan.sumber_data}
-                onChange={ubahFormPendataan}
-                placeholder="Contoh: Survei Lapangan Pemnag 2026"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Keterangan
-              </label>
-
-              <textarea
-                name="keterangan"
-                rows={3}
-                value={formPendataan.keterangan}
-                onChange={ubahFormPendataan}
-                placeholder="Catatan tambahan mengenai periode pendataan ini..."
-                className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Status Publikasi
-              </label>
-
-              <select
-                name="status_publikasi"
-                value={formPendataan.status_publikasi}
-                onChange={ubahFormPendataan}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-              >
-                <option value="draft">Draft (Belum Dipublikasikan)</option>
-                <option value="dipublikasikan">Dipublikasikan</option>
-              </select>
-            </div>
-
-            <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-3 py-3">
-              <input
-                type="checkbox"
-                name="is_active"
-                checked={formPendataan.is_active}
-                disabled={formPendataan.status_publikasi === "draft"}
-                onChange={ubahFormPendataan}
-              />
+        {/* SECTION 1: Form Tambah / Edit Pendataan (Tampil Hanya Saat isFormOpen = true) */}
+        {isFormOpen && (
+          <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-md space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div>
-                <span className="text-sm font-medium text-gray-700 block">
-                  Tampilkan sebagai data aktif di website publik
-                </span>
-                {formPendataan.status_publikasi === "draft" && (
-                  <span className="text-xs text-amber-600 block">
-                    Pendataan berstatus draft tidak dapat dijadikan pendataan aktif.
-                  </span>
-                )}
+                <h2 className="text-xl font-bold text-gray-900">
+                  {editingPendataanId
+                    ? "Edit Periode Pendataan"
+                    : "Tambah Periode Pendataan"}
+                </h2>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  {editingPendataanId
+                    ? "Perbarui data periode pendataan sarana pendidikan."
+                    : "Buat periode tahun pendataan sarana pendidikan Nagari."}
+                </p>
               </div>
-            </label>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
               <button
-                type="submit"
-                disabled={loading}
-                className="min-h-[44px] flex-1 rounded-lg bg-[#2c1b01] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#3a2604] disabled:opacity-60"
+                type="button"
+                onClick={handleBatalForm}
+                aria-label="Tutup form periode pendataan"
+                className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
               >
-                {loading
-                  ? "Menyimpan..."
-                  : editingPendataanId
-                  ? "Simpan Perubahan Pendataan"
-                  : "Tambah Pendataan"}
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               </button>
+            </div>
 
-              {editingPendataanId && (
+            <form onSubmit={simpanPendataan} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Tahun Pendataan
+                </label>
+
+                <input
+                  type="number"
+                  min="1900"
+                  max="2100"
+                  name="tahun_pendataan"
+                  value={formPendataan.tahun_pendataan}
+                  onChange={ubahFormPendataan}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Sumber Data
+                </label>
+
+                <input
+                  type="text"
+                  name="sumber_data"
+                  value={formPendataan.sumber_data}
+                  onChange={ubahFormPendataan}
+                  placeholder="Contoh: Survei Lapangan Pemnag 2026"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Keterangan
+                </label>
+
+                <textarea
+                  name="keterangan"
+                  rows={3}
+                  value={formPendataan.keterangan}
+                  onChange={ubahFormPendataan}
+                  placeholder="Catatan tambahan mengenai periode pendataan ini..."
+                  className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                  Status Publikasi
+                </label>
+
+                <select
+                  name="status_publikasi"
+                  value={formPendataan.status_publikasi}
+                  onChange={ubahFormPendataan}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                >
+                  <option value="draft">Draft (Belum Dipublikasikan)</option>
+                  <option value="dipublikasikan">Dipublikasikan</option>
+                </select>
+              </div>
+
+              <label className="flex items-center gap-3 rounded-lg border border-gray-300 p-3 bg-gray-50/50">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  checked={formPendataan.is_active}
+                  disabled={formPendataan.status_publikasi === "draft"}
+                  onChange={ubahFormPendataan}
+                  className="h-4 w-4 text-[#2c1b01] rounded"
+                />
+                <div>
+                  <span className="text-sm font-semibold text-gray-700 block">
+                    Tampilkan sebagai data aktif di website publik
+                  </span>
+                  {formPendataan.status_publikasi === "draft" && (
+                    <span className="text-xs text-amber-600 block">
+                      Pendataan berstatus draft tidak dapat dijadikan pendataan aktif.
+                    </span>
+                  )}
+                </div>
+              </label>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
-                  onClick={resetFormPendataan}
-                  className="rounded-lg bg-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+                  onClick={handleBatalForm}
+                  disabled={loading}
+                  className="px-5 py-2.5 rounded-xl border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   Batal
                 </button>
-              )}
-            </div>
-          </form>
-        </div>
-      </div>
 
-      {/* SECTION 2: Riwayat Pendataan (Full Width) */}
-      <div className="w-full max-w-5xl mx-auto px-4 mb-6">
-        <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#2c1b01] hover:bg-[#3a2604] text-white text-sm font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {loading
+                    ? "Menyimpan..."
+                    : editingPendataanId
+                    ? "Simpan Perubahan"
+                    : "Tambah Pendataan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* SECTION 2: Riwayat Pendataan */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-md space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900">
                 Riwayat Periode Pendataan
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 mt-0.5">
                 Pilih periode untuk mengelola daftar sekolah, fasilitas, dan kegiatan
               </p>
             </div>
@@ -562,7 +643,7 @@ export default function SaranaPendidikanAdminIndex() {
               type="button"
               onClick={fetchPendataan}
               disabled={loadingPendataan}
-              className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+              className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60 cursor-pointer transition-colors"
             >
               Refresh
             </button>
@@ -574,7 +655,7 @@ export default function SaranaPendidikanAdminIndex() {
             </p>
           ) : pendataanList.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-500">
-              Belum ada periode pendataan. Silakan buat periode pendataan baru di atas.
+              Belum ada periode pendataan. Silakan klik tombol &quot;+ Tambah Periode Pendataan&quot; di atas.
             </p>
           ) : (
             <div className="space-y-3">
@@ -635,7 +716,7 @@ export default function SaranaPendidikanAdminIndex() {
                     <button
                       type="button"
                       onClick={() => mulaiEditPendataan(item)}
-                      className="rounded-lg bg-yellow-500 px-3 py-2 text-xs font-semibold text-white hover:bg-yellow-600 transition-colors"
+                      className="rounded-lg bg-yellow-500 px-3 py-2 text-xs font-semibold text-white hover:bg-yellow-600 transition-colors cursor-pointer"
                     >
                       Edit
                     </button>
@@ -644,7 +725,7 @@ export default function SaranaPendidikanAdminIndex() {
                       type="button"
                       onClick={() => hapusPendataan(item)}
                       disabled={loading}
-                      className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
+                      className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors cursor-pointer"
                     >
                       Hapus
                     </button>

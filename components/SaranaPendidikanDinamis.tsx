@@ -361,37 +361,43 @@ export default async function SaranaPendidikanDinamis() {
           </div>
 
           {/* Ringkasan utama */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg bg-[#f0e8db] p-3 text-center">
-              <p className="text-[11px] text-gray-500">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 my-4">
+            {/* 1. Sarana */}
+            <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+              <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
                 Sarana
-              </p>
-
-              <p className="mt-1 text-lg font-bold text-[#2c1b01]">
-                {formatAngka(
-                  saranaOperasional.length
-                )}
-              </p>
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5 mt-2">
+                <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
+                  {formatAngka(
+                    saranaOperasional.length
+                  )}
+                </span>
+              </div>
             </div>
 
-            <div className="rounded-lg bg-blue-50 p-3 text-center">
-              <p className="text-[11px] text-gray-500">
+            {/* 2. Siswa */}
+            <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+              <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
                 Siswa
-              </p>
-
-              <p className="mt-1 text-lg font-bold text-blue-700">
-                {formatAngka(totalSiswa)}
-              </p>
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5 mt-2">
+                <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
+                  {formatAngka(totalSiswa)}
+                </span>
+              </div>
             </div>
 
-            <div className="rounded-lg bg-green-50 p-3 text-center">
-              <p className="text-[11px] text-gray-500">
+            {/* 3. Guru */}
+            <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+              <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
                 Guru
-              </p>
-
-              <p className="mt-1 text-lg font-bold text-green-700">
-                {formatAngka(totalGuru)}
-              </p>
+              </div>
+              <div className="flex items-baseline justify-center gap-1.5 mt-2">
+                <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
+                  {formatAngka(totalGuru)}
+                </span>
+              </div>
             </div>
           </div>
 

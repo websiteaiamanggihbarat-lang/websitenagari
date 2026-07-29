@@ -300,47 +300,68 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
           .
         </p>
 
-        <ul className="space-y-2">
-          <li>
-            <span className="font-semibold">
-              Jumlah KK
-            </span>
-            :{" "}
-            {formatAngka(
-              informasiPenduduk.jumlah_kk
-            )}{" "}
-            KK
-          </li>
+        {/* Tiga Kotak Statistik Ringkasan */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 my-4">
+          {/* 1. Jumlah Penduduk */}
+          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+            <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
+              Jumlah Penduduk
+            </div>
+            <div className="flex items-baseline justify-center gap-1.5 mt-2">
+              <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
+                {formatAngka(
+                  informasiPenduduk.jumlah_penduduk
+                )}
+              </span>
+              <span className="text-xs font-medium text-gray-500 leading-none">
+                jiwa
+              </span>
+            </div>
+          </div>
 
-          <li>
-            <span className="font-semibold">
+          {/* 2. Laki-laki */}
+          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+            <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
               Laki-laki
-            </span>
-            :{" "}
-            {formatAngka(
-              informasiPenduduk.jumlah_laki_laki
-            )}{" "}
-            jiwa
-          </li>
+            </div>
+            <div className="flex items-baseline justify-center gap-1.5 mt-2">
+              <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
+                {formatAngka(
+                  informasiPenduduk.jumlah_laki_laki
+                )}
+              </span>
+              <span className="text-xs font-medium text-gray-500 leading-none">
+                jiwa
+              </span>
+            </div>
+          </div>
 
-          <li>
-            <span className="font-semibold">
+          {/* 3. Perempuan */}
+          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+            <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
               Perempuan
-            </span>
-            :{" "}
-            {formatAngka(
-              informasiPenduduk.jumlah_perempuan
-            )}{" "}
-            jiwa
-          </li>
+            </div>
+            <div className="flex items-baseline justify-center gap-1.5 mt-2">
+              <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
+                {formatAngka(
+                  informasiPenduduk.jumlah_perempuan
+                )}
+              </span>
+              <span className="text-xs font-medium text-gray-500 leading-none">
+                jiwa
+              </span>
+            </div>
+          </div>
+        </div>
 
-          <li>
-            <span className="font-semibold">
-              Sumber data
-            </span>
-            : {informasiPenduduk.sumber_data}
-          </li>
-        </ul>
+        {/* Sumber data */}
+        <p className="text-sm text-gray-700">
+          <span className="font-semibold text-gray-900">
+            Sumber data:
+          </span>{" "}
+          {informasiPenduduk.sumber_data?.trim() ||
+            "Tidak dicantumkan"}
+        </p>
 
         {/* Keterangan dari admin */}
         {informasiPenduduk.keterangan && (
@@ -382,7 +403,7 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
                     Rentang Usia
                   </th>
 
-                  <th className="px-3 py-2 text-center font-semibold text-gray-900">
+                  <th className="px-3 py-2 text-right font-semibold text-gray-900">
                     Jumlah
                   </th>
                 </tr>
@@ -414,7 +435,7 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
                             "-"}
                         </td>
 
-                        <td className="px-3 py-2 text-center font-semibold">
+                        <td className="px-3 py-2 text-right font-semibold">
                           {formatAngka(
                             kelompok.jumlah
                           )}

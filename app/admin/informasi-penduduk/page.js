@@ -121,6 +121,7 @@ export default function InformasiPendudukAdmin() {
 
   const [dataPendudukList, setDataPendudukList] = useState([])
   const [editingId, setEditingId] = useState(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
@@ -321,7 +322,7 @@ export default function InformasiPendudukAdmin() {
       )
 
       window.location.href = "/login"
-      return null
+      return false
     }
 
     return session
@@ -532,6 +533,16 @@ export default function InformasiPendudukAdmin() {
     )
 
     setEditingId(null)
+  }
+
+  const handleOpenTambah = () => {
+    resetForm()
+    setIsFormOpen(true)
+  }
+
+  const handleBatalForm = () => {
+    resetForm()
+    setIsFormOpen(false)
   }
 
   const resetFilter = () => {
@@ -770,6 +781,7 @@ export default function InformasiPendudukAdmin() {
 
       resetForm()
       resetFilter()
+      setIsFormOpen(false)
 
       await fetchDataPenduduk()
     } catch (simpanError) {
@@ -876,14 +888,14 @@ export default function InformasiPendudukAdmin() {
       )
     )
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    })
-  }
+    setIsFormOpen(true)
 
-  const batalEdit = () => {
-    resetForm()
+    if (typeof window !== "undefined") {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      })
+    }
   }
 
   const hapusData = async (
@@ -941,7 +953,7 @@ export default function InformasiPendudukAdmin() {
     )
 
     if (editingId === item.id) {
-      resetForm()
+      handleBatalForm()
     }
 
     await fetchDataPenduduk()
@@ -995,19 +1007,52 @@ export default function InformasiPendudukAdmin() {
     : false
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-      <div className="max-w-[1500px] mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-8">
-        {/* Header */}
-        <div className="mb-4 sm:mb-6 md:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-              <Link
-                href="/admin"
-                className="p-2 hover:bg-white/50 rounded-lg transition-colors touch-manipulation"
-                title="Kembali ke Dashboard"
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation (Cokelat Gelap khas Admin) */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <Link
+              href="/admin"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
+              title="Kembali ke Dashboard Admin"
+              aria-label="Kembali ke Dashboard Admin"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                {editingId
+                  ? "Edit Informasi Penduduk"
+                  : "Kelola Informasi Penduduk"}
+              </h1>
+              <p className="text-xs sm:text-sm text-amber-200/80">
+                Kelola data penduduk berdasarkan tanggal pencatatan
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {!isFormOpen && (
+              <button
+                type="button"
+                onClick={handleOpenTambah}
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
               >
                 <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700"
+                  className="w-5 h-5 mr-2"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1016,28 +1061,17 @@ export default function InformasiPendudukAdmin() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                    d="M12 4v16m8-8H4"
                   />
                 </svg>
-              </Link>
-
-              <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 break-words">
-                  {editingId
-                    ? "Edit Informasi Penduduk"
-                    : "Kelola Informasi Penduduk"}
-                </h1>
-
-                <p className="text-gray-600 text-xs sm:text-sm mt-1">
-                  Kelola data penduduk berdasarkan tanggal pencatatan
-                </p>
-              </div>
-            </div>
+                + Tambah Data Penduduk
+              </button>
+            )}
 
             <button
               type="button"
               onClick={handleLogout}
-              className="px-4 py-2.5 sm:py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] touch-manipulation"
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
               disabled={loading}
             >
               <svg
@@ -1053,848 +1087,638 @@ export default function InformasiPendudukAdmin() {
                   d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                 />
               </svg>
-
               <span>Logout</span>
             </button>
           </div>
-
-          <div className="w-20 sm:w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] rounded-full" />
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-5 md:gap-6 items-start">
-          {/* Form data */}
-          <div className="xl:col-span-4">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sm:p-5 md:p-6">
-              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-2">
-                {editingId
-                  ? "Edit Data Penduduk"
-                  : "Form Data Penduduk"}
-              </h2>
-
-              <p className="text-xs sm:text-sm text-gray-500 mb-5">
-                Masukkan kondisi data penduduk pada satu tanggal pencatatan.
-              </p>
-
-              <form
-                onSubmit={
-                  simpanDataPenduduk
-                }
-                className="space-y-5"
+      {/* Main Content Area (Susunan Vertikal Berurutan: Form Hanya Tampil Saat isFormOpen = true) */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* KARTU 1: Form Data Penduduk (Tampil Hanya Saat Terbuka) */}
+        {isFormOpen && (
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 sm:p-8 space-y-6">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {editingId
+                    ? "Edit Data Penduduk"
+                    : "Form Data Penduduk"}
+                </h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Masukkan kondisi data penduduk pada satu tanggal pencatatan.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleBatalForm}
+                aria-label="Tutup form data penduduk"
+                className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
               >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={simpanDataPenduduk} className="space-y-6">
+              {/* Baris Pertama: Tanggal Data & Sumber Data */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Tanggal Data
                   </label>
-
                   <input
                     type="date"
                     name="tanggal_data"
-                    value={
-                      form.tanggal_data
-                    }
+                    value={form.tanggal_data}
                     onChange={ubahForm}
-                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Sumber Data
                   </label>
-
                   <input
                     type="text"
                     name="sumber_data"
                     placeholder="Contoh: Data Sensus Nagari"
-                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
-                    value={
-                      form.sumber_data
-                    }
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
+                    value={form.sumber_data}
+                    onChange={ubahForm}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Baris Kedua: Statistik Penduduk (4 Kolom) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Jumlah Penduduk
+                  </label>
+                  <input
+                    type="number"
+                    name="jumlah_penduduk"
+                    min="0"
+                    placeholder="0"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
+                    value={form.jumlah_penduduk}
                     onChange={ubahForm}
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Jumlah Penduduk
-                    </label>
-
-                    <input
-                      type="number"
-                      name="jumlah_penduduk"
-                      min="0"
-                      placeholder="0"
-                      className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
-                      value={
-                        form.jumlah_penduduk
-                      }
-                      onChange={ubahForm}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Jumlah KK
-                    </label>
-
-                    <input
-                      type="number"
-                      name="jumlah_kk"
-                      min="0"
-                      placeholder="0"
-                      className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
-                      value={
-                        form.jumlah_kk
-                      }
-                      onChange={ubahForm}
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Jumlah KK
+                  </label>
+                  <input
+                    type="number"
+                    name="jumlah_kk"
+                    min="0"
+                    placeholder="0"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
+                    value={form.jumlah_kk}
+                    onChange={ubahForm}
+                    required
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Laki-laki
-                    </label>
-
-                    <input
-                      type="number"
-                      name="jumlah_laki_laki"
-                      min="0"
-                      placeholder="0"
-                      className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
-                      value={
-                        form.jumlah_laki_laki
-                      }
-                      onChange={ubahForm}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Perempuan
-                    </label>
-
-                    <input
-                      type="number"
-                      name="jumlah_perempuan"
-                      min="0"
-                      placeholder="0"
-                      className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
-                      value={
-                        form.jumlah_perempuan
-                      }
-                      onChange={ubahForm}
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Laki-laki
+                  </label>
+                  <input
+                    type="number"
+                    name="jumlah_laki_laki"
+                    min="0"
+                    placeholder="0"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
+                    value={form.jumlah_laki_laki}
+                    onChange={ubahForm}
+                    required
+                  />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Perempuan
+                  </label>
+                  <input
+                    type="number"
+                    name="jumlah_perempuan"
+                    min="0"
+                    placeholder="0"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
+                    value={form.jumlah_perempuan}
+                    onChange={ubahForm}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Panel Validasi Jenis Kelamin */}
+              <div
+                className={`rounded-xl border p-4 text-sm font-medium ${
+                  form.jumlah_penduduk &&
+                  totalJenisKelamin !== keAngka(form.jumlah_penduduk)
+                    ? "border-red-200 bg-red-50 text-red-700"
+                    : "border-green-200 bg-green-50 text-green-700"
+                }`}
+              >
+                Total laki-laki + perempuan:{" "}
+                <strong>{formatAngka(totalJenisKelamin)}</strong>
+              </div>
+
+              {/* Seksi Kelompok Usia (3 Kolom di Desktop) */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="font-bold text-gray-900 text-base mb-1">
+                  Kelompok Usia
+                </h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  Total kelompok usia harus sama dengan jumlah penduduk.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                  {kelompokUsia.map((kelompok, index) => (
+                    <div
+                      key={kelompok.nama_kelompok}
+                      className="flex flex-col justify-between rounded-xl border border-gray-200 bg-gray-50/80 p-4 space-y-3"
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">
+                          {kelompok.nama_kelompok}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {kelompok.rentang_usia}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">
+                          Jumlah
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={kelompok.jumlah}
+                          onChange={(event) =>
+                            ubahJumlahKelompok(index, event.target.value)
+                          }
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
+                          required
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Panel Validasi Kelompok Usia */}
                 <div
-                  className={`rounded-lg border p-3 text-sm ${
+                  className={`mt-4 rounded-xl border p-4 text-sm font-medium ${
                     form.jumlah_penduduk &&
-                    totalJenisKelamin !==
-                      keAngka(
-                        form.jumlah_penduduk
-                      )
+                    totalKelompokUsia !== keAngka(form.jumlah_penduduk)
                       ? "border-red-200 bg-red-50 text-red-700"
                       : "border-green-200 bg-green-50 text-green-700"
                   }`}
                 >
-                  Total laki-laki + perempuan:{" "}
-                  <strong>
-                    {formatAngka(
-                      totalJenisKelamin
-                    )}
-                  </strong>
+                  Total kelompok usia:{" "}
+                  <strong>{formatAngka(totalKelompokUsia)}</strong>
                 </div>
+              </div>
 
-                <div className="border-t border-gray-200 pt-5">
-                  <h3 className="font-semibold text-gray-900 mb-1">
-                    Kelompok Usia
-                  </h3>
+              {/* Keterangan Textarea (Full Width) */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Keterangan
+                </label>
+                <textarea
+                  name="keterangan"
+                  rows={3}
+                  placeholder="Tambahkan keterangan bila diperlukan..."
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
+                  value={form.keterangan}
+                  onChange={ubahForm}
+                />
+              </div>
 
-                  <p className="text-xs text-gray-500 mb-4">
-                    Total kelompok usia harus sama dengan jumlah penduduk.
-                  </p>
-
-                  <div className="space-y-3">
-                    {kelompokUsia.map(
-                      (
-                        kelompok,
-                        index
-                      ) => (
-                        <div
-                          key={
-                            kelompok.nama_kelompok
-                          }
-                          className="rounded-lg border border-gray-200 bg-gray-50 p-3"
-                        >
-                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_130px] gap-3 items-end">
-                            <div>
-                              <p className="text-sm font-semibold text-gray-900">
-                                {
-                                  kelompok.nama_kelompok
-                                }
-                              </p>
-
-                              <p className="text-xs text-gray-500 mt-1">
-                                {
-                                  kelompok.rentang_usia
-                                }
-                              </p>
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Jumlah
-                              </label>
-
-                              <input
-                                type="number"
-                                min="0"
-                                placeholder="0"
-                                value={
-                                  kelompok.jumlah
-                                }
-                                onChange={(
-                                  event
-                                ) =>
-                                  ubahJumlahKelompok(
-                                    index,
-                                    event
-                                      .target
-                                      .value
-                                  )
-                                }
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all bg-white"
-                                required
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-
-                  <div
-                    className={`mt-3 rounded-lg border p-3 text-sm ${
-                      form.jumlah_penduduk &&
-                      totalKelompokUsia !==
-                        keAngka(
-                          form.jumlah_penduduk
-                        )
-                        ? "border-red-200 bg-red-50 text-red-700"
-                        : "border-green-200 bg-green-50 text-green-700"
-                    }`}
-                  >
-                    Total kelompok usia:{" "}
-                    <strong>
-                      {formatAngka(
-                        totalKelompokUsia
-                      )}
-                    </strong>
-                  </div>
-                </div>
-
+              {/* Status Publikasi & Is Active */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Keterangan
-                  </label>
-
-                  <textarea
-                    name="keterangan"
-                    rows={3}
-                    placeholder="Tambahkan keterangan bila diperlukan..."
-                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 resize-none focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all text-base"
-                    value={
-                      form.keterangan
-                    }
-                    onChange={ubahForm}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Status Publikasi
                   </label>
-
                   <select
                     name="status_publikasi"
-                    value={
-                      form.status_publikasi
-                    }
+                    value={form.status_publikasi}
                     onChange={ubahForm}
-                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01] focus:border-transparent transition-all"
                   >
-                    <option value="draft">
-                      Draft
-                    </option>
-
-                    <option value="dipublikasikan">
-                      Dipublikasikan
-                    </option>
+                    <option value="draft">Draft</option>
+                    <option value="dipublikasikan">Dipublikasikan</option>
                   </select>
                 </div>
 
-                <label
-                  className={`w-full min-h-[48px] flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
-                    form.status_publikasi ===
-                    "dipublikasikan"
-                      ? "border-gray-300 bg-white cursor-pointer"
-                      : "border-gray-200 bg-gray-100 cursor-not-allowed opacity-70"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    name="is_active"
-                    checked={
-                      form.is_active
-                    }
-                    onChange={ubahForm}
-                    disabled={
-                      form.status_publikasi !==
-                      "dipublikasikan"
-                    }
-                    className="h-4 w-4"
-                  />
-
-                  <span className="text-sm font-medium text-gray-700">
-                    Tampilkan sebagai data aktif di Beranda
-                  </span>
-                </label>
-
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
-                  <button
-                    type="submit"
-                    className="flex-1 bg-gradient-to-r from-[#2c1b01] to-[#1a1200] text-white font-semibold py-3 rounded-lg hover:from-[#3a2604] hover:to-[#100b00] transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed text-sm sm:text-base min-h-[44px]"
-                    disabled={loading}
+                <div className="flex items-end">
+                  <label
+                    className={`w-full min-h-[42px] flex items-center gap-3 rounded-lg border px-4 py-2.5 transition-colors ${
+                      form.status_publikasi === "dipublikasikan"
+                        ? "border-gray-300 bg-white cursor-pointer"
+                        : "border-gray-200 bg-gray-100 cursor-not-allowed opacity-70"
+                    }`}
                   >
-                    {loading
-                      ? "Menyimpan..."
-                      : editingId
-                        ? "Simpan Perubahan"
-                        : "Tambah Data Penduduk"}
-                  </button>
-
-                  {editingId && (
-                    <button
-                      type="button"
-                      onClick={batalEdit}
-                      className="px-4 sm:px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm sm:text-base min-h-[44px]"
-                    >
-                      Batal
-                    </button>
-                  )}
+                    <input
+                      type="checkbox"
+                      name="is_active"
+                      checked={form.is_active}
+                      onChange={ubahForm}
+                      disabled={form.status_publikasi !== "dipublikasikan"}
+                      className="h-4 w-4 text-[#2c1b01] rounded"
+                    />
+                    <span className="text-xs font-semibold text-gray-700">
+                      Tampilkan sebagai data aktif di Beranda
+                    </span>
+                  </label>
                 </div>
-              </form>
-            </div>
-          </div>
+              </div>
 
-          {/* Riwayat */}
-          <div className="xl:col-span-8">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sm:p-5 md:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
-                <div>
-                  <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900">
-                    Riwayat Informasi Penduduk
-                  </h2>
-
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                    Pilih periode untuk menampilkan satu data terakhir yang tersedia.
-                  </p>
-                </div>
-
+              {/* Tombol Simpan & Batal */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
-                  onClick={
-                    fetchDataPenduduk
-                  }
-                  className="px-3 sm:px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60 min-h-[44px]"
-                  disabled={
-                    loading ||
-                    loadingData
-                  }
+                  onClick={handleBatalForm}
+                  disabled={loading}
+                  className="px-5 py-2.5 rounded-xl border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-
-                  Refresh
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#2c1b01] hover:bg-[#1a1200] text-white text-sm font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {loading
+                    ? "Menyimpan..."
+                    : editingId
+                      ? "Simpan Perubahan"
+                      : "Tambah Data Penduduk"}
                 </button>
               </div>
+            </form>
+          </div>
+        )}
 
-              {/* Filter */}
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Jenis Filter
-                    </label>
+        {/* KARTU 2: Riwayat Informasi Penduduk (Lebar Penuh Container) */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 sm:p-8 space-y-6">
+          {/* Header Riwayat */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-100 pb-5">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Riwayat Informasi Penduduk
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                Pilih periode untuk menampilkan satu data terakhir yang tersedia.
+              </p>
+            </div>
 
-                    <select
-                      value={
-                        jenisFilter
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        setJenisFilter(
-                          event.target
-                            .value
-                        )
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                    >
-                      <option value="terbaru">
-                        Data terbaru
-                      </option>
+            <button
+              type="button"
+              onClick={fetchDataPenduduk}
+              className="inline-flex items-center justify-center px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-semibold transition-colors disabled:opacity-60 cursor-pointer self-start sm:self-auto"
+              disabled={loading || loadingData}
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Refresh Data
+            </button>
+          </div>
 
-                      <option value="hari">
-                        Per hari
-                      </option>
-
-                      <option value="bulan">
-                        Per bulan
-                      </option>
-
-                      <option value="tahun">
-                        Per tahun
-                      </option>
-
-                      <option value="rentang">
-                        Rentang tanggal
-                      </option>
-                    </select>
-                  </div>
-
-                  {jenisFilter ===
-                    "hari" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Pilih Tanggal
-                      </label>
-
-                      <input
-                        type="date"
-                        value={
-                          filterHari
-                        }
-                        onChange={(
-                          event
-                        ) =>
-                          setFilterHari(
-                            event.target
-                              .value
-                          )
-                        }
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                      />
-                    </div>
-                  )}
-
-                  {jenisFilter ===
-                    "bulan" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Pilih Bulan
-                      </label>
-
-                      <input
-                        type="month"
-                        value={
-                          filterBulan
-                        }
-                        onChange={(
-                          event
-                        ) =>
-                          setFilterBulan(
-                            event.target
-                              .value
-                          )
-                        }
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                      />
-                    </div>
-                  )}
-
-                  {jenisFilter ===
-                    "tahun" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tahun
-                      </label>
-
-                      <input
-                        type="number"
-                        min="1900"
-                        max="2100"
-                        placeholder="Contoh: 2026"
-                        value={
-                          filterTahun
-                        }
-                        onChange={(
-                          event
-                        ) =>
-                          setFilterTahun(
-                            event.target
-                              .value
-                          )
-                        }
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                      />
-                    </div>
-                  )}
-
-                  {jenisFilter ===
-                    "rentang" && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Dari Tanggal
-                        </label>
-
-                        <input
-                          type="date"
-                          value={
-                            filterTanggalMulai
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            setFilterTanggalMulai(
-                              event
-                                .target
-                                .value
-                            )
-                          }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Sampai Tanggal
-                        </label>
-
-                        <input
-                          type="date"
-                          min={
-                            filterTanggalMulai ||
-                            undefined
-                          }
-                          value={
-                            filterTanggalSelesai
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            setFilterTanggalSelesai(
-                              event
-                                .target
-                                .value
-                            )
-                          }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={
-                        resetFilter
-                      }
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-colors"
-                    >
-                      Reset Filter
-                    </button>
-                  </div>
-                </div>
-
-                <div
-                  className={`mt-4 rounded-lg border p-3 text-sm ${
-                    filterRentangTidakValid
-                      ? "border-red-200 bg-red-50 text-red-700"
-                      : "border-blue-200 bg-blue-50 text-blue-700"
-                  }`}
+          {/* Area Filter Riwayat */}
+          <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-4 sm:p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Jenis Filter
+                </label>
+                <select
+                  value={jenisFilter}
+                  onChange={(event) => setJenisFilter(event.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
                 >
-                  <p className="font-semibold">
-                    {
-                      keteranganFilter
-                    }
-                  </p>
-
-                  {filterSudahDipilih &&
-                    !filterRentangTidakValid && (
-                      <p className="mt-1">
-                        {
-                          hasilFilter.length
-                        }{" "}
-                        data ditemukan.
-                        Riwayat menampilkan
-                        satu data paling
-                        akhir.
-                      </p>
-                    )}
-                </div>
+                  <option value="terbaru">Data terbaru</option>
+                  <option value="hari">Per hari</option>
+                  <option value="bulan">Per bulan</option>
+                  <option value="tahun">Per tahun</option>
+                  <option value="rentang">Rentang tanggal</option>
+                </select>
               </div>
 
-              {error && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                  {error}
+              {jenisFilter === "hari" && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Pilih Tanggal
+                  </label>
+                  <input
+                    type="date"
+                    value={filterHari}
+                    onChange={(event) => setFilterHari(event.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                  />
                 </div>
               )}
 
-              {loadingData && (
-                <div className="flex flex-col items-center justify-center py-16">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#2c1b01]" />
-
-                  <p className="text-gray-500 text-sm mt-4">
-                    Memuat informasi penduduk...
-                  </p>
+              {jenisFilter === "bulan" && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Pilih Bulan
+                  </label>
+                  <input
+                    type="month"
+                    value={filterBulan}
+                    onChange={(event) => setFilterBulan(event.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                  />
                 </div>
               )}
 
-              {!loadingData &&
-                !filterSudahDipilih && (
-                  <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center">
-                    <p className="text-gray-500 text-sm">
-                      Lengkapi pilihan filter untuk melihat data.
-                    </p>
+              {jenisFilter === "tahun" && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Tahun
+                  </label>
+                  <input
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    placeholder="Contoh: 2026"
+                    value={filterTahun}
+                    onChange={(event) => setFilterTahun(event.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                  />
+                </div>
+              )}
+
+              {jenisFilter === "rentang" && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      Dari Tanggal
+                    </label>
+                    <input
+                      type="date"
+                      value={filterTanggalMulai}
+                      onChange={(event) =>
+                        setFilterTanggalMulai(event.target.value)
+                      }
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    />
                   </div>
-                )}
 
-              {!loadingData &&
-                filterSudahDipilih &&
-                !dataTerpilih && (
-                  <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center">
-                    <p className="text-gray-500 text-sm">
-                      Tidak ada informasi penduduk pada periode yang dipilih.
-                    </p>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      Sampai Tanggal
+                    </label>
+                    <input
+                      type="date"
+                      min={filterTanggalMulai || undefined}
+                      value={filterTanggalSelesai}
+                      onChange={(event) =>
+                        setFilterTanggalSelesai(event.target.value)
+                      }
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                    />
                   </div>
-                )}
+                </>
+              )}
 
-              {!loadingData &&
-                dataTerpilih && (
-                  <>
-                    <div className="overflow-x-auto rounded-xl border border-gray-200">
-                      <table className="w-full min-w-[1450px] border-collapse text-sm">
-                        <thead className="bg-[#2c1b01] text-white">
-                          <tr>
-                            <th className="px-4 py-3 text-left whitespace-nowrap">
-                              Tanggal
-                            </th>
+              <div>
+                <button
+                  type="button"
+                  onClick={resetFilter}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  Reset Filter
+                </button>
+              </div>
+            </div>
 
-                            <th className="px-4 py-3 text-left whitespace-nowrap">
-                              Sumber
-                            </th>
-
-                            <th className="px-4 py-3 text-right whitespace-nowrap">
-                              Penduduk
-                            </th>
-
-                            <th className="px-4 py-3 text-right whitespace-nowrap">
-                              Laki-laki
-                            </th>
-
-                            <th className="px-4 py-3 text-right whitespace-nowrap">
-                              Perempuan
-                            </th>
-
-                            <th className="px-4 py-3 text-right whitespace-nowrap">
-                              KK
-                            </th>
-
-                            <th className="px-4 py-3 text-right whitespace-nowrap">
-                              Anak
-                            </th>
-
-                            <th className="px-4 py-3 text-right whitespace-nowrap">
-                              Produktif
-                            </th>
-
-                            <th className="px-4 py-3 text-right whitespace-nowrap">
-                              Lansia
-                            </th>
-
-                            <th className="px-4 py-3 text-center whitespace-nowrap">
-                              Status
-                            </th>
-
-                            <th className="px-4 py-3 text-center whitespace-nowrap">
-                              Aktif
-                            </th>
-
-                            <th className="px-4 py-3 text-left min-w-[220px]">
-                              Keterangan
-                            </th>
-
-                            <th className="px-4 py-3 text-center whitespace-nowrap">
-                              Aksi
-                            </th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          <tr className="bg-white hover:bg-gray-50">
-                            <td className="border-t border-gray-200 px-4 py-4 font-semibold whitespace-nowrap">
-                              {formatTanggal(
-                                dataTerpilih.tanggal_data
-                              )}
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 min-w-[180px]">
-                              {
-                                dataTerpilih.sumber_data
-                              }
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-right font-semibold">
-                              {formatAngka(
-                                dataTerpilih.jumlah_penduduk
-                              )}
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-right">
-                              {formatAngka(
-                                dataTerpilih.jumlah_laki_laki
-                              )}
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-right">
-                              {formatAngka(
-                                dataTerpilih.jumlah_perempuan
-                              )}
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-right">
-                              {formatAngka(
-                                dataTerpilih.jumlah_kk
-                              )}
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-right">
-                              {formatAngka(
-                                anakAnak
-                              )}
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-right">
-                              {formatAngka(
-                                usiaProduktif
-                              )}
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-right">
-                              {formatAngka(
-                                lansia
-                              )}
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-center">
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                  dataTerpilih.status_publikasi ===
-                                  "dipublikasikan"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
-                              >
-                                {dataTerpilih.status_publikasi ===
-                                "dipublikasikan"
-                                  ? "Dipublikasikan"
-                                  : "Draft"}
-                              </span>
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-center">
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                  dataTerpilih.is_active
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
-                              >
-                                {dataTerpilih.is_active
-                                  ? "Ya"
-                                  : "Tidak"}
-                              </span>
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4 text-gray-600">
-                              {dataTerpilih.keterangan ||
-                                "-"}
-                            </td>
-
-                            <td className="border-t border-gray-200 px-4 py-4">
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    mulaiEdit(
-                                      dataTerpilih
-                                    )
-                                  }
-                                  className="px-3 py-2 rounded-lg bg-yellow-500 text-white text-xs font-semibold hover:bg-yellow-600 transition-colors"
-                                >
-                                  Edit
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    hapusData(
-                                      dataTerpilih
-                                    )
-                                  }
-                                  className="px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors"
-                                  disabled={
-                                    loading
-                                  }
-                                >
-                                  Hapus
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div
-                      className={`mt-4 rounded-lg border p-3 text-sm ${
-                        dataTerpilihSesuai
-                          ? "border-green-200 bg-green-50 text-green-700"
-                          : "border-red-200 bg-red-50 text-red-700"
-                      }`}
-                    >
-                      {dataTerpilihSesuai
-                        ? "Total jenis kelamin dan kelompok usia sesuai dengan jumlah penduduk."
-                        : "Periksa kembali total jenis kelamin atau kelompok usia."}
-                    </div>
-                  </>
-                )}
+            {/* Panel Keterangan Filter */}
+            <div
+              className={`rounded-lg border p-3 text-xs sm:text-sm font-medium ${
+                filterRentangTidakValid
+                  ? "border-red-200 bg-red-50 text-red-700"
+                  : "border-blue-200 bg-blue-50 text-blue-700"
+              }`}
+            >
+              <p className="font-semibold">{keteranganFilter}</p>
+              {filterSudahDipilih && !filterRentangTidakValid && (
+                <p className="mt-0.5 text-xs text-blue-600">
+                  {hasilFilter.length} data ditemukan. Riwayat menampilkan satu data paling akhir.
+                </p>
+              )}
             </div>
           </div>
+
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {loadingData && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#2c1b01]" />
+              <p className="text-gray-500 text-sm mt-4">
+                Memuat informasi penduduk...
+              </p>
+            </div>
+          )}
+
+          {!loadingData && !filterSudahDipilih && (
+            <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center">
+              <p className="text-gray-500 text-sm">
+                Lengkapi pilihan filter untuk melihat data.
+              </p>
+            </div>
+          )}
+
+          {!loadingData && filterSudahDipilih && !dataTerpilih && (
+            <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center">
+              <p className="text-gray-500 text-sm">
+                Tidak ada informasi penduduk pada periode yang dipilih.
+              </p>
+            </div>
+          )}
+
+          {!loadingData && dataTerpilih && (
+            <>
+              {/* Tabel Riwayat Data */}
+              <div className="overflow-x-auto rounded-xl border border-gray-200">
+                <table className="w-full min-w-[1100px] border-collapse text-sm">
+                  <thead className="bg-[#2c1b01] text-white">
+                    <tr>
+                      <th className="px-4 py-3 text-left whitespace-nowrap">
+                        Tanggal
+                      </th>
+                      <th className="px-4 py-3 text-left whitespace-nowrap">
+                        Sumber
+                      </th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">
+                        Penduduk
+                      </th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">
+                        Laki-laki
+                      </th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">
+                        Perempuan
+                      </th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">
+                        KK
+                      </th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">
+                        Anak
+                      </th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">
+                        Produktif
+                      </th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">
+                        Lansia
+                      </th>
+                      <th className="px-4 py-3 text-center whitespace-nowrap">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-center whitespace-nowrap">
+                        Aktif
+                      </th>
+                      <th className="px-4 py-3 text-left min-w-[180px]">
+                        Keterangan
+                      </th>
+                      <th className="px-4 py-3 text-center whitespace-nowrap">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr className="bg-white hover:bg-gray-50">
+                      <td className="border-t border-gray-200 px-4 py-4 font-semibold whitespace-nowrap">
+                        {formatTanggal(dataTerpilih.tanggal_data)}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4">
+                        {dataTerpilih.sumber_data}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-right font-semibold">
+                        {formatAngka(dataTerpilih.jumlah_penduduk)}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-right">
+                        {formatAngka(dataTerpilih.jumlah_laki_laki)}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-right">
+                        {formatAngka(dataTerpilih.jumlah_perempuan)}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-right">
+                        {formatAngka(dataTerpilih.jumlah_kk)}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-right">
+                        {formatAngka(anakAnak)}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-right">
+                        {formatAngka(usiaProduktif)}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-right">
+                        {formatAngka(lansia)}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-center">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            dataTerpilih.status_publikasi === "dipublikasikan"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {dataTerpilih.status_publikasi === "dipublikasikan"
+                            ? "Dipublikasikan"
+                            : "Draft"}
+                        </span>
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-center">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            dataTerpilih.is_active
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {dataTerpilih.is_active ? "Ya" : "Tidak"}
+                        </span>
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4 text-gray-600">
+                        {dataTerpilih.keterangan || "-"}
+                      </td>
+                      <td className="border-t border-gray-200 px-4 py-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => mulaiEdit(dataTerpilih)}
+                            className="px-3 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => hapusData(dataTerpilih)}
+                            className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60"
+                            disabled={loading}
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Panel Status Keselarasan Total */}
+              <div
+                className={`rounded-xl border p-4 text-sm font-medium ${
+                  dataTerpilihSesuai
+                    ? "border-green-200 bg-green-50 text-green-700"
+                    : "border-red-200 bg-red-50 text-red-700"
+                }`}
+              >
+                {dataTerpilihSesuai
+                  ? "Total jenis kelamin dan kelompok usia sesuai dengan jumlah penduduk."
+                  : "Periksa kembali total jenis kelamin atau kelompok usia."}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

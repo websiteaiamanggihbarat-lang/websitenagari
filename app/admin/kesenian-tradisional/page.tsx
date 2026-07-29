@@ -39,6 +39,32 @@ const FORM_AWAL: FormKesenianState = {
   urutan: "0",
 }
 
+async function keluarDariAdmin(labelError = "Logout error") {
+  try {
+    await supabase.auth.signOut()
+
+    if (typeof window !== "undefined") {
+      localStorage.clear()
+      sessionStorage.clear()
+    }
+
+    const response = await fetch("/auth/signout", {
+      method: "POST",
+      credentials: "include",
+      redirect: "follow",
+    })
+
+    if (response.redirected) {
+      window.location.href = response.url
+    } else {
+      window.location.href = `/login?logout=success&t=${Date.now()}`
+    }
+  } catch (error) {
+    console.error(labelError, error)
+    window.location.href = `/login?logout=success&t=${Date.now()}`
+  }
+}
+
 export default function AdminKesenianTradisionalPage() {
   const [listKesenian, setListKesenian] = useState<KesenianTradisional[]>([])
   const [coverMap, setCoverMap] = useState<Record<string, boolean>>({})
@@ -55,6 +81,11 @@ export default function AdminKesenianTradisionalPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState<FormKesenianState>(FORM_AWAL)
+
+  const handleLogout = async () => {
+    setLoadingList(true)
+    await keluarDariAdmin("Logout error")
+  }
 
   const periksaSesi = async () => {
     const {
@@ -428,43 +459,19 @@ export default function AdminKesenianTradisionalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2c1b01] to-[#4a3210] text-white shadow-md">
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11.48 3.5a.562.562 0 011.04 0l2.125 5.11 5.518.4a.562.562 0 01.32.98l-4.204 3.6 1.285 5.39a.562.562 0 01-.84.61L12 17.77l-4.724 2.82a.562.562 0 01-.84-.61l1.285-5.39-4.204-3.6a.562.562 0 01.32-.98l5.518-.4 2.125-5.11z"
-                  />
-                </svg>
-              </span>
-              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-                Kelola Kesenian Tradisional
-              </h1>
-            </div>
-            <p className="mt-1 text-sm text-gray-600">
-              Kelola data utama sanggar, kelompok seni, dan kesenian daerah Nagari Aia Manggih Barat.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
             <Link
               href="/admin"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#8c734b]"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
+              title="Kembali ke Dashboard Admin"
+              aria-label="Kembali ke Dashboard Admin"
             >
               <svg
-                className="h-4 w-4"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -476,16 +483,26 @@ export default function AdminKesenianTradisionalPage() {
                   d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
-              Kembali ke Dashboard Admin
             </Link>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Kelola Kesenian Tradisional
+              </h1>
+              <p className="text-xs sm:text-sm text-amber-200/80">
+                Kelola data utama sanggar, kelompok seni, dan kesenian daerah Nagari Aia Manggih Barat
+              </p>
+            </div>
+          </div>
 
+          <div className="flex flex-wrap items-center gap-3">
             {!isFormOpen && (
               <button
+                type="button"
                 onClick={handleOpenTambah}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#2c1b01] px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#4a3210] focus:outline-none focus:ring-2 focus:ring-[#8c734b]"
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
               >
                 <svg
-                  className="h-4 w-4"
+                  className="w-5 h-5 mr-2"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -500,8 +517,33 @@ export default function AdminKesenianTradisionalPage() {
                 Tambah Kesenian Baru
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loadingList || loadingForm}
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              <span>Logout</span>
+            </button>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
         {/* Alert Notifications */}
         {pesanSukses && (
@@ -888,11 +930,11 @@ export default function AdminKesenianTradisionalPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
                             {/* Kelola Galeri */}
                             <Link
                               href={`/admin/kesenian-tradisional/${item.id}`}
-                              className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100 transition shadow-sm"
+                              className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 px-2.5 py-1.5 text-xs font-semibold shadow-sm transition"
                               title="Kelola Galeri Foto"
                             >
                               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -905,7 +947,7 @@ export default function AdminKesenianTradisionalPage() {
                             <button
                               onClick={() => handleOpenEdit(item)}
                               disabled={isProcessing}
-                              className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm disabled:opacity-50"
+                              className="rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
                             >
                               Edit
                             </button>
@@ -915,7 +957,7 @@ export default function AdminKesenianTradisionalPage() {
                               <button
                                 onClick={() => handleNonaktifkan(item)}
                                 disabled={isProcessing}
-                                className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition shadow-sm disabled:opacity-50"
+                                className="rounded-lg bg-gray-700 hover:bg-gray-800 text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
                               >
                                 {isProcessing ? "Proses..." : "Nonaktifkan"}
                               </button>
@@ -923,7 +965,7 @@ export default function AdminKesenianTradisionalPage() {
                               <button
                                 onClick={() => handleAktifkan(item)}
                                 disabled={isProcessing}
-                                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition shadow-sm disabled:opacity-50"
+                                className="rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
                               >
                                 {isProcessing ? "Proses..." : "Aktifkan"}
                               </button>
@@ -933,7 +975,7 @@ export default function AdminKesenianTradisionalPage() {
                             <button
                               onClick={() => handleHapus(item)}
                               disabled={isProcessing}
-                              className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition shadow-sm disabled:opacity-50"
+                              className="rounded-lg bg-red-600 hover:bg-red-700 text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
                             >
                               {isProcessing ? "Proses..." : "Hapus"}
                             </button>

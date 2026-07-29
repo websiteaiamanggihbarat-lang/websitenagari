@@ -47,6 +47,32 @@ function buatNamaFileAman(namaFile: string): string {
   return extClean ? `${namaClean}.${extClean}` : namaClean
 }
 
+async function keluarDariAdmin(labelError = "Logout error") {
+  try {
+    await supabase.auth.signOut()
+
+    if (typeof window !== "undefined") {
+      localStorage.clear()
+      sessionStorage.clear()
+    }
+
+    const response = await fetch("/auth/signout", {
+      method: "POST",
+      credentials: "include",
+      redirect: "follow",
+    })
+
+    if (response.redirected) {
+      window.location.href = response.url
+    } else {
+      window.location.href = `/login?logout=success&t=${Date.now()}`
+    }
+  } catch (error) {
+    console.error(labelError, error)
+    window.location.href = `/login?logout=success&t=${Date.now()}`
+  }
+}
+
 export default function AdminGaleriKesenianPage({ params }: PageProps) {
   const routeParams = useParams()
   const unwrappedParams = typeof use === "function" && params ? use(params) : null
@@ -63,6 +89,11 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+
+  const handleLogout = async () => {
+    setLoading(true)
+    await keluarDariAdmin("Logout error")
+  }
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
@@ -589,56 +620,110 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
   const hasActiveCover = galeriList.some((g) => g.is_cover && g.is_active)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        {/* Breadcrumb & Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-2">
-            <Link href="/admin" className="hover:text-gray-900">
-              Admin
-            </Link>
-            <span>/</span>
-            <Link href="/admin/kesenian-tradisional" className="hover:text-gray-900">
-              Kesenian Tradisional
-            </Link>
-            <span>/</span>
-            <span className="text-gray-900 font-semibold">{kesenian.nama_kesenian}</span>
-          </div>
-
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/80 pb-6">
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center rounded-md bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900">
-                  {getLabelKategoriKesenian(kesenian.kategori)}
-                </span>
-                {kesenian.is_active ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 border border-blue-200">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
-                    Status Kesenian: Aktif
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-200">
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
-                    Status Kesenian: Nonaktif
-                  </span>
-                )}
-              </div>
-
-              <h1 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
-                Galeri Foto — {kesenian.nama_kesenian}
-              </h1>
-              <p className="mt-1 text-sm text-gray-600">
-                {kesenian.alamat ? `Lokasi: ${kesenian.alamat} | ` : ""}
-                Kelola foto utama (cover) dan foto galeri kesenian ini.
-              </p>
-            </div>
-
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
             <Link
               href="/admin/kesenian-tradisional"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
+              title="Kembali ke Daftar Kesenian"
+              aria-label="Kembali ke Daftar Kesenian"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </Link>
+
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Galeri Foto — {kesenian.nama_kesenian}
+              </h1>
+
+              <p className="text-xs sm:text-sm text-amber-200/80">
+                Kelola foto utama, galeri, dan metadata dokumentasi kesenian
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/admin/kesenian-tradisional"
+              className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
             >
               ← Kembali ke Kelola Kesenian
             </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loading}
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Ringkasan Status Kesenian Card */}
+        <div className="rounded-xl border border-gray-200/80 bg-white p-4 sm:p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center rounded-md bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">
+              {getLabelKategoriKesenian(kesenian.kategori)}
+            </span>
+
+            {kesenian.is_active ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                Status Kesenian: Aktif
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 border border-gray-200">
+                <span className="h-2 w-2 rounded-full bg-gray-400"></span>
+                Status Kesenian: Nonaktif
+              </span>
+            )}
+
+            {hasActiveCover ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                ✓ Cover Utama Terpasang
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 border border-amber-200">
+                ! Belum Ada Cover Utama
+              </span>
+            )}
+          </div>
+
+          <div className="text-xs text-gray-500 font-medium">
+            {kesenian.alamat && <span>📍 {kesenian.alamat} | </span>}
+            <span>Total: {galeriList.length} Foto</span>
           </div>
         </div>
 
