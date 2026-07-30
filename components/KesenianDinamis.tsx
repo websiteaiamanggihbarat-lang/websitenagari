@@ -1,15 +1,14 @@
 import { connection } from "next/server"
 import Link from "next/link"
-import { fetchRingkasanJenisKesenianAktif } from "@/lib/kesenian"
+import { fetchRekapKategoriKesenianAktif } from "@/lib/kesenian"
 
 export const dynamic = "force-dynamic"
 
 export default async function KesenianDinamis() {
   await connection()
 
-  // Ambil ringkasan jenis kesenian tradisional aktif (maksimal 5 jenis)
-  const ringkasanFull = await fetchRingkasanJenisKesenianAktif()
-  const ringkasanList = ringkasanFull.slice(0, 5)
+  // Ambil rekap kategori kesenian tradisional aktif
+  const ringkasanList = await fetchRekapKategoriKesenianAktif()
 
   return (
     <div className="group rounded-2xl border border-gray-200/50 bg-gradient-to-br from-white to-gray-50 p-6 sm:p-8 shadow-sm transition-all duration-300 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] scroll-slide-right">
@@ -41,11 +40,11 @@ export default async function KesenianDinamis() {
         </div>
       </div>
 
-      {/* Subheader & Tabel Ringkasan Jenis / Empty State */}
+      {/* Subheader & Tabel Ringkasan Kategori / Empty State */}
       {ringkasanList.length === 0 ? (
         <div className="my-5 rounded-xl border border-dashed border-gray-300 bg-white/60 p-6 text-center text-sm text-gray-500">
           <p className="font-medium text-gray-700">
-            Belum ada jenis kesenian tradisional aktif.
+            Belum ada kesenian tradisional aktif.
           </p>
           <p className="mt-1 text-xs text-gray-400">
             Silakan kembali lagi nanti untuk melihat pembaruan data kesenian.
@@ -54,7 +53,7 @@ export default async function KesenianDinamis() {
       ) : (
         <div className="my-5 space-y-3">
           <p className="text-sm font-semibold text-gray-800">
-            Daftar jenis kesenian tradisional aktif:
+            Daftar kategori kesenian tradisional aktif:
           </p>
 
           <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -65,9 +64,9 @@ export default async function KesenianDinamis() {
                     No.
                   </th>
                   <th className="px-3.5 py-2.5 text-left font-semibold text-gray-900">
-                    Jenis Kesenian
+                    Kategori Kesenian
                   </th>
-                  <th className="px-3.5 py-2.5 text-right font-semibold text-gray-900 w-24">
+                  <th className="px-3.5 py-2.5 text-right font-semibold text-gray-900 w-28">
                     Jumlah
                   </th>
                 </tr>
@@ -75,7 +74,7 @@ export default async function KesenianDinamis() {
               <tbody className="divide-y divide-gray-200 bg-white">
                 {ringkasanList.map((item, index) => (
                   <tr
-                    key={item.jenis_slug}
+                    key={item.kategori}
                     className="hover:bg-[#f7f2e8]/60 transition-colors group/row"
                   >
                     <td className="px-3.5 py-2.5 text-gray-600 font-medium">
@@ -83,11 +82,11 @@ export default async function KesenianDinamis() {
                     </td>
                     <td className="px-3.5 py-2.5">
                       <Link
-                        href={`/kesenian-tradisional?jenis=${item.jenis_slug}`}
-                        aria-label={`Lihat kesenian jenis ${item.jenis_kesenian}`}
+                        href={`/kesenian-tradisional?kategori=${item.kategori}`}
+                        aria-label={`Lihat kesenian kategori ${item.label}`}
                         className="font-semibold text-gray-900 group-hover/row:text-[#2c1b01] flex items-center justify-between hover:underline focus:outline-none focus:ring-2 focus:ring-[#5a3b0d] rounded-md px-1 py-0.5"
                       >
-                        <span>{item.jenis_kesenian}</span>
+                        <span>{item.label}</span>
                         <span className="text-xs text-[#5a3b0d] font-normal group-hover/row:translate-x-0.5 transition-transform flex items-center gap-0.5">
                           <span>Lihat</span>
                           <svg
@@ -107,7 +106,7 @@ export default async function KesenianDinamis() {
                       </Link>
                     </td>
                     <td className="px-3.5 py-2.5 text-right font-bold text-[#2c1b01]">
-                      {item.jumlah}
+                      {item.jumlah} kesenian
                     </td>
                   </tr>
                 ))}

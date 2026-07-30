@@ -380,72 +380,116 @@ export type JenisKesenianUnik = {
   urutan_terkecil: number
 }
 
+export type RekapKategoriKesenian = {
+  kategori: KategoriKesenian
+  label: string
+  jumlah: number
+}
+
 /**
- * Membaca ringkasan jumlah per jenis kesenian tradisional aktif untuk kartu Beranda.
+ * Membaca rekap jumlah kesenian tradisional aktif per kategori.
  */
-export async function fetchRingkasanJenisKesenianAktif(): Promise<RingkasanJenisKesenian[]> {
+export async function fetchRekapKategoriKesenianAktif(): Promise<RekapKategoriKesenian[]> {
   try {
     const { data, error } = await supabase
       .from("kesenian_tradisional")
-      .select("id, jenis_kesenian, jenis_slug, urutan")
+      .select("kategori")
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
-      .order("nama_kesenian", { ascending: true })
 
     if (error || !data) {
       if (error) {
-        console.error("fetchRingkasanJenisKesenianAktif error:", error.message)
+        console.error("fetchRekapKategoriKesenianAktif error:", error.message)
       }
       return []
     }
 
-    const map = new Map<string, RingkasanJenisKesenian>()
+    const counts: Record<KategoriKesenian, number> = {
+      tari: 0,
+      musik: 0,
+      pertunjukan: 0,
+      kerajinan: 0,
+      lainnya: 0,
+    }
 
     for (const item of data) {
-      const slug = (item.jenis_slug || "").trim()
-      const namaJenis = (item.jenis_kesenian || "").trim()
-      if (!slug || !namaJenis) continue
-
-      const currentUrutan = typeof item.urutan === "number" ? item.urutan : 0
-
-      if (!map.has(slug)) {
-        map.set(slug, {
-          jenis_kesenian: namaJenis,
-          jenis_slug: slug,
-          jumlah: 1,
-          urutan_terkecil: currentUrutan,
-        })
-      } else {
-        const existing = map.get(slug)!
-        existing.jumlah += 1
-        if (currentUrutan < existing.urutan_terkecil) {
-          existing.urutan_terkecil = currentUrutan
-        }
+      if (item.kategori && item.kategori in counts) {
+        counts[item.kategori as KategoriKesenian] += 1
       }
     }
 
-    return Array.from(map.values()).sort((a, b) => {
-      if (a.urutan_terkecil !== b.urutan_terkecil) {
-        return a.urutan_terkecil - b.urutan_terkecil
-      }
-      return a.jenis_kesenian.localeCompare(b.jenis_kesenian, "id-ID")
-    })
+    return PILIHAN_KATEGORI_KESENIAN
+      .map((opsi) => ({
+        kategori: opsi.value as KategoriKesenian,
+        label: opsi.label,
+        jumlah: counts[opsi.value as KategoriKesenian] || 0,
+      }))
+      .filter((item) => item.jumlah > 0)
   } catch (err) {
-    console.error("fetchRingkasanJenisKesenianAktif catch:", err)
+    console.error("fetchRekapKategoriKesenianAktif catch:", err)
     return []
   }
 }
 
 /**
- * Membaca daftar jenis kesenian aktif yang unik untuk tombol filter halaman publik.
+ * Membaca kesenian aktif beserta cover aktif, opsional difilter berdasarkan kategori.
  */
-export async function fetchJenisKesenianAktif(): Promise<JenisKesenianUnik[]> {
-  const ringkasan = await fetchRingkasanJenisKesenianAktif()
-  return ringkasan.map((item) => ({
-    jenis_kesenian: item.jenis_kesenian,
-    jenis_slug: item.jenis_slug,
-    urutan_terkecil: item.urutan_terkecil,
-  }))
+export async function fetchDaftarKesenianAktifByKategori(
+  kategoriClean?: string
+): Promise<KesenianDenganCover[]> {
+  try {
+    let query = supabase
+      .from("kesenian_tradisional")
+      .select("*")
+      .eq("is_active", true)
+      .order("urutan", { ascending: true })
+      .order("nama_kesenian", { ascending: true })
+
+    if (kategoriClean && kategoriClean.trim() && kategoriClean !== "semua") {
+      query = query.eq("kategori", kategoriClean.trim())
+    }
+
+    const { data: listKesenian, error: errKesenian } = await query
+
+    if (errKesenian || !listKesenian) {
+      if (errKesenian) {
+        console.error("fetchDaftarKesenianAktifByKategori errKesenian:", errKesenian)
+      }
+      return []
+    }
+
+    const kesenianIds = listKesenian.map((item) => item.id)
+    if (kesenianIds.length === 0) {
+      return []
+    }
+
+    const { data: listCover, error: errCover } = await supabase
+      .from("galeri_kesenian_tradisional")
+      .select("*")
+      .in("kesenian_id", kesenianIds)
+      .eq("is_active", true)
+      .eq("is_cover", true)
+
+    if (errCover) {
+      console.error("fetchDaftarKesenianAktifByKategori errCover:", errCover)
+    }
+
+    const coverMap = new Map<string, GaleriKesenianTradisional>()
+    if (listCover) {
+      for (const cover of listCover as GaleriKesenianTradisional[]) {
+        if (!coverMap.has(cover.kesenian_id)) {
+          coverMap.set(cover.kesenian_id, cover)
+        }
+      }
+    }
+
+    return (listKesenian as KesenianTradisional[]).map((k) => ({
+      ...k,
+      cover: coverMap.get(k.id) || null,
+    }))
+  } catch (error) {
+    console.error("fetchDaftarKesenianAktifByKategori catch error:", error)
+    return []
+  }
 }
 
 /**

@@ -2,8 +2,8 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { connection } from "next/server"
 import {
-  fetchDaftarKesenianAktifByJenis,
-  fetchJenisKesenianAktif,
+  PILIHAN_KATEGORI_KESENIAN,
+  fetchDaftarKesenianAktifByKategori,
   getLabelKategoriKesenian,
 } from "@/lib/kesenian"
 
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 interface PageProps {
   searchParams: Promise<{
-    jenis?: string | string[]
+    kategori?: string | string[]
   }>
 }
 
@@ -26,21 +26,20 @@ export default async function KesenianTradisionalIndexPage(props: PageProps) {
   await connection()
 
   const searchParams = await props.searchParams
-  const jenisParamRaw = Array.isArray(searchParams?.jenis)
-    ? searchParams.jenis[0]
-    : searchParams?.jenis
+  const kategoriParamRaw = Array.isArray(searchParams?.kategori)
+    ? searchParams.kategori[0]
+    : searchParams?.kategori
 
-  const jenisSlug = jenisParamRaw?.trim().toLowerCase() || ""
+  const kategoriClean = kategoriParamRaw?.trim().toLowerCase() || ""
 
-  // Ambil daftar jenis unik aktif untuk tombol filter
-  const daftarJenis = await fetchJenisKesenianAktif()
+  // Cari objek kategori yang terpilih jika ada
+  const selectedKategoriObj = PILIHAN_KATEGORI_KESENIAN.find(
+    (k) => k.value === kategoriClean
+  )
+  const isFiltered = Boolean(kategoriClean && selectedKategoriObj)
 
-  // Cari objek jenis yang terpilih jika ada
-  const selectedJenisObj = daftarJenis.find((j) => j.jenis_slug === jenisSlug)
-  const isFiltered = Boolean(jenisSlug && selectedJenisObj)
-
-  // Ambil daftar kesenian aktif berdasarkan filter jenis_slug
-  const listKesenian = await fetchDaftarKesenianAktifByJenis(jenisSlug)
+  // Ambil daftar kesenian aktif berdasarkan filter kategori
+  const listKesenian = await fetchDaftarKesenianAktifByKategori(kategoriClean)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fdfbf7] via-white to-[#f7f3eb]">
@@ -67,50 +66,48 @@ export default async function KesenianTradisionalIndexPage(props: PageProps) {
             </p>
           </div>
 
-          {/* Filter Baris Jenis Kesenian */}
-          {daftarJenis.length > 0 && (
-            <div className="mb-10">
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 overflow-x-auto max-w-full pb-2">
-                {/* Tombol Semua */}
-                <Link
-                  href="/kesenian-tradisional"
-                  aria-current={!jenisSlug ? "page" : undefined}
-                  className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-                    !jenisSlug
-                      ? "bg-[#2c1b01] text-white shadow-md border border-[#2c1b01]"
-                      : "bg-white/90 text-gray-700 hover:bg-[#f7f2e8] hover:text-[#2c1b01] border border-gray-200/80 shadow-sm"
-                  }`}
-                >
-                  Semua
-                </Link>
+          {/* Filter Baris Kategori Kesenian */}
+          <div className="mb-10">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 overflow-x-auto max-w-full pb-2">
+              {/* Tombol Semua */}
+              <Link
+                href="/kesenian-tradisional"
+                aria-current={!kategoriClean ? "page" : undefined}
+                className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                  !kategoriClean
+                    ? "bg-[#2c1b01] text-white shadow-md border border-[#2c1b01]"
+                    : "bg-white/90 text-gray-700 hover:bg-[#f7f2e8] hover:text-[#2c1b01] border border-gray-200/80 shadow-sm"
+                }`}
+              >
+                Semua
+              </Link>
 
-                {/* List Jenis */}
-                {daftarJenis.map((item) => {
-                  const isActive = jenisSlug === item.jenis_slug
-                  return (
-                    <Link
-                      key={item.jenis_slug}
-                      href={`/kesenian-tradisional?jenis=${item.jenis_slug}`}
-                      aria-current={isActive ? "page" : undefined}
-                      className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-                        isActive
-                          ? "bg-[#2c1b01] text-white shadow-md border border-[#2c1b01]"
-                          : "bg-white/90 text-gray-700 hover:bg-[#f7f2e8] hover:text-[#2c1b01] border border-gray-200/80 shadow-sm"
-                      }`}
-                    >
-                      {item.jenis_kesenian}
-                    </Link>
-                  )
-                })}
-              </div>
+              {/* List Kategori */}
+              {PILIHAN_KATEGORI_KESENIAN.map((item) => {
+                const isActive = kategoriClean === item.value
+                return (
+                  <Link
+                    key={item.value}
+                    href={`/kesenian-tradisional?kategori=${item.value}`}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                      isActive
+                        ? "bg-[#2c1b01] text-white shadow-md border border-[#2c1b01]"
+                        : "bg-white/90 text-gray-700 hover:bg-[#f7f2e8] hover:text-[#2c1b01] border border-gray-200/80 shadow-sm"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              })}
             </div>
-          )}
+          </div>
 
           {/* Judul Konteks Hasil Filter & Count */}
           <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-4 gap-2">
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
               {isFiltered
-                ? `Kesenian Jenis ${selectedJenisObj?.jenis_kesenian}`
+                ? `Kesenian Kategori ${selectedKategoriObj?.label}`
                 : "Semua Kesenian Tradisional"}
             </h2>
             <span className="text-sm font-medium text-gray-500">
@@ -135,16 +132,16 @@ export default async function KesenianTradisionalIndexPage(props: PageProps) {
                 />
               </svg>
               <h3 className="text-lg font-bold text-gray-900">
-                {jenisSlug
-                  ? "Belum Ada Kesenian Aktif Untuk Jenis Ini"
+                {kategoriClean
+                  ? "Belum Ada Kesenian Aktif Untuk Kategori Ini"
                   : "Belum Ada Kesenian Dipublikasikan"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {jenisSlug
-                  ? "Tidak ada data kesenian tradisional aktif yang cocok dengan jenis pilihan."
+                {kategoriClean
+                  ? "Tidak ada data kesenian tradisional aktif yang cocok dengan kategori pilihan."
                   : "Saat ini belum ada data kesenian tradisional yang dipublikasikan."}
               </p>
-              {jenisSlug && (
+              {kategoriClean && (
                 <div className="mt-6">
                   <Link
                     href="/kesenian-tradisional"
@@ -179,11 +176,6 @@ export default async function KesenianTradisionalIndexPage(props: PageProps) {
                       <span className="inline-flex items-center rounded-lg bg-black/60 backdrop-blur-md px-3 py-1 text-xs font-semibold text-amber-300">
                         {getLabelKategoriKesenian(item.kategori)}
                       </span>
-                      {item.jenis_kesenian && (
-                        <span className="inline-flex items-center rounded-lg bg-[#2c1b01]/80 backdrop-blur-md px-3 py-1 text-xs font-semibold text-white">
-                          {item.jenis_kesenian}
-                        </span>
-                      )}
                     </div>
                   </div>
 

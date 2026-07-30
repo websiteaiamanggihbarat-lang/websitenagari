@@ -85,9 +85,15 @@ export default function AdminKesenianTradisionalPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [filterKategori, setFilterKategori] = useState<string>("semua")
 
   const [formData, setFormData] = useState<FormKesenianState>(FORM_AWAL)
   const [isSlugAutoMode, setIsSlugAutoMode] = useState<boolean>(true)
+
+  const listKesenianTerfilter =
+    filterKategori === "semua"
+      ? listKesenian
+      : listKesenian.filter((item) => item.kategori === filterKategori)
 
   const handleLogout = async () => {
     setLoadingList(true)
@@ -233,28 +239,11 @@ export default function AdminKesenianTradisionalPage() {
 
     // Validasi
     const namaClean = formData.nama_kesenian.trim()
-    const jenisClean = formData.jenis_kesenian.trim()
-    const slugClean = formData.jenis_slug.trim()
     const deskripsiClean = formData.deskripsi_singkat.trim()
     const petaClean = formData.tautan_peta.trim()
 
     if (!namaClean) {
       setPesanError("Nama kesenian wajib diisi.")
-      return
-    }
-
-    if (!jenisClean) {
-      setPesanError("Jenis Kesenian wajib diisi (contoh: Randai, Tari, Rebana, Ronggeng, Deki Pano).")
-      return
-    }
-
-    if (!slugClean) {
-      setPesanError("Slug Jenis wajib diisi (contoh: randai, tari, rebana, deki-pano).")
-      return
-    }
-
-    if (!isSlugJenisValid(slugClean)) {
-      setPesanError("Slug Jenis tidak valid. Gunakan huruf kecil, angka, dan tanda hubung (contoh: deki-pano).")
       return
     }
 
@@ -267,6 +256,10 @@ export default function AdminKesenianTradisionalPage() {
       setPesanError("Tautan peta harus diawali dengan https://")
       return
     }
+
+    const editingItem = listKesenian.find((item) => item.id === editingId)
+    const jenisClean = editingItem?.jenis_kesenian || namaClean
+    const slugClean = editingItem?.jenis_slug || buatSlugJenisKesenian(namaClean)
 
     const numUrutan = Math.max(0, parseInt(formData.urutan || "0", 10) || 0)
 
@@ -725,46 +718,6 @@ export default function AdminKesenianTradisionalPage() {
                   </select>
                 </div>
 
-                {/* Jenis Kesenian */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Jenis Kesenian <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.jenis_kesenian}
-                    onChange={handleJenisKesenianChange}
-                    placeholder="Contoh: Randai, Tari, Rebana, Ronggeng, Deki Pano"
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
-                  />
-                </div>
-
-                {/* Slug Jenis */}
-                <div>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-semibold text-gray-700">
-                      Slug Jenis <span className="text-red-500">*</span>
-                    </label>
-                    {isSlugAutoMode && (
-                      <span className="text-[11px] font-medium text-emerald-600">
-                        (Otomatis dari Jenis)
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    value={formData.jenis_slug}
-                    onChange={handleJenisSlugChange}
-                    placeholder="Contoh: randai atau deki-pano"
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-mono text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Digunakan untuk filter URL. Gunakan huruf kecil, angka, dan tanda hubung.
-                  </p>
-                </div>
-
                 {/* Deskripsi Singkat */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700">
@@ -927,11 +880,49 @@ export default function AdminKesenianTradisionalPage() {
           </div>
         )}
 
-        {/* Tabel / Lista Kesenian */}
+        {/* Panel Filter Kategori */}
+        <div className="mb-6 rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="filter-kategori-select" className="text-sm font-semibold text-gray-700">
+              Filter Kategori:
+            </label>
+            <select
+              id="filter-kategori-select"
+              value={filterKategori}
+              onChange={(e) => setFilterKategori(e.target.value)}
+              className="rounded-xl border border-gray-300 px-3.5 py-2 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+            >
+              <option value="semua">Semua Kategori</option>
+              {PILIHAN_KATEGORI_KESENIAN.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
+            {filterKategori !== "semua" && (
+              <button
+                type="button"
+                onClick={() => setFilterKategori("semua")}
+                className="text-xs font-semibold text-amber-800 hover:underline px-2 py-1 cursor-pointer"
+              >
+                Reset Filter
+              </button>
+            )}
+          </div>
+
+          <p className="text-xs text-gray-500 font-medium">
+            {filterKategori === "semua"
+              ? "Menampilkan seluruh data kesenian tradisional."
+              : `Menampilkan kategori ${getLabelKategoriKesenian(filterKategori)} — ${listKesenianTerfilter.length} data ditemukan.`}
+          </p>
+        </div>
+
+        {/* Tabel / Daftar Kesenian */}
         <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-md">
           <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
             <h3 className="font-bold text-gray-900">
-              Daftar Kesenian Tradisional ({listKesenian.length})
+              Daftar Kesenian Tradisional ({listKesenianTerfilter.length})
             </h3>
             {loadingList && <span className="text-xs text-gray-500">Memuat data...</span>}
           </div>
@@ -948,10 +939,18 @@ export default function AdminKesenianTradisionalPage() {
               </svg>
               <p className="mt-2">Sedang memuat data kesenian...</p>
             </div>
-          ) : listKesenian.length === 0 ? (
+          ) : listKesenianTerfilter.length === 0 ? (
             <div className="p-12 text-center text-sm text-gray-500">
-              <p className="text-base font-semibold text-gray-700">Belum ada data kesenian tradisional.</p>
-              <p className="mt-1 text-xs text-gray-500">Klik tombol &quot;Tambah Kesenian Baru&quot; di atas untuk mendaftarkan kesenian.</p>
+              <p className="text-base font-semibold text-gray-700">
+                {filterKategori !== "semua"
+                  ? `Tidak ada kesenian tradisional pada kategori ini.`
+                  : "Belum ada data kesenian tradisional."}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                {filterKategori !== "semua"
+                  ? "Coba pilih kategori lain atau reset filter."
+                  : 'Klik tombol "Tambah Kesenian Baru" di atas untuk mendaftarkan kesenian.'}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -960,17 +959,14 @@ export default function AdminKesenianTradisionalPage() {
                   <tr>
                     <th className="px-6 py-3.5">Urutan</th>
                     <th className="px-6 py-3.5">Nama Kesenian</th>
-                    <th className="px-6 py-3.5">Jenis Kesenian</th>
                     <th className="px-6 py-3.5">Kategori</th>
                     <th className="px-6 py-3.5">Alamat / Jorong</th>
-                    <th className="px-6 py-3.5">Status Cover</th>
                     <th className="px-6 py-3.5">Status Publikasi</th>
-                    <th className="px-6 py-3.5 text-right">Aksi</th>
+                    <th className="px-6 py-3.5 text-center min-w-[190px]">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 border-t border-gray-100">
-                  {listKesenian.map((item) => {
-                    const hasCover = Boolean(coverMap[item.id])
+                  {listKesenianTerfilter.map((item) => {
                     const isProcessing = actionLoadingId === item.id
 
                     return (
@@ -987,43 +983,12 @@ export default function AdminKesenianTradisionalPage() {
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          {item.jenis_kesenian ? (
-                            <div>
-                              <div className="font-semibold text-gray-900">
-                                {item.jenis_kesenian}
-                              </div>
-                              {item.jenis_slug && (
-                                <div className="text-[11px] font-mono text-gray-500">
-                                  /{item.jenis_slug}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="inline-flex items-center rounded-md bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
-                              Belum dilengkapi
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
                           <span className="inline-flex items-center rounded-md bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
                             {getLabelKategoriKesenian(item.kategori)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-gray-600">
                           {item.alamat || "-"}
-                        </td>
-                        <td className="px-6 py-4">
-                          {hasCover ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                              Sudah ada foto utama
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                              Belum ada foto utama
-                            </span>
-                          )}
                         </td>
                         <td className="px-6 py-4">
                           {item.is_active ? (
@@ -1038,55 +1003,57 @@ export default function AdminKesenianTradisionalPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex flex-wrap items-center justify-end gap-1.5">
-                            {/* Kelola Galeri */}
+                        <td className="px-6 py-4 align-middle">
+                          <div className="grid min-w-[190px] grid-cols-2 gap-2 mx-auto">
+                            {/* Row 1: Galeri & Edit */}
                             <Link
                               href={`/admin/kesenian-tradisional/${item.id}`}
-                              className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 px-2.5 py-1.5 text-xs font-semibold shadow-sm transition"
+                              className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-amber-500 hover:bg-amber-400 text-gray-950 px-3 py-2 text-xs font-semibold shadow-sm transition w-full"
                               title="Kelola Galeri Foto"
                             >
-                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              Galeri
+                              <span>Galeri</span>
                             </Link>
 
-                            {/* Edit */}
                             <button
+                              type="button"
                               onClick={() => handleOpenEdit(item)}
                               disabled={isProcessing}
-                              className="rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
+                              className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full cursor-pointer"
                             >
-                              Edit
+                              <span>Edit</span>
                             </button>
 
-                            {/* Aktifkan / Nonaktifkan */}
+                            {/* Row 2: Aktifkan/Nonaktifkan & Hapus */}
                             {item.is_active ? (
                               <button
+                                type="button"
                                 onClick={() => handleNonaktifkan(item)}
                                 disabled={isProcessing}
-                                className="rounded-lg bg-gray-700 hover:bg-gray-800 text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
+                                className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-gray-700 hover:bg-gray-800 text-white px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full cursor-pointer"
                               >
-                                {isProcessing ? "Proses..." : "Nonaktifkan"}
+                                <span>{isProcessing ? "Proses..." : "Nonaktifkan"}</span>
                               </button>
                             ) : (
                               <button
+                                type="button"
                                 onClick={() => handleAktifkan(item)}
                                 disabled={isProcessing}
-                                className="rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
+                                className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full cursor-pointer"
                               >
-                                {isProcessing ? "Proses..." : "Aktifkan"}
+                                <span>{isProcessing ? "Proses..." : "Aktifkan"}</span>
                               </button>
                             )}
 
-                            {/* Hapus */}
                             <button
+                              type="button"
                               onClick={() => handleHapus(item)}
                               disabled={isProcessing}
-                              className="rounded-lg bg-red-600 hover:bg-red-700 text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
+                              className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-red-600 hover:bg-red-700 text-white px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full cursor-pointer"
                             >
-                              {isProcessing ? "Proses..." : "Hapus"}
+                              <span>{isProcessing ? "Proses..." : "Hapus"}</span>
                             </button>
                           </div>
                         </td>
