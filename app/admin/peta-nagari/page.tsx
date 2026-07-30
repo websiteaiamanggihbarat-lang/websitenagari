@@ -885,7 +885,7 @@ export default function AdminPetaNagariPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
       {/* Top Header Navigation */}
       <div className="bg-[#2c1b01] text-white shadow-md mb-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
             <Link
               href="/admin"
@@ -918,7 +918,7 @@ export default function AdminPetaNagariPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {!isFormOpen ? (
+            {!isFormOpen && (
               <button
                 type="button"
                 onClick={handleOpenTambah}
@@ -937,15 +937,7 @@ export default function AdminPetaNagariPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                + Tambah Peta Baru
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleBatalForm}
-                className="inline-flex items-center px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
-              >
-                Tutup Form
+                + Tambah Peta
               </button>
             )}
 
@@ -974,7 +966,7 @@ export default function AdminPetaNagariPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Notifications */}
         {pesanSukses && (
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 shadow-sm">
@@ -1435,16 +1427,9 @@ export default function AdminPetaNagariPage() {
               <h3 className="text-base font-bold text-gray-900 mb-1">
                 Belum ada data peta nagari.
               </h3>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs text-gray-500">
                 Silakan tambah peta baru untuk dipublikasikan pada slider beranda.
               </p>
-              <button
-                type="button"
-                onClick={handleOpenTambah}
-                className="inline-flex items-center px-4 py-2 rounded-xl bg-[#2c1b01] text-white text-xs font-semibold shadow-md hover:bg-[#4a3210] transition cursor-pointer"
-              >
-                + Tambah Peta Pertama
-              </button>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-gray-200">
