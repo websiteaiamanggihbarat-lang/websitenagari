@@ -16,6 +16,21 @@ import {
   isPosisiGambarHero,
 } from "@/lib/heroBeranda"
 
+export type CleanupHeroTertunda = {
+  id: string
+  heroId: string
+  namaInternal: string
+  bucket: string
+  storagePath: string
+  pesan: string
+}
+
+export type HasilHapusFile = {
+  berhasil: boolean
+  sudahTidakAda: boolean
+  pesan: string | null
+}
+
 /**
  * Helper internal untuk menormalisasi nama file menjadi aman untuk Storage path
  */
@@ -44,7 +59,31 @@ function buatNamaFileAman(file: File): string {
 }
 
 /**
- * Helper internal untuk membersihkan file baru di Storage jika insert DB gagal (Rollback)
+ * Validasi struktur storage path internal hero beranda
+ */
+function isStoragePathValidForHero(heroId: string, path: string): boolean {
+  if (
+    !path ||
+    !path.trim() ||
+    path.startsWith("/") ||
+    path.includes("../") ||
+    path.includes("..\\") ||
+    path.includes("\\")
+  ) {
+    return false
+  }
+  const parts = path.split("/")
+  if (parts.length < 4) return false
+  if (parts[0] !== "hero-beranda") return false
+  if (parts[1] !== heroId) return false
+  if (parts[2] !== "gambar") return false
+  const filename = parts.slice(3).join("/")
+  if (!filename || !filename.trim() || filename.includes("/")) return false
+  return true
+}
+
+/**
+ * Helper internal untuk membersihkan file baru di Storage jika insert/update DB gagal (Rollback)
  */
 async function hapusFileBaruSetelahGagal(
   storagePath: string
@@ -61,6 +100,110 @@ async function hapusFileBaruSetelahGagal(
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     return { berhasil: false, error: msg }
+  }
+}
+
+/**
+ * Helper internal idempotent untuk memeriksa keberadaan satu file lalu menghapusnya secara aman
+ */
+async function hapusFileJikaAda(
+  heroId: string,
+  storagePath: string
+): Promise<HasilHapusFile> {
+  if (!isStoragePathValidForHero(heroId, storagePath)) {
+    return { berhasil: false, sudahTidakAda: false, pesan: "Format storage path tidak valid." }
+  }
+
+  const parts = storagePath.split("/")
+  const folderPath = parts.slice(0, 3).join("/")
+  const filename = parts.slice(3).join("/")
+
+  try {
+    const { data: listData, error: listError } = await supabase.storage
+      .from(BUCKET_GAMBAR_HERO_BERANDA)
+      .list(folderPath, { limit: 1000 })
+
+    if (listError) {
+      return { berhasil: false, sudahTidakAda: false, pesan: listError.message }
+    }
+
+    const fileFound = listData?.some((item) => item.name === filename)
+
+    if (!fileFound) {
+      return { berhasil: true, sudahTidakAda: true, pesan: null }
+    }
+
+    const { error: removeError } = await supabase.storage
+      .from(BUCKET_GAMBAR_HERO_BERANDA)
+      .remove([storagePath])
+
+    if (removeError) {
+      return { berhasil: false, sudahTidakAda: false, pesan: removeError.message }
+    }
+
+    return { berhasil: true, sudahTidakAda: false, pesan: null }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { berhasil: false, sudahTidakAda: false, pesan: msg }
+  }
+}
+
+/**
+ * Helper internal untuk membersihkan seluruh isi folder satu record hero secara aman
+ */
+async function bersihkanFolderHero(heroId: string): Promise<{ berhasil: boolean; pesan: string | null }> {
+  if (!heroId || !heroId.trim()) {
+    return { berhasil: false, pesan: "Hero ID tidak valid." }
+  }
+
+  const folderPath = `hero-beranda/${heroId}/gambar`
+
+  try {
+    const { data: listData, error: listError } = await supabase.storage
+      .from(BUCKET_GAMBAR_HERO_BERANDA)
+      .list(folderPath, { limit: 1000 })
+
+    if (listError) {
+      return { berhasil: false, pesan: listError.message }
+    }
+
+    if (!listData || listData.length === 0) {
+      return { berhasil: true, pesan: null }
+    }
+
+    const fullPaths = listData
+      .filter((item) => item.name && !item.name.includes("/"))
+      .map((item) => `${folderPath}/${item.name}`)
+
+    if (fullPaths.length === 0) {
+      return { berhasil: true, pesan: null }
+    }
+
+    const { error: removeError } = await supabase.storage
+      .from(BUCKET_GAMBAR_HERO_BERANDA)
+      .remove(fullPaths)
+
+    if (removeError) {
+      return { berhasil: false, pesan: removeError.message }
+    }
+
+    // Verifikasi ulang list folder
+    const { data: verifyList, error: verifyError } = await supabase.storage
+      .from(BUCKET_GAMBAR_HERO_BERANDA)
+      .list(folderPath, { limit: 1000 })
+
+    if (verifyError) {
+      return { berhasil: false, pesan: verifyError.message }
+    }
+
+    if (verifyList && verifyList.length > 0) {
+      return { berhasil: false, pesan: "Beberapa file pada folder hero belum berhasil dibersihkan." }
+    }
+
+    return { berhasil: true, pesan: null }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { berhasil: false, pesan: msg }
   }
 }
 
@@ -82,19 +225,42 @@ export default function AdminHeroBerandaPage() {
   const [urutan, setUrutan] = useState<string>("0")
   const [isActive, setIsActive] = useState<boolean>(false)
 
-  // State File & Preview Lokal (Hanya Mode Tambah)
+  // State File & Preview Lokal
   const [fileGambar, setFileGambar] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [dimensiGambar, setDimensiGambar] = useState<{ width: number; height: number } | null>(null)
   const [warningGambar, setWarningGambar] = useState<string[]>([])
 
-  // Ref untuk Melindungi Race Condition Pembacaan Gambar Lokal
+  // State Proses per Record (Tahap 05B)
+  const [processingToggleId, setProcessingToggleId] = useState<string | null>(null)
+  const [processingDeleteId, setProcessingDeleteId] = useState<string | null>(null)
+  const [processingCleanupId, setProcessingCleanupId] = useState<string | null>(null)
+  const [retryDeleteIds, setRetryDeleteIds] = useState<string[]>([])
+  const [cleanupTertunda, setCleanupTertunda] = useState<CleanupHeroTertunda[]>([])
+  const [previewGambarErrorIds, setPreviewGambarErrorIds] = useState<string[]>([])
+
+  // Ref Race Condition Guard untuk Preview
   const activeObjectUrlRef = useRef<string | null>(null)
 
   // State Feedback Form
   const [loadingForm, setLoadingForm] = useState<boolean>(false)
   const [errorForm, setErrorForm] = useState<string | null>(null)
   const [pesanSuksesForm, setPesanSuksesForm] = useState<string | null>(null)
+
+  // Helper Terpusat Tambah/Update Cleanup Item (Deduplikasi)
+  const tambahCleanupTertunda = useCallback((newItem: CleanupHeroTertunda) => {
+    setCleanupTertunda((prev) => {
+      const index = prev.findIndex(
+        (c) => c.bucket === newItem.bucket && c.storagePath === newItem.storagePath
+      )
+      if (index !== -1) {
+        const copy = [...prev]
+        copy[index] = { ...copy[index], pesan: newItem.pesan }
+        return copy
+      }
+      return [...prev, newItem]
+    })
+  }, [])
 
   // Helper Terpusat Cleanup Object URL Lokal
   const bersihkanPreviewLokal = useCallback(() => {
@@ -122,6 +288,7 @@ export default function AdminHeroBerandaPage() {
     try {
       const data = await fetchSemuaHeroBerandaAdmin()
       setDaftarHero(data)
+      setPreviewGambarErrorIds([])
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setErrorData(msg || "Data hero beranda belum dapat dimuat.")
@@ -152,7 +319,7 @@ export default function AdminHeroBerandaPage() {
     setFormTerbuka(true)
   }
 
-  // Buka Form Edit Metadata
+  // Buka Form Edit Metadata & Gambar
   const bukaFormEdit = (item: HeroBeranda) => {
     bersihkanPreviewLokal()
     setModeForm("edit")
@@ -183,7 +350,7 @@ export default function AdminHeroBerandaPage() {
     setPesanSuksesForm(null)
   }
 
-  // Handler Pilih File Gambar (Mode Tambah)
+  // Handler Pilih File Gambar (Mode Tambah & Mode Edit Replace)
   const handlePilihFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -191,7 +358,7 @@ export default function AdminHeroBerandaPage() {
     setErrorForm(null)
     setWarningGambar([])
 
-    // 1. Validasi Tipe MIME
+    // Validasi Tipe MIME
     if (!file.type || !MIME_GAMBAR_HERO.includes(file.type as typeof MIME_GAMBAR_HERO[number])) {
       setErrorForm("Format file tidak didukung. Harap pilih gambar berformat JPEG, PNG, atau WebP.")
       bersihkanPreviewLokal()
@@ -201,7 +368,7 @@ export default function AdminHeroBerandaPage() {
       return
     }
 
-    // 2. Validasi Ukuran Maksimal (10 MB)
+    // Validasi Ukuran Maksimal (10 MB)
     if (file.size > MAKS_UKURAN_GAMBAR_HERO) {
       setErrorForm("Ukuran file melebihi batas maksimal 10 MB. Harap pilih gambar yang lebih kecil.")
       bersihkanPreviewLokal()
@@ -220,19 +387,15 @@ export default function AdminHeroBerandaPage() {
       )
     }
 
-    // Bersihkan preview lama
     bersihkanPreviewLokal()
 
-    // Buat Object URL baru & catat ke Ref
     const newUrl = URL.createObjectURL(file)
     activeObjectUrlRef.current = newUrl
     setPreviewUrl(newUrl)
     setFileGambar(file)
 
-    // Deteksi Dimensi & Orientasi Gambar via Image decoding
     const img = new Image()
     img.onload = () => {
-      // Mencegah Race Condition jika pengguna mengganti file dengan cepat
       if (activeObjectUrlRef.current !== newUrl) return
 
       const width = img.naturalWidth
@@ -264,7 +427,15 @@ export default function AdminHeroBerandaPage() {
     img.src = newUrl
   }
 
-  // Submit Handler: Safe Create & Safe Edit Metadata
+  // Batalkan File Pengganti pada Mode Edit
+  const handleBatalkanFilePengganti = () => {
+    bersihkanPreviewLokal()
+    setFileGambar(null)
+    setDimensiGambar(null)
+    setWarningGambar([])
+  }
+
+  // Submit Handler: Safe Create, Safe Edit Metadata, & Safe Replace Gambar
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault()
     if (loadingForm) return
@@ -272,7 +443,7 @@ export default function AdminHeroBerandaPage() {
     setErrorForm(null)
     setPesanSuksesForm(null)
 
-    // 1. Validasi Metadata Runtime
+    // Validasi Metadata Runtime
     const namaTrim = namaInternal.trim()
     const altTrim = teksAlt.trim()
     const urutanParsed = parseInt(urutan, 10)
@@ -340,16 +511,27 @@ export default function AdminHeroBerandaPage() {
 
         if (!publicUrl || !isHttpsUrl) {
           const rollbackRes = await hapusFileBaruSetelahGagal(storagePath)
-          const infoRollback = rollbackRes.berhasil
-            ? " File yang sempat diunggah telah dibersihkan."
-            : ` File yang sempat diunggah belum berhasil dibersihkan (${storagePath}).`
+          let infoRollback = ""
+          if (rollbackRes.berhasil) {
+            infoRollback = " File yang sempat diunggah telah dibersihkan."
+          } else {
+            infoRollback = ` File yang sempat diunggah belum berhasil dibersihkan (${storagePath}).`
+            tambahCleanupTertunda({
+              id: crypto.randomUUID(),
+              heroId: heroId,
+              namaInternal: namaTrim,
+              bucket: BUCKET_GAMBAR_HERO_BERANDA,
+              storagePath: storagePath,
+              pesan: rollbackRes.error ?? "Rollback file baru gagal.",
+            })
+          }
 
           setErrorForm(`Public URL gambar yang dihasilkan tidak valid.${infoRollback}`)
           setLoadingForm(false)
           return
         }
 
-        // 3. Insert Record Database (Tepat 8 Field)
+        // 3. Insert Record Database
         const { error: dbError } = await supabase.from("hero_beranda").insert({
           id: heroId,
           nama_internal: namaTrim,
@@ -364,9 +546,20 @@ export default function AdminHeroBerandaPage() {
         // 4. Rollback jika DB Insert Gagal
         if (dbError) {
           const rollbackRes = await hapusFileBaruSetelahGagal(storagePath)
-          const infoRollback = rollbackRes.berhasil
-            ? " File yang sempat diunggah telah dibersihkan."
-            : ` File yang sempat diunggah belum berhasil dibersihkan (Storage Path: ${storagePath}).`
+          let infoRollback = ""
+          if (rollbackRes.berhasil) {
+            infoRollback = " File yang sempat diunggah telah dibersihkan."
+          } else {
+            infoRollback = ` File yang sempat diunggah belum berhasil dibersihkan (Storage Path: ${storagePath}).`
+            tambahCleanupTertunda({
+              id: crypto.randomUUID(),
+              heroId: heroId,
+              namaInternal: namaTrim,
+              bucket: BUCKET_GAMBAR_HERO_BERANDA,
+              storagePath: storagePath,
+              pesan: rollbackRes.error ?? "Rollback file baru setelah DB insert gagal.",
+            })
+          }
 
           if (dbError.code === "23505") {
             setErrorForm(
@@ -392,7 +585,7 @@ export default function AdminHeroBerandaPage() {
       }
     }
 
-    // MODE EDIT METADATA (Tanpa Mengganti Gambar & Tanpa Operasi Storage)
+    // MODE EDIT (Metadata Only atau Safe Replace Gambar)
     else if (modeForm === "edit") {
       if (!heroSedangDiedit) {
         setErrorForm("Data hero yang akan diedit tidak ditemukan.")
@@ -401,35 +594,297 @@ export default function AdminHeroBerandaPage() {
 
       setLoadingForm(true)
 
-      try {
-        // Update Tepat 5 Field Metadata
-        const { error: updateError } = await supabase
-          .from("hero_beranda")
-          .update({
-            nama_internal: namaTrim,
-            teks_alt: altTrim,
-            posisi_gambar: posisiGambar,
-            urutan: urutanFinal,
-            is_active: isActive,
-          })
-          .eq("id", heroSedangDiedit.id)
+      // KASUS A: Safe Edit Metadata Saja (fileGambar === null)
+      if (!fileGambar) {
+        try {
+          const { error: updateError } = await supabase
+            .from("hero_beranda")
+            .update({
+              nama_internal: namaTrim,
+              teks_alt: altTrim,
+              posisi_gambar: posisiGambar,
+              urutan: urutanFinal,
+              is_active: isActive,
+            })
+            .eq("id", heroSedangDiedit.id)
 
-        if (updateError) {
-          setErrorForm(`Metadata hero gagal diperbarui: ${updateError.message}`)
+          if (updateError) {
+            setErrorForm(`Metadata hero gagal diperbarui: ${updateError.message}`)
+            setLoadingForm(false)
+            return
+          }
+
+          setPesanSuksesForm("Metadata hero berhasil diperbarui.")
+          setFormTerbuka(false)
+          await muatDaftarHero()
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setErrorForm(`Terjadi kesalahan tidak terduga saat memperbarui metadata: ${msg}`)
+        } finally {
           setLoadingForm(false)
-          return
         }
-
-        // Sukses Edit Metadata
-        setPesanSuksesForm("Metadata hero berhasil diperbarui.")
-        setFormTerbuka(false)
-        await muatDaftarHero()
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err)
-        setErrorForm(`Terjadi kesalahan tidak terduga saat memperbarui metadata: ${msg}`)
-      } finally {
-        setLoadingForm(false)
       }
+
+      // KASUS B: Safe Replace Gambar (fileGambar !== null)
+      else {
+        const heroId = heroSedangDiedit.id
+        const gambarStoragePathLama = heroSedangDiedit.gambar_storage_path
+
+        const randomSuffix = crypto.randomUUID().replaceAll("-", "").slice(0, 8)
+        const timestamp = Date.now()
+        const namaAman = buatNamaFileAman(fileGambar)
+        const storagePathBaru = `hero-beranda/${heroId}/gambar/${timestamp}-${randomSuffix}-${namaAman}`
+
+        try {
+          // 1. Upload Gambar Baru ke Storage (upsert: false)
+          const { error: uploadError } = await supabase.storage
+            .from(BUCKET_GAMBAR_HERO_BERANDA)
+            .upload(storagePathBaru, fileGambar, {
+              contentType: fileGambar.type,
+              upsert: false,
+            })
+
+          if (uploadError) {
+            setErrorForm(`Gambar baru gagal diunggah: ${uploadError.message}. Gambar lama tidak diubah.`)
+            setLoadingForm(false)
+            return
+          }
+
+          // 2. Ambil Public URL Gambar Baru & Validasi HTTPS
+          const {
+            data: { publicUrl: publicUrlBaru },
+          } = supabase.storage.from(BUCKET_GAMBAR_HERO_BERANDA).getPublicUrl(storagePathBaru)
+
+          let isHttpsUrl = false
+          try {
+            const parsedUrl = new URL(publicUrlBaru)
+            isHttpsUrl = parsedUrl.protocol === "https:"
+          } catch {
+            isHttpsUrl = false
+          }
+
+          if (!publicUrlBaru || !isHttpsUrl) {
+            const rollbackRes = await hapusFileBaruSetelahGagal(storagePathBaru)
+            let infoRollback = ""
+            if (rollbackRes.berhasil) {
+              infoRollback = " File pengganti yang sempat diunggah telah dibersihkan."
+            } else {
+              infoRollback = ` File pengganti yang sempat diunggah belum berhasil dibersihkan (${storagePathBaru}).`
+              tambahCleanupTertunda({
+                id: crypto.randomUUID(),
+                heroId: heroId,
+                namaInternal: namaTrim,
+                bucket: BUCKET_GAMBAR_HERO_BERANDA,
+                storagePath: storagePathBaru,
+                pesan: rollbackRes.error ?? "Rollback file baru setelah URL invalid gagal.",
+              })
+            }
+
+            setErrorForm(`Public URL gambar baru yang dihasilkan tidak valid.${infoRollback}`)
+            setLoadingForm(false)
+            return
+          }
+
+          // 3. Update Database ke Gambar Baru & Metadata
+          const { error: updateDbError } = await supabase
+            .from("hero_beranda")
+            .update({
+              nama_internal: namaTrim,
+              teks_alt: altTrim,
+              posisi_gambar: posisiGambar,
+              urutan: urutanFinal,
+              is_active: isActive,
+              gambar_url: publicUrlBaru,
+              gambar_storage_path: storagePathBaru,
+            })
+            .eq("id", heroId)
+
+          // 4. Rollback Gambar Baru jika DB Update Gagal
+          if (updateDbError) {
+            const rollbackRes = await hapusFileBaruSetelahGagal(storagePathBaru)
+            let infoRollback = ""
+            if (rollbackRes.berhasil) {
+              infoRollback = " File pengganti telah dibersihkan."
+            } else {
+              infoRollback = ` File pengganti belum berhasil dibersihkan (${storagePathBaru}).`
+              tambahCleanupTertunda({
+                id: crypto.randomUUID(),
+                heroId: heroId,
+                namaInternal: namaTrim,
+                bucket: BUCKET_GAMBAR_HERO_BERANDA,
+                storagePath: storagePathBaru,
+                pesan: rollbackRes.error ?? "Rollback file baru setelah DB update gagal.",
+              })
+            }
+
+            setErrorForm(`Gagal memperbarui database dengan gambar baru: ${updateDbError.message}.${infoRollback}`)
+            setLoadingForm(false)
+            return
+          }
+
+          // 5. DB Update Sukses! Sekarang coba hapus gambar lama
+          const hasilHapusLama = await hapusFileJikaAda(heroId, gambarStoragePathLama)
+
+          if (hasilHapusLama.berhasil) {
+            setPesanSuksesForm("Gambar dan metadata hero berhasil diperbarui.")
+          } else {
+            tambahCleanupTertunda({
+              id: crypto.randomUUID(),
+              heroId: heroId,
+              namaInternal: namaTrim,
+              bucket: BUCKET_GAMBAR_HERO_BERANDA,
+              storagePath: gambarStoragePathLama,
+              pesan: hasilHapusLama.pesan ?? "Gambar lama belum berhasil dibersihkan dari Storage.",
+            })
+            setPesanSuksesForm(
+              "Gambar baru dan metadata berhasil diperbarui. Namun file gambar lama belum berhasil dibersihkan dari Storage."
+            )
+          }
+
+          bersihkanPreviewLokal()
+          setFormTerbuka(false)
+          await muatDaftarHero()
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setErrorForm(`Terjadi kesalahan tidak terduga saat mengganti gambar: ${msg}`)
+        } finally {
+          setLoadingForm(false)
+        }
+      }
+    }
+  }
+
+  // Quick Toggle Status Aktif / Nonaktif (Tahap 05B)
+  const handleQuickToggle = async (item: HeroBeranda) => {
+    if (processingToggleId || processingDeleteId || loadingForm) return
+
+    setProcessingToggleId(item.id)
+    setErrorData(null)
+    setPesanSuksesForm(null)
+
+    const statusBaru = !item.is_active
+
+    try {
+      const { error: updateError } = await supabase
+        .from("hero_beranda")
+        .update({ is_active: statusBaru })
+        .eq("id", item.id)
+
+      if (updateError) {
+        setErrorData(`Gagal memperbarui status publikasi: ${updateError.message}`)
+        return
+      }
+
+      setPesanSuksesForm(
+        `Status gambar '${item.nama_internal}' berhasil diubah menjadi ${statusBaru ? "Aktif" : "Nonaktif"}.`
+      )
+      await muatDaftarHero()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setErrorData(`Terjadi kesalahan saat mengubah status publikasi: ${msg}`)
+    } finally {
+      setProcessingToggleId(null)
+    }
+  }
+
+  // Safe Delete Flow (Tahap 05B)
+  const handleSafeDelete = async (item: HeroBeranda) => {
+    if (processingDeleteId || processingToggleId || loadingForm) return
+
+    const isRetry = retryDeleteIds.includes(item.id)
+    const confirmMessage = isRetry
+      ? `Coba lagi menghapus gambar hero '${item.nama_internal}'? File Storage dan record database akan dibersihkan ulang.`
+      : `Hapus gambar hero '${item.nama_internal}'? Gambar akan dinonaktifkan terlebih dahulu, kemudian file Storage dan record database akan dihapus.`
+
+    if (!window.confirm(confirmMessage)) {
+      return
+    }
+
+    setProcessingDeleteId(item.id)
+    setErrorData(null)
+    setPesanSuksesForm(null)
+
+    const heroId = item.id
+
+    try {
+      // 1. Set is_active = false terlebih dahulu di DB
+      const { error: deactivateError } = await supabase
+        .from("hero_beranda")
+        .update({ is_active: false })
+        .eq("id", heroId)
+
+      if (deactivateError) {
+        setErrorData(`Gagal menonaktifkan gambar sebelum penghapusan: ${deactivateError.message}`)
+        return
+      }
+
+      // 2. Bersihkan seluruh file di folder hero-beranda/{heroId}/gambar
+      const hasilFolder = await bersihkanFolderHero(heroId)
+
+      if (!hasilFolder.berhasil) {
+        if (!retryDeleteIds.includes(heroId)) {
+          setRetryDeleteIds((prev) => [...prev, heroId])
+        }
+        setErrorData(
+          `Gambar telah dinonaktifkan, tetapi file Storage belum berhasil dibersihkan (${hasilFolder.pesan ?? "Error Storage"}). Gunakan tombol Retry Hapus.`
+        )
+        await muatDaftarHero()
+        return
+      }
+
+      // 3. Storage sudah bersih! Hapus record dari database
+      const { error: dbDeleteError } = await supabase
+        .from("hero_beranda")
+        .delete()
+        .eq("id", heroId)
+
+      if (dbDeleteError) {
+        if (!retryDeleteIds.includes(heroId)) {
+          setRetryDeleteIds((prev) => [...prev, heroId])
+        }
+        setErrorData(
+          `File Storage sudah dibersihkan, tetapi record database belum berhasil dihapus (${dbDeleteError.message}). Gunakan tombol Retry Hapus.`
+        )
+        await muatDaftarHero()
+        return
+      }
+
+      // Sukses Safe Delete Penuh
+      setRetryDeleteIds((prev) => prev.filter((id) => id !== heroId))
+      setPesanSuksesForm(`Gambar hero '${item.nama_internal}' berhasil dihapus secara permanen.`)
+      await muatDaftarHero()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setErrorData(`Terjadi kesalahan saat menghapus gambar hero: ${msg}`)
+    } finally {
+      setProcessingDeleteId(null)
+    }
+  }
+
+  // Retry Cleanup Item Tertunda dari Safe Replace
+  const handleRetryCleanupItem = async (item: CleanupHeroTertunda) => {
+    if (processingCleanupId) return
+
+    setProcessingCleanupId(item.id)
+    setErrorData(null)
+
+    try {
+      const hasil = await hapusFileJikaAda(item.heroId, item.storagePath)
+
+      if (hasil.berhasil) {
+        setCleanupTertunda((prev) => prev.filter((c) => c.id !== item.id))
+        setPesanSuksesForm(`File Storage tertunda (${item.storagePath}) berhasil dibersihkan.`)
+      } else {
+        setCleanupTertunda((prev) =>
+          prev.map((c) => (c.id === item.id ? { ...c, pesan: hasil.pesan ?? "Pembersihan ulang gagal." } : c))
+        )
+        setErrorData(`Pembersihan file tertunda gagal: ${hasil.pesan}`)
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setErrorData(`Terjadi kesalahan saat mencoba membersihkan file tertunda: ${msg}`)
+    } finally {
+      setProcessingCleanupId(null)
     }
   }
 
@@ -497,12 +952,58 @@ export default function AdminHeroBerandaPage() {
           </div>
         )}
 
+        {/* Section UI Pembersihan File Storage Tertunda (Tahap 05B) */}
+        {cleanupTertunda.length > 0 && (
+          <div className="mb-8 bg-amber-50/90 border border-amber-300 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center space-x-3">
+              <svg className="w-6 h-6 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <div>
+                <h2 className="text-base font-bold text-amber-900">Pembersihan File Storage Tertunda ({cleanupTertunda.length})</h2>
+                <p className="text-xs text-amber-800">
+                  Beberapa file gambar lama belum berhasil dibersihkan dari Storage setelah penggantian gambar.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {cleanupTertunda.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white border border-amber-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs text-gray-700"
+                >
+                  <div className="space-y-1">
+                    <p className="font-bold text-gray-900">{item.namaInternal}</p>
+                    <p className="font-mono text-gray-500 break-all">Path: {item.storagePath}</p>
+                    <p className="text-amber-700">{item.pesan}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRetryCleanupItem(item)}
+                    disabled={processingCleanupId === item.id}
+                    aria-label={`Coba bersihkan file ${item.namaInternal}`}
+                    className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg shadow-sm transition-colors shrink-0 disabled:opacity-50"
+                  >
+                    {processingCleanupId === item.id ? "Membersihkan..." : "Coba Bersihkan Lagi"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Form Modal / Collapsible */}
         {formTerbuka && (
           <div className="mb-8 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
             <div className="bg-[#2c1b01]/5 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[#2c1b01]">
-                {modeForm === "tambah" ? "Tambah Gambar Hero Beranda Baru" : "Edit Metadata Hero Beranda"}
+                {modeForm === "tambah" ? "Tambah Gambar Hero Beranda Baru" : "Edit Metadata & Gambar Hero Beranda"}
               </h2>
               <button
                 type="button"
@@ -625,15 +1126,15 @@ export default function AdminHeroBerandaPage() {
                   </div>
                 </div>
 
-                {/* Kolom Kanan: Input File (Mode Tambah) atau Informasi (Mode Edit) + Preview */}
+                {/* Kolom Kanan: Input File & Preview */}
                 <div className="space-y-4">
                   {modeForm === "tambah" ? (
                     <div>
-                      <label htmlFor="input_file_gambar" className="block text-sm font-semibold text-gray-700 mb-1">
+                      <label htmlFor="input_file_gambar_tambah" className="block text-sm font-semibold text-gray-700 mb-1">
                         File Gambar Hero <span className="text-red-500">*</span>
                       </label>
                       <input
-                        id="input_file_gambar"
+                        id="input_file_gambar_tambah"
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
                         onChange={handlePilihFile}
@@ -644,11 +1145,31 @@ export default function AdminHeroBerandaPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-4 text-xs text-amber-900 space-y-1">
-                      <p className="font-semibold text-sm">Mode Edit Metadata</p>
-                      <p>
-                        Penggantian file gambar dapat dilakukan pada tahap pengelolaan file (Tahap 05B). Mode ini hanya
-                        memperbarui data teks, urutan, posisi fokus, dan status aktif.
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor="input_file_gambar_edit" className="block text-sm font-semibold text-gray-700">
+                          Ganti Gambar Hero (Opsional)
+                        </label>
+                        {fileGambar && (
+                          <button
+                            type="button"
+                            onClick={handleBatalkanFilePengganti}
+                            className="text-xs text-red-600 hover:text-red-800 font-semibold"
+                          >
+                            Batalkan File Pengganti
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        id="input_file_gambar_edit"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handlePilihFile}
+                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer border border-gray-300 rounded-xl p-1"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Kosongkan jika hanya ingin memperbarui metadata. Gambar lama baru akan dihapus setelah file baru
+                        berhasil diunggah dan database diperbarui.
                       </p>
                     </div>
                   )}
@@ -667,11 +1188,18 @@ export default function AdminHeroBerandaPage() {
 
                   {/* Container Preview Gambar */}
                   <div>
-                    <span className="block text-xs font-semibold text-gray-600 mb-1">
-                      Preview Tampilan Hero (Simulasi Slider)
-                    </span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="block text-xs font-semibold text-gray-600">
+                        Preview Tampilan Hero (Simulasi Slider)
+                      </span>
+                      {modeForm === "edit" && fileGambar && (
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
+                          Preview Gambar Baru
+                        </span>
+                      )}
+                    </div>
                     <div className="relative w-full aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-inner border border-gray-200 group">
-                      {modeForm === "tambah" && previewUrl ? (
+                      {previewUrl ? (
                         <img
                           src={previewUrl}
                           alt={teksAlt || "Preview Gambar Hero"}
@@ -704,7 +1232,7 @@ export default function AdminHeroBerandaPage() {
                       )}
 
                       {/* Info Overlay Dimensi */}
-                      {dimensiGambar && modeForm === "tambah" && (
+                      {dimensiGambar && (
                         <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded">
                           Dimensi: {dimensiGambar.width} &times; {dimensiGambar.height} px
                         </div>
@@ -742,7 +1270,13 @@ export default function AdminHeroBerandaPage() {
                       <span>Menyimpan...</span>
                     </>
                   ) : (
-                    <span>{modeForm === "tambah" ? "Simpan Gambar Hero" : "Perbarui Metadata"}</span>
+                    <span>
+                      {modeForm === "tambah"
+                        ? "Simpan Gambar Hero"
+                        : fileGambar
+                        ? "Ganti Gambar & Perbarui Metadata"
+                        : "Perbarui Metadata"}
+                    </span>
                   )}
                 </button>
               </div>
@@ -834,73 +1368,126 @@ export default function AdminHeroBerandaPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {daftarHero.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
-                      {/* Preview Gambar */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="w-32 aspect-video bg-gray-900 rounded-lg overflow-hidden border border-gray-200 shadow-sm relative">
-                          <img
-                            src={item.gambar_url}
-                            alt={item.teks_alt}
-                            loading="lazy"
-                            decoding="async"
-                            style={{
-                              objectPosition: getObjectPositionHero(item.posisi_gambar),
-                            }}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </td>
+                  {daftarHero.map((item) => {
+                    const isPreviewError = previewGambarErrorIds.includes(item.id)
+                    const isToggleLoading = processingToggleId === item.id
+                    const isDeleteLoading = processingDeleteId === item.id
+                    const isRetry = retryDeleteIds.includes(item.id)
 
-                      {/* Nama Internal & Alt Text */}
-                      <td className="px-6 py-4">
-                        <div className="max-w-xs space-y-1">
-                          <p className="font-bold text-gray-900 text-sm truncate">{item.nama_internal}</p>
-                          <p className="text-xs text-gray-500 line-clamp-2" title={item.teks_alt}>
-                            <span className="font-semibold text-gray-600">Alt:</span> {item.teks_alt}
-                          </p>
-                        </div>
-                      </td>
+                    return (
+                      <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
+                        {/* Preview Gambar */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="w-32 aspect-video bg-gray-900 rounded-lg overflow-hidden border border-gray-200 shadow-sm relative">
+                            {isPreviewError ? (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-400 text-[10px] p-2 text-center">
+                                Preview gagal dimuat
+                              </div>
+                            ) : (
+                              <img
+                                src={item.gambar_url}
+                                alt={item.teks_alt}
+                                loading="lazy"
+                                decoding="async"
+                                onError={() => setPreviewGambarErrorIds((prev) => [...prev, item.id])}
+                                style={{
+                                  objectPosition: getObjectPositionHero(item.posisi_gambar),
+                                }}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                        </td>
 
-                      {/* Posisi Fokus */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
-                          {getLabelPosisiGambarHero(item.posisi_gambar)}
-                        </span>
-                      </td>
+                        {/* Nama Internal & Alt Text */}
+                        <td className="px-6 py-4">
+                          <div className="max-w-xs space-y-1">
+                            <p className="font-bold text-gray-900 text-sm truncate">{item.nama_internal}</p>
+                            <p className="text-xs text-gray-500 line-clamp-2" title={item.teks_alt}>
+                              <span className="font-semibold text-gray-600">Alt:</span> {item.teks_alt}
+                            </p>
+                          </div>
+                        </td>
 
-                      {/* Urutan */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        {item.urutan}
-                      </td>
-
-                      {/* Status Badge */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {item.is_active ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            Aktif
+                        {/* Posisi Fokus */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                            {getLabelPosisiGambarHero(item.posisi_gambar)}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
-                            Nonaktif
-                          </span>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Tombol Aksi */}
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        <button
-                          type="button"
-                          onClick={() => bukaFormEdit(item)}
-                          disabled={loadingForm}
-                          aria-label={`Edit metadata ${item.nama_internal}`}
-                          className="px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-semibold transition-colors border border-amber-200 disabled:opacity-50"
-                        >
-                          Edit Metadata
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        {/* Urutan */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                          {item.urutan}
+                        </td>
+
+                        {/* Status Badge */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {item.is_active ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              Aktif
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                              Nonaktif
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Tombol Aksi */}
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                          <div className="flex items-center justify-end space-x-2">
+                            {/* Tombol Edit */}
+                            <button
+                              type="button"
+                              onClick={() => bukaFormEdit(item)}
+                              disabled={loadingForm || isToggleLoading || isDeleteLoading}
+                              aria-label={`Edit metadata ${item.nama_internal}`}
+                              className="px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-semibold transition-colors border border-amber-200 disabled:opacity-50"
+                            >
+                              Edit
+                            </button>
+
+                            {/* Tombol Quick Toggle Status */}
+                            <button
+                              type="button"
+                              onClick={() => handleQuickToggle(item)}
+                              disabled={loadingForm || isToggleLoading || isDeleteLoading}
+                              aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.nama_internal}`}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border disabled:opacity-50 ${
+                                item.is_active
+                                  ? "bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200"
+                                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200"
+                              }`}
+                            >
+                              {isToggleLoading ? (
+                                item.is_active ? "Menonaktifkan..." : "Mengaktifkan..."
+                              ) : item.is_active ? (
+                                "Nonaktifkan"
+                              ) : (
+                                "Aktifkan"
+                              )}
+                            </button>
+
+                            {/* Tombol Hapus / Retry Hapus */}
+                            <button
+                              type="button"
+                              onClick={() => handleSafeDelete(item)}
+                              disabled={loadingForm || isToggleLoading || isDeleteLoading}
+                              aria-label={`${isRetry ? "Retry hapus" : "Hapus"} ${item.nama_internal}`}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border disabled:opacity-50 ${
+                                isRetry
+                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-300"
+                                  : "bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+                              }`}
+                            >
+                              {isDeleteLoading ? "Menghapus..." : isRetry ? "Retry Hapus" : "Hapus"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
