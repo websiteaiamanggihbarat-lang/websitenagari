@@ -85,13 +85,14 @@ export default function GaleriGrid({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {foto.map((item, index) => {
           const isFailed = failedImageIds.has(item.id)
+          const altText = item.teks_alt ?? "Foto Galeri Nagari Aia Manggih Barat"
 
           return (
             <button
               key={item.id}
               type="button"
               onClick={() => setSelectedFoto(item)}
-              aria-label={`Buka foto: ${item.teks_alt}`}
+              aria-label={`Buka foto: ${altText}`}
               className={`group relative aspect-[4/3] w-full bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-lg shadow-gray-200/50 border border-gray-200/50 hover:shadow-2xl hover:shadow-[rgba(182,165,135,0.3)] transition-all duration-300 cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-[#b6a587] ${
                 index % 3 === 0
                   ? "scroll-slide-left"
@@ -120,7 +121,7 @@ export default function GaleriGrid({
               ) : (
                 <img
                   src={item.foto_url}
-                  alt={item.teks_alt}
+                  alt={altText}
                   loading="lazy"
                   decoding="async"
                   onError={() => handleImageError(item.id)}
@@ -156,7 +157,9 @@ export default function GaleriGrid({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`Tampilan penuh foto: ${selectedFoto.teks_alt}`}
+          aria-label={`Tampilan penuh foto: ${
+            selectedFoto.teks_alt ?? "Foto Galeri Nagari Aia Manggih Barat"
+          }`}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in"
           onClick={() => setSelectedFoto(null)}
         >
@@ -190,7 +193,9 @@ export default function GaleriGrid({
           >
             <img
               src={selectedFoto.foto_url}
-              alt={selectedFoto.teks_alt}
+              alt={
+                selectedFoto.teks_alt ?? "Foto Galeri Nagari Aia Manggih Barat"
+              }
               className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
             />
             {selectedFoto.teks_alt && (

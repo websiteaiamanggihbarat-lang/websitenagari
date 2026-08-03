@@ -201,13 +201,11 @@ export default function AdminGaleriPage() {
       return
     }
 
-    // Validasi Teks Alt
+    // Normalisasi Teks Alt (Opsional)
     const cleanAlt = teksAlt.trim()
-    if (!cleanAlt) {
-      setErrorForm("Teks alternatif wajib diisi.")
-      return
-    }
-    if (cleanAlt.length > 300) {
+    const finalAlt = cleanAlt === "" ? null : cleanAlt
+
+    if (finalAlt && finalAlt.length > 300) {
       setErrorForm("Teks alternatif maksimal 300 karakter.")
       return
     }
@@ -253,7 +251,7 @@ export default function AdminGaleriPage() {
           id: fotoId,
           foto_url: publicUrl,
           foto_storage_path: storagePath,
-          teks_alt: cleanAlt,
+          teks_alt: finalAlt,
           is_active: true,
         })
 
@@ -325,8 +323,12 @@ export default function AdminGaleriPage() {
   const handleHapus = async (item: GaleriFoto) => {
     if (deletingId) return
 
+    const teksKonfirmasi = item.teks_alt
+      ? `dengan teks alternatif "${item.teks_alt}"`
+      : "ini"
+
     const konfirmasi = confirm(
-      `Apakah Anda yakin ingin menghapus foto dengan teks alternatif "${item.teks_alt}" secara permanen?`
+      `Apakah Anda yakin ingin menghapus foto ${teksKonfirmasi} secara permanen?`
     )
     if (!konfirmasi) return
 
@@ -669,7 +671,7 @@ export default function AdminGaleriPage() {
                 Tambah Foto Galeri
               </h2>
               <p className="text-xs text-gray-500">
-                Pilih foto dan berikan teks alternatif sebelum mengunggah.
+                Pilih foto dan berikan teks alternatif/deskripsi (opsional) sebelum mengunggah.
               </p>
             </div>
 
@@ -704,7 +706,7 @@ export default function AdminGaleriPage() {
                 </p>
 
                 {warningFile && (
-                  <p className="mt-1.5 text-xs text-amber-700 font-medium">
+                  <p className="mt-1.5 text-xs font-medium text-amber-700">
                     ⚠️ {warningFile}
                   </p>
                 )}
@@ -719,21 +721,21 @@ export default function AdminGaleriPage() {
                   <div className="relative aspect-[4/3] max-w-md overflow-hidden rounded-xl border border-gray-200 bg-gray-100 shadow-inner">
                     <img
                       src={previewUrl}
-                      alt={teksAlt.trim() || "Preview Foto Galeri"}
+                      alt={teksAlt.trim() || "Pratinjau foto Galeri Nagari"}
                       className="h-full w-full object-cover"
                     />
                   </div>
                 </div>
               )}
 
-              {/* Field Teks Alternatif */}
+              {/* Field Teks Alternatif / Deskripsi (Opsional) */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="mb-1.5 flex items-center justify-between">
                   <label
                     htmlFor="input-teks-alt"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Teks Alternatif <span className="text-red-500">*</span>
+                    Teks Alternatif / Deskripsi Foto (Opsional)
                   </label>
                   <span className="text-xs text-gray-400">
                     {teksAlt.trim().length}/300
@@ -747,12 +749,12 @@ export default function AdminGaleriPage() {
                   value={teksAlt}
                   onChange={(e) => setTeksAlt(e.target.value)}
                   disabled={isSaving}
-                  placeholder="Contoh: Foto bersama warga Nagari Aia Manggih Barat saat gotong royong."
+                  placeholder="Contoh: Dokumentasi kegiatan masyarakat Nagari Aia Manggih Barat."
                   className="block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 disabled:bg-gray-100 disabled:opacity-60"
                 />
 
                 <p className="mt-1 text-xs text-gray-500">
-                  Deskripsi singkat isi gambar untuk aksesibilitas pembaca layar (screen reader).
+                  Deskripsi singkat isi gambar untuk aksesibilitas pembaca layar (screen reader). Opsional.
                 </p>
               </div>
 
@@ -779,148 +781,161 @@ export default function AdminGaleriPage() {
           </div>
         )}
 
-        {/* Subheader Daftar */}
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">
-            Daftar Foto Galeri ({items.length})
-          </h2>
+        {/* Tabel Daftar Foto Admin (4 Kolom) */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">
+              Daftar Foto Galeri ({items.length})
+            </h2>
+          </div>
+
+          {/* Error Daftar */}
+          {errorDaftar && (
+            <div className="p-4 text-sm text-red-700 bg-red-50 border-b border-red-200">
+              {errorDaftar}
+            </div>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-gray-600">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50/80 text-xs font-bold tracking-wider text-gray-600 uppercase">
+                  <th className="px-4 py-3.5">PREVIEW</th>
+                  <th className="px-4 py-3.5">TEKS ALTERNATIF / DESKRIPSI</th>
+                  <th className="px-4 py-3.5">DITAMBAHKAN</th>
+                  <th className="px-4 py-3.5 text-right">AKSI</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={4} className="py-16 text-center text-gray-500">
+                      <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"></div>
+                      <p className="text-sm font-medium">Memuat foto galeri...</p>
+                    </td>
+                  </tr>
+                ) : items.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-12 text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <h3 className="mt-3 text-base font-semibold text-gray-900">
+                        Belum ada foto galeri yang ditambahkan.
+                      </h3>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Gunakan tombol "+ Tambah Foto" di bagian atas untuk menambahkan foto pertama.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((item) => {
+                    const isDeleting = deletingId === item.id
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-gray-50/80 transition-colors"
+                      >
+                        {/* Preview */}
+                        <td className="px-4 py-3">
+                          <div className="relative aspect-[4/3] w-24 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 shadow-sm">
+                            <img
+                              src={item.foto_url}
+                              alt={item.teks_alt || "Foto Galeri Nagari"}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        </td>
+
+                        {/* Teks Alternatif / Deskripsi */}
+                        <td className="px-4 py-3">
+                          {item.teks_alt ? (
+                            <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                              {item.teks_alt}
+                            </p>
+                          ) : (
+                            <span className="text-xs italic text-gray-400">
+                              Tidak ada deskripsi
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Ditambahkan */}
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-gray-600">
+                            {formatTanggal(item.created_at)}
+                          </span>
+                        </td>
+
+                        {/* Aksi (Hapus / Retry Hapus berdasarkan is_active) */}
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end">
+                            {item.is_active ? (
+                              <button
+                                type="button"
+                                onClick={() => handleHapus(item)}
+                                disabled={isDeleting}
+                                className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+                              >
+                                <svg
+                                  className="h-3.5 w-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                <span>{isDeleting ? "Menghapus..." : "Hapus"}</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleRetryHapus(item)}
+                                disabled={isDeleting}
+                                className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-50"
+                              >
+                                <svg
+                                  className="h-3.5 w-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                  />
+                                </svg>
+                                <span>{isDeleting ? "Memproses..." : "Retry Hapus"}</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-
-        {/* Error Daftar */}
-        {errorDaftar && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {errorDaftar}
-          </div>
-        )}
-
-        {/* Loading State */}
-        {isLoading ? (
-          <div className="py-16 text-center text-gray-500">
-            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"></div>
-            <p className="text-sm font-medium">Memuat foto galeri...</p>
-          </div>
-        ) : items.length === 0 ? (
-          /* Empty State */
-          <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center shadow-sm">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <h3 className="mt-3 text-base font-semibold text-gray-900">
-              Belum ada foto galeri yang ditambahkan.
-            </h3>
-            <p className="mt-1 text-xs text-gray-500">
-              Gunakan tombol "+ Tambah Foto" di bagian atas untuk menambahkan foto pertama.
-            </p>
-          </div>
-        ) : (
-          /* Grid Kartu Foto Admin */
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) => {
-              const isDeleting = deletingId === item.id
-
-              return (
-                <div
-                  key={item.id}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md"
-                >
-                  {/* Aspect Ratio Preview Container */}
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
-                    <img
-                      src={item.foto_url}
-                      alt={item.teks_alt}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-
-                    {/* Status Badge Internal */}
-                    <div className="absolute top-3 left-3">
-                      {item.is_active ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm shadow-sm">
-                          <span className="h-1.5 w-1.5 rounded-full bg-white"></span>
-                          Tersedia di Galeri
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm shadow-sm">
-                          <span className="h-1.5 w-1.5 rounded-full bg-white"></span>
-                          Menunggu Penyelesaian Hapus
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Body Kartu */}
-                  <div className="flex flex-1 flex-col p-4">
-                    <p className="line-clamp-2 text-sm font-medium text-gray-900">
-                      {item.teks_alt}
-                    </p>
-
-                    <p className="mt-2 text-xs text-gray-400">
-                      Ditambahkan: {formatTanggal(item.created_at)}
-                    </p>
-
-                    {/* Tombol Aksi (Single Action: Hapus / Retry Hapus) */}
-                    <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-end">
-                      {item.is_active ? (
-                        <button
-                          type="button"
-                          onClick={() => handleHapus(item)}
-                          disabled={isDeleting}
-                          className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
-                        >
-                          <svg
-                            className="h-3.5 w-3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                          <span>{isDeleting ? "Menghapus..." : "Hapus"}</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleRetryHapus(item)}
-                          disabled={isDeleting}
-                          className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-50"
-                        >
-                          <svg
-                            className="h-3.5 w-3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                          </svg>
-                          <span>{isDeleting ? "Memproses..." : "Retry Hapus"}</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </main>
     </div>
   )

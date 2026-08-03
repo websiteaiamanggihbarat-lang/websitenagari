@@ -23,7 +23,7 @@ export type GaleriFoto = {
   id: string
   foto_url: string
   foto_storage_path: string
-  teks_alt: string
+  teks_alt: string | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -80,11 +80,17 @@ function isValidTimestamp(value: unknown): value is string {
   return !isNaN(Date.parse(value))
 }
 
-function isValidAltText(value: unknown): value is string {
-  if (!isNonEmptyTrimmedString(value)) {
-    return false
+function isValidOptionalAltText(value: unknown): value is string | null {
+  if (value === null) {
+    return true
   }
-  return value.length <= 300
+
+  return (
+    typeof value === "string" &&
+    value === value.trim() &&
+    value.length >= 1 &&
+    value.length <= 300
+  )
 }
 
 function isValidStoragePath(value: unknown, recordId: string): value is string {
@@ -121,7 +127,7 @@ function parseGaleriFotoPublik(row: unknown): GaleriFotoPublik {
   if (!isHttpsUrl(r.foto_url)) {
     throw new Error(`Kolom foto_url galeri foto invalid (ID: ${r.id}).`)
   }
-  if (!isValidAltText(r.teks_alt)) {
+  if (!isValidOptionalAltText(r.teks_alt)) {
     throw new Error(`Kolom teks_alt galeri foto invalid (ID: ${r.id}).`)
   }
   if (!isValidTimestamp(r.created_at)) {
@@ -152,7 +158,7 @@ function parseGaleriFoto(row: unknown): GaleriFoto {
   if (!isValidStoragePath(r.foto_storage_path, r.id)) {
     throw new Error(`Kolom foto_storage_path galeri foto invalid (ID: ${r.id}).`)
   }
-  if (!isValidAltText(r.teks_alt)) {
+  if (!isValidOptionalAltText(r.teks_alt)) {
     throw new Error(`Kolom teks_alt galeri foto invalid (ID: ${r.id}).`)
   }
   if (typeof r.is_active !== "boolean") {
