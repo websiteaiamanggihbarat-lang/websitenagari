@@ -244,6 +244,53 @@ export default async function AdminPage() {
             </div>
           </Link>
 
+          {/* Kelola Galeri */}
+          <Link
+            href="/admin/galeri"
+            className="group flex min-h-[220px] flex-col rounded-xl border-2 border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#6b4b1d] hover:shadow-xl"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-[#4a3210] to-[#2c1b01] shadow-md transition-transform group-hover:scale-110">
+              <svg
+                className="h-6 w-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+
+            <h2 className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-[#5a3b0d]">
+              Kelola Galeri
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Tambah dan hapus foto yang ditampilkan pada halaman galeri.
+            </p>
+
+            <div className="mt-auto flex items-center gap-1 pt-5 text-sm font-semibold text-[#5a3b0d]">
+              Buka kelola galeri
+              <svg
+                className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </Link>
+
           {/* Kelola Informasi Penduduk */}
           <Link
             href="/admin/informasi-penduduk"
