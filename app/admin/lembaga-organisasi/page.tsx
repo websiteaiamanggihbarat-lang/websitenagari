@@ -326,7 +326,7 @@ export default function AdminLembagaOrganisasiPage() {
 
       if (hasPengurus || hasTugas || hasGaleri) {
         setPesanError(
-          "Data tidak dapat dihapus karena masih mempunyai rincian. Pengelolaan rincian akan tersedia pada tahap berikutnya."
+          "Data mempunyai rincian. Buka Kelola Rincian untuk menghapus pengurus, tugas, dan galeri terlebih dahulu."
         )
         setDeletingId(null)
         return
@@ -688,6 +688,12 @@ export default function AdminLembagaOrganisasiPage() {
                       {/* Aksi */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/lembaga-organisasi/${item.id}`}
+                            className="rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4]"
+                          >
+                            Kelola Rincian
+                          </Link>
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(item)}
@@ -762,6 +768,12 @@ export default function AdminLembagaOrganisasiPage() {
                   </div>
 
                   <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-3">
+                    <Link
+                      href={`/admin/lembaga-organisasi/${item.id}`}
+                      className="rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4]"
+                    >
+                      Kelola Rincian
+                    </Link>
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(item)}
