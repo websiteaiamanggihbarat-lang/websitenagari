@@ -158,20 +158,17 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
                 </div>
               </div>
 
-              {/* Tombol Lihat Rincian (Disabled Non-Link sebelum Tahap 07) */}
+              {/* Tombol Lihat Rincian (Aktif) */}
               <div className="mt-6 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  title="Rincian akan tersedia setelah halaman detail selesai."
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-semibold text-gray-400 shadow-none cursor-not-allowed transition-all"
+                <Link
+                  href={`/lembaga-organisasi/${item.id}`}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#6b4b1d] px-4 py-2.5 text-xs font-semibold text-white shadow-md hover:opacity-90 active:scale-95 transition-all"
                 >
                   <span>Lihat Rincian</span>
                   <svg className="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </button>
+                </Link>
               </div>
             </div>
           </div>
