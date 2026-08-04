@@ -2,7 +2,6 @@
 
 import { use, useEffect, useState, FormEvent, ChangeEvent } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import {
   DetailLembagaOrganisasiAdmin,
@@ -11,7 +10,6 @@ import {
   GaleriLembagaOrganisasi,
   LEMBAGA_ORGANISASI_BUCKET,
   fetchDetailLembagaOrganisasiAdmin,
-  formatJenisLembagaOrganisasi,
   isValidLembagaOrganisasiId,
 } from "@/lib/lembagaOrganisasi"
 
@@ -28,16 +26,16 @@ function parseErrorMessage(err: SupabaseErrorLike | null | undefined, defaultMsg
   if (!err) return defaultMsg
   const code = err.code || ""
   if (code === "23505") {
-    return "Terjadi duplikasi data (misal: nama duplikat atau foto cover ganda)."
+    return "Nama tersebut sudah digunakan."
   }
   if (code === "23514") {
-    return "Data melanggar aturan validasi database."
+    return "Data tidak memenuhi aturan validasi database."
   }
   if (code === "23503") {
     return "Data utama tidak ditemukan atau relasi tidak valid."
   }
   if (code === "P0001") {
-    return "Lembaga atau organisasi aktif wajib memiliki foto cover aktif."
+    return "Perubahan ditolak oleh aturan bisnis database."
   }
   if (code === "42501") {
     return "Sesi tidak valid atau akses ditolak."
@@ -70,8 +68,23 @@ function validateImageFile(file: File): string | null {
   return null
 }
 
+interface DataUtamaForm {
+  nama: string
+  deskripsi: string
+  alamat: string
+  kontak: string
+  jam_kerja: string
+}
+
+const INITIAL_DATA_UTAMA_FORM: DataUtamaForm = {
+  nama: "",
+  deskripsi: "",
+  alamat: "",
+  kontak: "",
+  jam_kerja: "",
+}
+
 export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) {
-  const router = useRouter()
   const resolvedParams = use(params)
   const dataId = resolvedParams?.dataId || ""
 
@@ -83,6 +96,11 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
   const [activeOperation, setActiveOperation] = useState<string | null>(null)
+
+  // Data Utama Form State
+  const [dataUtamaForm, setDataUtamaForm] = useState<DataUtamaForm>(INITIAL_DATA_UTAMA_FORM)
+  const [dataUtamaErrors, setDataUtamaErrors] = useState<Record<string, string>>({})
+  const [savingDataUtama, setSavingDataUtama] = useState(false)
 
   // Modal Pengurus State
   const [isPengurusModalOpen, setIsPengurusModalOpen] = useState(false)
@@ -137,6 +155,15 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
     try {
       const result = await fetchDetailLembagaOrganisasiAdmin(dataId)
       setDetail(result)
+      if (result) {
+        setDataUtamaForm({
+          nama: result.data.nama || "",
+          deskripsi: result.data.deskripsi || "",
+          alamat: result.data.alamat || "",
+          kontak: result.data.kontak || "",
+          jam_kerja: result.data.jam_kerja || "",
+        })
+      }
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       setPesanError(parseErrorMessage(e, "Gagal memuat detail lembaga dan organisasi."))
@@ -156,55 +183,91 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
   }, [dataId])
 
   // ============================================================================
-  // SECTION 1: PUBLIKASI & DEACTIVATE PARENT
+  // SECTION 1: EDITABLE DATA UTAMA SUBMIT
   // ============================================================================
-  const handleTogglePublikasi = async () => {
-    if (!detail || activeOperation || !isAuthenticated) return
+  const validateDataUtama = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    const namaTrim = dataUtamaForm.nama.trim()
+    if (namaTrim.length < 2 || namaTrim.length > 200) {
+      errors.nama = "Nama harus diisi 2 sampai 200 karakter."
+    }
+
+    const deskripsiTrim = dataUtamaForm.deskripsi.trim()
+    if (deskripsiTrim.length < 10 || deskripsiTrim.length > 5000) {
+      errors.deskripsi = "Deskripsi harus diisi 10 sampai 5000 karakter."
+    }
+
+    const alamatTrim = dataUtamaForm.alamat.trim()
+    if (alamatTrim.length < 3 || alamatTrim.length > 500) {
+      errors.alamat = "Alamat harus diisi 3 sampai 500 karakter."
+    }
+
+    const kontakTrim = dataUtamaForm.kontak.trim()
+    if (kontakTrim.length > 0 && kontakTrim.length > 100) {
+      errors.kontak = "Kontak maksimal 100 karakter."
+    }
+
+    const jamKerjaTrim = dataUtamaForm.jam_kerja.trim()
+    if (jamKerjaTrim.length > 0 && jamKerjaTrim.length > 300) {
+      errors.jam_kerja = "Jam kerja maksimal 300 karakter."
+    }
+
+    setDataUtamaErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleSubmitDataUtama = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!detail || savingDataUtama || activeOperation || !isAuthenticated) return
+
     setPesanSukses(null)
     setPesanError(null)
 
-    const isCurrentlyActive = detail.data.is_active
-
-    if (!isCurrentlyActive) {
-      const hasActiveCover = detail.galeri.some((g) => g.is_cover && g.is_active)
-      if (!hasActiveCover) {
-        setPesanError("Tentukan foto cover aktif terlebih dahulu sebelum mempublikasikan data.")
-        return
-      }
+    if (!validateDataUtama()) {
+      return
     }
 
-    setActiveOperation("publikasi")
+    setSavingDataUtama(true)
+    setActiveOperation("data_utama_submit")
 
     try {
-      const { data: updatedParent, error } = await supabase
+      const namaTrim = dataUtamaForm.nama.trim()
+      const deskripsiTrim = dataUtamaForm.deskripsi.trim()
+      const alamatTrim = dataUtamaForm.alamat.trim()
+      const kontakTrim = dataUtamaForm.kontak.trim() || null
+      const jamKerjaTrim = dataUtamaForm.jam_kerja.trim() || null
+
+      const { data: updatedRow, error } = await supabase
         .from("lembaga_organisasi")
-        .update({ is_active: !isCurrentlyActive })
+        .update({
+          nama: namaTrim,
+          deskripsi: deskripsiTrim,
+          alamat: alamatTrim,
+          kontak: kontakTrim,
+          jam_kerja: jamKerjaTrim,
+        })
         .eq("id", dataId)
-        .select("id")
+        .select("id, nama, deskripsi, alamat, kontak, jam_kerja, is_active")
         .maybeSingle()
 
       if (error) {
-        setPesanError(parseErrorMessage(error, "Gagal mengubah status publikasi."))
-        setActiveOperation(null)
+        setPesanError(parseErrorMessage(error, "Gagal menyimpan perubahan. Silakan coba kembali."))
         return
       }
 
-      if (!updatedParent) {
-        setPesanError("Data lembaga/organisasi tidak ditemukan atau tidak dapat diubah.")
-        setActiveOperation(null)
+      if (!updatedRow) {
+        setPesanError("Data lembaga/organisasi tidak ditemukan atau sesi tidak memiliki akses.")
         return
       }
 
-      setPesanSukses(
-        !isCurrentlyActive
-          ? "Lembaga/organisasi berhasil dipublikasikan."
-          : "Lembaga/organisasi berhasil dijadikan draft."
-      )
+      setPesanSukses("Data Utama berhasil diperbarui.")
       await loadDetail()
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Terjadi kesalahan saat mengubah publikasi."))
+      setPesanError(parseErrorMessage(e, "Gagal menyimpan perubahan. Silakan coba kembali."))
     } finally {
+      setSavingDataUtama(false)
       setActiveOperation(null)
     }
   }
@@ -838,24 +901,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
     const wasParentActive = detail.data.is_active
 
     try {
-      // 1. Ensure target galeri is active first
-      if (!targetGaleri.is_active) {
-        const { data: resAct, error: errActive } = await supabase
-          .from("galeri_lembaga_organisasi")
-          .update({ is_active: true })
-          .eq("id", targetGaleri.id)
-          .eq("lembaga_organisasi_id", dataId)
-          .select("id")
-          .maybeSingle()
-
-        if (errActive || !resAct) {
-          setPesanError("Gagal mengaktifkan foto galeri sebelum dijadikan cover.")
-          setActiveOperation(null)
-          return
-        }
-      }
-
-      // 2. Clear old cover status for this parent
+      // 1. Clear old cover status for this parent
       const oldCovers = detail.galeri.filter((g) => g.is_cover && g.id !== targetGaleri.id)
       for (const old of oldCovers) {
         await supabase
@@ -865,7 +911,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
           .eq("lembaga_organisasi_id", dataId)
       }
 
-      // 3. Set target galeri as cover
+      // 2. Set target galeri as cover (always active)
       const { data: resSet, error: errSet } = await supabase
         .from("galeri_lembaga_organisasi")
         .update({ is_cover: true, is_active: true })
@@ -880,7 +926,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
         return
       }
 
-      // 4. Restore parent publication state if parent was previously active
+      // 3. Restore parent publication state if parent was previously active
       if (wasParentActive) {
         await supabase
           .from("lembaga_organisasi")
@@ -892,47 +938,6 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       await loadDetail()
     } catch {
       setPesanError("Terjadi kesalahan saat menetapkan foto cover.")
-    } finally {
-      setActiveOperation(null)
-    }
-  }
-
-  const handleToggleGaleriActive = async (g: GaleriLembagaOrganisasi) => {
-    if (!detail || activeOperation || !isAuthenticated) return
-    setPesanSukses(null)
-    setPesanError(null)
-
-    if (g.is_cover && g.is_active) {
-      if (
-        !window.confirm(
-          "Menonaktifkan foto cover akan membuat data lembaga/organisasi kembali menjadi draft. Lanjutkan?"
-        )
-      ) {
-        return
-      }
-    }
-
-    setActiveOperation("toggle_galeri_active")
-
-    try {
-      const { data: updatedRow, error } = await supabase
-        .from("galeri_lembaga_organisasi")
-        .update({ is_active: !g.is_active })
-        .eq("id", g.id)
-        .eq("lembaga_organisasi_id", dataId)
-        .select("id")
-        .maybeSingle()
-
-      if (error || !updatedRow) {
-        setPesanError(parseErrorMessage(error, "Gagal mengubah status foto galeri."))
-        setActiveOperation(null)
-        return
-      }
-
-      setPesanSukses("Status foto galeri berhasil diperbarui.")
-      await loadDetail()
-    } catch {
-      setPesanError("Terjadi kesalahan saat mengubah status galeri.")
     } finally {
       setActiveOperation(null)
     }
@@ -1089,124 +1094,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
   }
 
   // ============================================================================
-  // SECTION 5: SAFE DELETE PARENT LENGKAP
-  // ============================================================================
-  const handleSafeDeleteParent = async () => {
-    if (!detail || activeOperation || !isAuthenticated) return
-
-    const namaData = detail.data.nama
-    const firstConfirm = window.confirm(
-      `PERINGATAN: Anda akan menghapus SELURUH data '${namaData}' beserta pengurus, tugas, galeri, dan seluruh file foto terkait secara permanen. Lanjutkan?`
-    )
-    if (!firstConfirm) return
-
-    const secondConfirm = window.confirm(
-      `KONFIRMASI AKHIR: Hapus permanen '${namaData}' beserta seluruh filenya?`
-    )
-    if (!secondConfirm) return
-
-    setPesanSukses(null)
-    setPesanError(null)
-    setActiveOperation("safe_delete_parent")
-
-    try {
-      // 1. Set parent is_active = false
-      await supabase
-        .from("lembaga_organisasi")
-        .update({ is_active: false })
-        .eq("id", dataId)
-
-      // 2. Collect all storage paths
-      const pathsToDelete: string[] = []
-      for (const p of detail.pengurus) {
-        if (p.foto_storage_path) {
-          pathsToDelete.push(p.foto_storage_path)
-        }
-      }
-      for (const g of detail.galeri) {
-        if (g.foto_storage_path) {
-          pathsToDelete.push(g.foto_storage_path)
-        }
-      }
-
-      const uniquePaths = Array.from(new Set(pathsToDelete))
-
-      // 3. Remove storage files
-      if (uniquePaths.length > 0) {
-        const { error: errRemove } = await supabase.storage
-          .from(LEMBAGA_ORGANISASI_BUCKET)
-          .remove(uniquePaths)
-
-        if (errRemove) {
-          setPesanError("Gagal menghapus file foto dari storage. Penghapusan parent dibatalkan.")
-          setActiveOperation(null)
-          await loadDetail()
-          return
-        }
-      }
-
-      // 4. Delete child tables
-      const { error: errGaleri } = await supabase
-        .from("galeri_lembaga_organisasi")
-        .delete()
-        .eq("lembaga_organisasi_id", dataId)
-
-      if (errGaleri) {
-        setPesanError("File terhapus tetapi gagal menghapus data galeri.")
-        setActiveOperation(null)
-        await loadDetail()
-        return
-      }
-
-      const { error: errTugas } = await supabase
-        .from("tugas_lembaga_organisasi")
-        .delete()
-        .eq("lembaga_organisasi_id", dataId)
-
-      if (errTugas) {
-        setPesanError("Gagal menghapus data tugas.")
-        setActiveOperation(null)
-        await loadDetail()
-        return
-      }
-
-      const { error: errPengurus } = await supabase
-        .from("pengurus_lembaga_organisasi")
-        .delete()
-        .eq("lembaga_organisasi_id", dataId)
-
-      if (errPengurus) {
-        setPesanError("Gagal menghapus data pengurus.")
-        setActiveOperation(null)
-        await loadDetail()
-        return
-      }
-
-      // 5. Delete parent
-      const { data: delParentRow, error: errParent } = await supabase
-        .from("lembaga_organisasi")
-        .delete()
-        .eq("id", dataId)
-        .select("id")
-        .maybeSingle()
-
-      if (errParent || !delParentRow) {
-        setPesanError("Rincian terhapus tetapi gagal menghapus data utama parent.")
-        setActiveOperation(null)
-        await loadDetail()
-        return
-      }
-
-      router.push("/admin/lembaga-organisasi")
-      router.refresh()
-    } catch {
-      setPesanError("Terjadi kesalahan saat menghapus data lengkap.")
-      setActiveOperation(null)
-    }
-  }
-
-  // ============================================================================
-  // SECTION 6: RENDER VIEWS
+  // SECTION 5: RENDER VIEWS
   // ============================================================================
   if (checkingSession) {
     return (
@@ -1276,9 +1164,6 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
               </Link>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[#6b4b1d]">
-                    {formatJenisLembagaOrganisasi(parent.jenis)}
-                  </span>
                   {parent.is_active ? (
                     <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
                       Aktif (Publik)
@@ -1293,19 +1178,8 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
               </div>
             </div>
 
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                type="button"
-                onClick={handleTogglePublikasi}
-                disabled={Boolean(activeOperation)}
-                className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-md transition-all disabled:opacity-50 ${
-                  parent.is_active
-                    ? "bg-amber-600 text-white hover:bg-amber-700"
-                    : "bg-emerald-600 text-white hover:bg-emerald-700"
-                }`}
-              >
-                {parent.is_active ? "Jadikan Draft" : "Publikasikan"}
-              </button>
+            <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500">
+              <span>Status publikasi dikelola dari halaman daftar lembaga dan organisasi.</span>
             </div>
           </div>
           <div className="mt-4 h-1 w-24 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587]" />
@@ -1323,42 +1197,123 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
           </div>
         )}
 
-        {/* PANEL 1: RINGKASAN DATA UTAMA */}
+        {/* PANEL 1: EDITABLE DATA UTAMA FORM */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <h2 className="text-lg font-bold text-gray-900">1. Ringkasan Data Utama</h2>
-            <Link
-              href="/admin/lembaga-organisasi"
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
-            >
-              Edit Data Utama
-            </Link>
+          <div className="border-b border-gray-100 pb-4">
+            <h2 className="text-lg font-bold text-gray-900">1. Data Utama Lembaga / Organisasi</h2>
+            <p className="text-xs text-gray-500">
+              Perbarui rincian profil dan informasi kontak. Perubahan disimpan secara langsung.
+            </p>
           </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
+
+          <form onSubmit={handleSubmitDataUtama} className="mt-6 space-y-6">
+            {/* Nama */}
             <div>
-              <span className="font-semibold text-gray-500 block text-xs">NAMA RESMI</span>
-              <p className="mt-0.5 font-medium text-gray-900">{parent.nama}</p>
+              <label htmlFor="input-nama" className="block text-sm font-semibold text-gray-700">
+                Nama Resmi Lembaga / Organisasi <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="input-nama"
+                type="text"
+                value={dataUtamaForm.nama}
+                onChange={(e) => setDataUtamaForm({ ...dataUtamaForm, nama: e.target.value })}
+                disabled={savingDataUtama || Boolean(activeOperation)}
+                placeholder="Contoh: Posyandu Lansia Manggih"
+                className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+              />
+              {dataUtamaErrors.nama && (
+                <p className="mt-1 text-xs font-medium text-red-600">{dataUtamaErrors.nama}</p>
+              )}
             </div>
+
+            {/* Deskripsi */}
             <div>
-              <span className="font-semibold text-gray-500 block text-xs">JENIS</span>
-              <p className="mt-0.5 font-medium text-gray-900">{formatJenisLembagaOrganisasi(parent.jenis)}</p>
+              <label htmlFor="input-deskripsi" className="block text-sm font-semibold text-gray-700">
+                Deskripsi / Profil <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="input-deskripsi"
+                rows={5}
+                value={dataUtamaForm.deskripsi}
+                onChange={(e) => setDataUtamaForm({ ...dataUtamaForm, deskripsi: e.target.value })}
+                disabled={savingDataUtama || Boolean(activeOperation)}
+                placeholder="Tuliskan profil dan visi misi..."
+                className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+              />
+              {dataUtamaErrors.deskripsi && (
+                <p className="mt-1 text-xs font-medium text-red-600">{dataUtamaErrors.deskripsi}</p>
+              )}
             </div>
-            <div className="sm:col-span-2">
-              <span className="font-semibold text-gray-500 block text-xs">DESKRIPSI / PROFIL</span>
-              <p className="mt-0.5 whitespace-pre-wrap text-gray-800">{parent.deskripsi}</p>
-            </div>
+
+            {/* Alamat */}
             <div>
-              <span className="font-semibold text-gray-500 block text-xs">ALAMAT KANTOR</span>
-              <p className="mt-0.5 text-gray-800">{parent.alamat}</p>
+              <label htmlFor="input-alamat" className="block text-sm font-semibold text-gray-700">
+                Alamat Kantor <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="input-alamat"
+                rows={2}
+                value={dataUtamaForm.alamat}
+                onChange={(e) => setDataUtamaForm({ ...dataUtamaForm, alamat: e.target.value })}
+                disabled={savingDataUtama || Boolean(activeOperation)}
+                placeholder="Jalan, Jorong, atau lokasi gedung..."
+                className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+              />
+              {dataUtamaErrors.alamat && (
+                <p className="mt-1 text-xs font-medium text-red-600">{dataUtamaErrors.alamat}</p>
+              )}
             </div>
-            <div>
-              <span className="font-semibold text-gray-500 block text-xs">KONTAK & JAM KERJA</span>
-              <p className="mt-0.5 text-gray-800">
-                Kontak: {parent.kontak || "Belum tersedia"} <br />
-                Jam Kerja: {parent.jam_kerja || "Belum tersedia"}
-              </p>
+
+            {/* Kontak & Jam Kerja Grid */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <label htmlFor="input-kontak" className="block text-sm font-semibold text-gray-700">
+                  Nomor Kontak <span className="text-xs font-normal text-gray-500">(Opsional)</span>
+                </label>
+                <input
+                  id="input-kontak"
+                  type="text"
+                  value={dataUtamaForm.kontak}
+                  onChange={(e) => setDataUtamaForm({ ...dataUtamaForm, kontak: e.target.value })}
+                  disabled={savingDataUtama || Boolean(activeOperation)}
+                  placeholder="Contoh: 0812-3456-7890"
+                  className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+                />
+                {dataUtamaErrors.kontak && (
+                  <p className="mt-1 text-xs font-medium text-red-600">{dataUtamaErrors.kontak}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="input-jam-kerja" className="block text-sm font-semibold text-gray-700">
+                  Jam Operasional <span className="text-xs font-normal text-gray-500">(Opsional)</span>
+                </label>
+                <textarea
+                  id="input-jam-kerja"
+                  rows={2}
+                  value={dataUtamaForm.jam_kerja}
+                  onChange={(e) => setDataUtamaForm({ ...dataUtamaForm, jam_kerja: e.target.value })}
+                  disabled={savingDataUtama || Boolean(activeOperation)}
+                  placeholder="Contoh: Senin - Jumat (08.00 - 16.00 WIB)"
+                  className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+                />
+                {dataUtamaErrors.jam_kerja && (
+                  <p className="mt-1 text-xs font-medium text-red-600">{dataUtamaErrors.jam_kerja}</p>
+                )}
+              </div>
             </div>
-          </div>
+
+            {/* Simpan Perubahan Button */}
+            <div className="flex items-center justify-end border-t border-gray-100 pt-5">
+              <button
+                type="submit"
+                disabled={savingDataUtama || Boolean(activeOperation)}
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6b4b1d] to-[#2c1b01] px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90 active:scale-95 disabled:opacity-50"
+              >
+                {savingDataUtama ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          </form>
         </div>
 
         {/* PANEL 2: STRUKTUR PENGURUS */}
@@ -1585,15 +1540,33 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
                           Cover Utama
                         </span>
                       )}
-                      {g.is_active ? (
-                        <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                          Aktif
-                        </span>
-                      ) : (
+                      {!g.is_active && (
                         <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
                           Nonaktif
                         </span>
                       )}
+                    </div>
+
+                    {/* Reorder Galeri Controls */}
+                    <div className="absolute bottom-2 right-2 flex gap-1 bg-black/40 p-1 rounded-lg backdrop-blur-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleReorderGaleri(idx, "up")}
+                        disabled={idx === 0 || Boolean(activeOperation)}
+                        className="rounded bg-white/80 p-1 text-xs font-bold text-gray-900 hover:bg-white disabled:opacity-30"
+                        title="Geser Kiri/Atas"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleReorderGaleri(idx, "down")}
+                        disabled={idx === detail.galeri.length - 1 || Boolean(activeOperation)}
+                        className="rounded bg-white/80 p-1 text-xs font-bold text-gray-900 hover:bg-white disabled:opacity-30"
+                        title="Geser Kanan/Bawah"
+                      >
+                        ▼
+                      </button>
                     </div>
                   </div>
 
@@ -1612,15 +1585,6 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
                         Jadikan Cover
                       </button>
                     )}
-
-                    <button
-                      type="button"
-                      onClick={() => handleToggleGaleriActive(g)}
-                      disabled={Boolean(activeOperation)}
-                      className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      {g.is_active ? "Nonaktifkan" : "Aktifkan"}
-                    </button>
 
                     <button
                       type="button"
@@ -1644,24 +1608,6 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
               ))}
             </div>
           )}
-        </div>
-
-        {/* PANEL 5: ZONA BERBAHAYA / SAFE DELETE PARENT LENGKAP */}
-        <div className="rounded-2xl border border-red-200 bg-red-50/40 p-6 shadow-sm sm:p-8">
-          <h2 className="text-lg font-bold text-red-900">5. Zona Berbahaya (Hapus Permanen)</h2>
-          <p className="mt-1 text-sm text-red-700">
-            Operasi ini akan menghapus data utama, pengurus, tugas, galeri foto, beserta seluruh file pada storage secara permanen.
-          </p>
-          <div className="mt-5">
-            <button
-              type="button"
-              onClick={handleSafeDeleteParent}
-              disabled={Boolean(activeOperation)}
-              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-red-700 active:scale-95 disabled:opacity-50"
-            >
-              {activeOperation === "safe_delete_parent" ? "Menghapus..." : "Hapus Lembaga/Organisasi Lengkap"}
-            </button>
-          </div>
         </div>
       </div>
 
