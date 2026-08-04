@@ -2,10 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import {
-  DetailLembagaOrganisasiPublik,
-  formatJenisLembagaOrganisasi,
-} from "@/lib/lembagaOrganisasi"
+import { DetailLembagaOrganisasiPublik } from "@/lib/lembagaOrganisasi"
 
 interface Props {
   detail: DetailLembagaOrganisasiPublik
@@ -47,26 +44,14 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
   }
 
   return (
-    <div className="space-y-10">
-      {/* Navigasi Breadcrumb & Tombol Kembali */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-medium text-gray-500 flex-wrap">
-          <Link href="/" className="hover:text-[#6b4b1d] transition-colors">
-            Beranda
-          </Link>
-          <span>/</span>
-          <Link href="/lembaga-organisasi" className="hover:text-[#6b4b1d] transition-colors">
-            Lembaga dan Organisasi
-          </Link>
-          <span>/</span>
-          <span className="text-gray-900 font-semibold truncate max-w-xs">{detail.nama}</span>
-        </nav>
-
+    <div className="space-y-8">
+      {/* Tombol Kembali Bagian Atas */}
+      <div className="flex items-center justify-between">
         <Link
           href="/lembaga-organisasi"
-          className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors w-fit"
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors w-fit focus:outline-none focus:ring-2 focus:ring-[#6b4b1d]"
         >
-          <svg className="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4 w-4 text-[#6b4b1d]" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Kembali ke Daftar
@@ -98,16 +83,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
               </div>
             )}
 
-            {/* Badges Cover Utama & Indikator */}
-            <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
-              {currentGaleri?.is_cover && (
-                <span className="rounded-lg bg-emerald-600/90 px-3 py-1 text-xs font-bold text-white shadow-md backdrop-blur-md">
-                  Cover Utama
-                </span>
-              )}
-            </div>
-
-            {/* Kontrol Navigasi Slider */}
+            {/* Kontrol Navigasi Slider & Indikator Posisi */}
             {galeriList.length > 1 && (
               <>
                 <button
@@ -182,11 +158,6 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
       {/* Main Content Card: Header & Deskripsi */}
       <div className="rounded-3xl border border-gray-200/80 bg-white p-6 sm:p-10 shadow-lg space-y-8">
         <div className="border-b border-gray-100 pb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="inline-flex items-center rounded-lg bg-[#2c1b01] px-3 py-1 text-xs font-semibold text-white shadow-sm">
-              {formatJenisLembagaOrganisasi(detail.jenis)}
-            </span>
-          </div>
           <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl tracking-tight break-words">
             {detail.nama}
           </h1>
@@ -325,19 +296,6 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Footer Navigasi Bawah */}
-      <div className="flex justify-center pt-4">
-        <Link
-          href="/lembaga-organisasi"
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#6b4b1d] px-6 py-3 text-sm font-semibold text-white shadow-md hover:opacity-90 transition-all"
-        >
-          <svg className="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Kembali ke Daftar Lembaga dan Organisasi
-        </Link>
       </div>
     </div>
   )

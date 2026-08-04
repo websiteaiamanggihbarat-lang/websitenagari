@@ -2,10 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import {
-  KartuLembagaOrganisasiPublik,
-  formatJenisLembagaOrganisasi,
-} from "@/lib/lembagaOrganisasi"
+import { KartuLembagaOrganisasiPublik } from "@/lib/lembagaOrganisasi"
 
 interface Props {
   daftar: KartuLembagaOrganisasiPublik[]
@@ -105,13 +102,6 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
                   <span className="text-xs font-medium text-gray-500 break-words max-w-xs">{item.nama}</span>
                 </div>
               )}
-
-              {/* Badge Jenis */}
-              <div className="absolute top-3 left-3">
-                <span className="inline-flex items-center rounded-lg bg-[#2c1b01]/90 px-3 py-1 text-xs font-semibold text-white shadow-md backdrop-blur-md">
-                  {formatJenisLembagaOrganisasi(item.jenis)}
-                </span>
-              </div>
             </div>
 
             {/* Isi Kartu */}
@@ -158,7 +148,7 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
                 </div>
               </div>
 
-              {/* Tombol Lihat Rincian (Aktif) */}
+              {/* Tombol Lihat Rincian */}
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <Link
                   href={`/lembaga-organisasi/${item.id}`}
