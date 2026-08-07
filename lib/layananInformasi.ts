@@ -3,6 +3,16 @@ import { supabase } from "@/lib/supabase"
 export const LAYANAN_SURAT_TABLE = "layanan_surat"
 export const PERSYARATAN_LAYANAN_SURAT_TABLE = "persyaratan_layanan_surat"
 export const PENGATURAN_LAYANAN_INFORMASI_TABLE = "pengaturan_layanan_informasi"
+export const JADWAL_PELAYANAN_INFORMASI_TABLE = "jadwal_pelayanan_informasi"
+
+export type HariPelayananKey =
+  | "senin"
+  | "selasa"
+  | "rabu"
+  | "kamis"
+  | "jumat"
+  | "sabtu"
+  | "minggu"
 
 export type LayananSurat = {
   id: string
@@ -28,6 +38,8 @@ export type PersyaratanLayananSurat = {
 export type PengaturanLayananInformasi = {
   id: string
   slot_key: "utama"
+  // Legacy compatibility.
+  // Jadwal baru menggunakan jadwal_pelayanan_informasi.
   jadwal_pelayanan: string
   whatsapp_pelayanan: string | null
   email_pelayanan: string | null
@@ -41,6 +53,40 @@ export type PengaturanLayananInformasi = {
   updated_at: string
 }
 
+export type JadwalPelayananInformasi = {
+  id: string
+  hari_key: HariPelayananKey
+  is_tutup: boolean
+  jam_buka: string | null
+  jam_tutup: string | null
+  urutan: number
+  created_at: string
+  updated_at: string
+}
+
+export const HARI_PELAYANAN_LABEL: Record<
+  HariPelayananKey,
+  string
+> = {
+  senin: "Senin",
+  selasa: "Selasa",
+  rabu: "Rabu",
+  kamis: "Kamis",
+  jumat: "Jumat",
+  sabtu: "Sabtu",
+  minggu: "Minggu",
+}
+
+export type GrupJadwalPelayanan = {
+  hari_mulai: HariPelayananKey
+  hari_selesai: HariPelayananKey
+  label_hari: string
+  is_tutup: boolean
+  jam_buka: string | null
+  jam_tutup: string | null
+  label_waktu: string
+}
+
 export type LayananSuratDenganPersyaratan = LayananSurat & {
   persyaratan: PersyaratanLayananSurat[]
 }
@@ -48,11 +94,13 @@ export type LayananSuratDenganPersyaratan = LayananSurat & {
 export type DataLayananInformasiPublik = {
   layanan: LayananSuratDenganPersyaratan[]
   pengaturan: PengaturanLayananInformasi | null
+  jadwal: JadwalPelayananInformasi[]
 }
 
 export type DataLayananInformasiAdmin = {
   layanan: LayananSuratDenganPersyaratan[]
   pengaturan: PengaturanLayananInformasi | null
+  jadwal: JadwalPelayananInformasi[]
 }
 
 const SELECT_LAYANAN_SURAT = [
@@ -92,6 +140,17 @@ const SELECT_PENGATURAN_LAYANAN_INFORMASI = [
   "updated_at",
 ].join(",")
 
+const SELECT_JADWAL_PELAYANAN_INFORMASI = [
+  "id",
+  "hari_key",
+  "is_tutup",
+  "jam_buka",
+  "jam_tutup",
+  "urutan",
+  "created_at",
+  "updated_at",
+].join(",")
+
 const REGEX_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -104,6 +163,70 @@ export function isValidLayananSuratId(value: unknown): value is string {
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+const HARI_KEY_SET: Set<string> = new Set([
+  "senin",
+  "selasa",
+  "rabu",
+  "kamis",
+  "jumat",
+  "sabtu",
+  "minggu",
+])
+
+function isHariPelayananKey(value: unknown): value is HariPelayananKey {
+  return typeof value === "string" && HARI_KEY_SET.has(value)
+}
+
+function parseJadwalPelayananInformasi(row: unknown): JadwalPelayananInformasi {
+  if (!isObjectRecord(row)) {
+    throw new Error("Format data jadwal pelayanan informasi tidak valid.")
+  }
+
+  const r = row
+  if (typeof r.id !== "string" || r.id.trim() === "") {
+    throw new Error("ID jadwal pelayanan informasi tidak valid.")
+  }
+  if (!isHariPelayananKey(r.hari_key)) {
+    throw new Error(`Hari key '${String(r.hari_key)}' tidak valid.`)
+  }
+  if (typeof r.is_tutup !== "boolean") {
+    throw new Error(`Status is_tutup untuk hari ${String(r.hari_key)} harus berjenis boolean.`)
+  }
+  if (
+    typeof r.urutan !== "number" ||
+    !Number.isInteger(r.urutan) ||
+    r.urutan < 1 ||
+    r.urutan > 7
+  ) {
+    throw new Error(`Urutan untuk hari ${String(r.hari_key)} harus berupa integer antara 1 sampai 7.`)
+  }
+
+  if (r.jam_buka !== null && typeof r.jam_buka !== "string") {
+    throw new Error(`Jam_buka untuk hari ${String(r.hari_key)} harus berupa string atau null.`)
+  }
+  if (r.jam_tutup !== null && typeof r.jam_tutup !== "string") {
+    throw new Error(`Jam_tutup untuk hari ${String(r.hari_key)} harus berupa string atau null.`)
+  }
+
+  if (typeof r.created_at !== "string" || r.created_at.trim() === "") {
+    throw new Error(`Created_at untuk hari ${String(r.hari_key)} tidak valid.`)
+  }
+  if (typeof r.updated_at !== "string" || r.updated_at.trim() === "") {
+    throw new Error(`Updated_at untuk hari ${String(r.hari_key)} tidak valid.`)
+  }
+
+  return {
+    id: r.id,
+    hari_key: r.hari_key,
+    is_tutup: r.is_tutup,
+    jam_buka: r.jam_buka,
+    jam_tutup: r.jam_tutup,
+    urutan: r.urutan,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+  }
 }
 
 function parsePengaturanLayananInformasi(row: unknown): PengaturanLayananInformasi {
@@ -234,6 +357,24 @@ function groupPersyaratanByParentId(
     map.set(item.layanan_surat_id, list)
   }
   return map
+}
+
+export async function fetchJadwalPelayananInformasi(): Promise<JadwalPelayananInformasi[]> {
+  const { data, error } = await supabase
+    .from(JADWAL_PELAYANAN_INFORMASI_TABLE)
+    .select(SELECT_JADWAL_PELAYANAN_INFORMASI)
+    .order("urutan", { ascending: true })
+    .order("id", { ascending: true })
+
+  if (error) {
+    throw new Error(`Gagal memuat jadwal pelayanan informasi: ${error.message}`)
+  }
+
+  if (!data || data.length === 0) {
+    return []
+  }
+
+  return data.map(parseJadwalPelayananInformasi)
 }
 
 export async function fetchPengaturanLayananInformasi(): Promise<PengaturanLayananInformasi | null> {
@@ -376,27 +517,149 @@ export async function fetchLayananSuratPublik(): Promise<LayananSuratDenganPersy
 }
 
 export async function fetchDataLayananInformasiPublik(): Promise<DataLayananInformasiPublik> {
-  const [layanan, pengaturan] = await Promise.all([
+  const [layanan, pengaturan, jadwal] = await Promise.all([
     fetchLayananSuratPublik(),
     fetchPengaturanLayananInformasi(),
+    fetchJadwalPelayananInformasi(),
   ])
 
   return {
     layanan,
     pengaturan,
+    jadwal,
   }
 }
 
 export async function fetchDataLayananInformasiAdmin(): Promise<DataLayananInformasiAdmin> {
-  const [layanan, pengaturan] = await Promise.all([
+  const [layanan, pengaturan, jadwal] = await Promise.all([
     fetchLayananSuratAdmin(),
     fetchPengaturanLayananInformasi(),
+    fetchJadwalPelayananInformasi(),
   ])
 
   return {
     layanan,
     pengaturan,
+    jadwal,
   }
+}
+
+const REGEX_TIME = /^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/
+
+export function formatJamPelayanan(
+  value: string | null | undefined
+): string | null {
+  if (typeof value !== "string") {
+    return null
+  }
+
+  const trimmed = value.trim()
+  if (trimmed === "") {
+    return null
+  }
+
+  const match = trimmed.match(REGEX_TIME)
+  if (!match) {
+    return null
+  }
+
+  const hh = match[1]
+  const mm = match[2]
+  return `${hh}.${mm}`
+}
+
+export function groupJadwalPelayanan(
+  jadwal: JadwalPelayananInformasi[]
+): GrupJadwalPelayanan[] {
+  if (!Array.isArray(jadwal) || jadwal.length === 0) {
+    return []
+  }
+
+  const sorted = [...jadwal].sort((a, b) => {
+    if (a.urutan !== b.urutan) {
+      return a.urutan - b.urutan
+    }
+    return a.id.localeCompare(b.id)
+  })
+
+  const groups: GrupJadwalPelayanan[] = []
+  let currentGroupItems: JadwalPelayananInformasi[] = []
+
+  function buildLabelWaktu(isTutup: boolean, jamBuka: string | null, jamTutup: string | null): string {
+    if (isTutup) {
+      return "Tutup"
+    }
+    const buka = formatJamPelayanan(jamBuka)
+    const tutup = formatJamPelayanan(jamTutup)
+    if (buka && tutup) {
+      return `${buka} – ${tutup}`
+    }
+    return "Jadwal belum tersedia"
+  }
+
+  function canMerge(prev: JadwalPelayananInformasi, curr: JadwalPelayananInformasi): boolean {
+    if (curr.urutan !== prev.urutan + 1) {
+      return false
+    }
+    if (prev.is_tutup !== curr.is_tutup) {
+      return false
+    }
+    if (prev.is_tutup) {
+      return true
+    }
+    return prev.jam_buka === curr.jam_buka && prev.jam_tutup === curr.jam_tutup
+  }
+
+  for (const item of sorted) {
+    if (currentGroupItems.length === 0) {
+      currentGroupItems.push(item)
+    } else {
+      const prev = currentGroupItems[currentGroupItems.length - 1]
+      if (canMerge(prev, item)) {
+        currentGroupItems.push(item)
+      } else {
+        const first = currentGroupItems[0]
+        const last = currentGroupItems[currentGroupItems.length - 1]
+        const labelHari =
+          first.hari_key === last.hari_key
+            ? HARI_PELAYANAN_LABEL[first.hari_key]
+            : `${HARI_PELAYANAN_LABEL[first.hari_key]} – ${HARI_PELAYANAN_LABEL[last.hari_key]}`
+
+        groups.push({
+          hari_mulai: first.hari_key,
+          hari_selesai: last.hari_key,
+          label_hari: labelHari,
+          is_tutup: first.is_tutup,
+          jam_buka: first.jam_buka,
+          jam_tutup: first.jam_tutup,
+          label_waktu: buildLabelWaktu(first.is_tutup, first.jam_buka, first.jam_tutup),
+        })
+
+        currentGroupItems = [item]
+      }
+    }
+  }
+
+  if (currentGroupItems.length > 0) {
+    const first = currentGroupItems[0]
+    const last = currentGroupItems[currentGroupItems.length - 1]
+    const labelHari =
+      first.hari_key === last.hari_key
+        ? HARI_PELAYANAN_LABEL[first.hari_key]
+        : `${HARI_PELAYANAN_LABEL[first.hari_key]} – ${HARI_PELAYANAN_LABEL[last.hari_key]}`
+
+    groups.push({
+      hari_mulai: first.hari_key,
+      hari_selesai: last.hari_key,
+      label_hari: labelHari,
+      is_tutup: first.is_tutup,
+      jam_buka: first.jam_buka,
+      jam_tutup: first.jam_tutup,
+      label_waktu: buildLabelWaktu(first.is_tutup, first.jam_buka, first.jam_tutup),
+    })
+  }
+
+  return groups
 }
 
 export function normalizeIndonesianPhoneNumber(
