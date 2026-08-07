@@ -12,7 +12,6 @@ import {
   PERSYARATAN_LAYANAN_SURAT_TABLE,
   PengaturanLayananInformasi,
   LayananSuratDenganPersyaratan,
-  PersyaratanLayananSurat,
 } from "@/lib/layananInformasi"
 
 interface FormState {
@@ -43,7 +42,6 @@ interface PersyaratanFormRow {
   localId: string
   id: string | null
   isi_persyaratan: string
-  urutan: number
 }
 
 interface FormLayananState {
@@ -51,7 +49,6 @@ interface FormLayananState {
   deskripsi: string
   estimasi_pembuatan: string
   form_pendataan_url: string
-  urutan_layanan: number
 }
 
 const INITIAL_LAYANAN_FORM: FormLayananState = {
@@ -59,7 +56,6 @@ const INITIAL_LAYANAN_FORM: FormLayananState = {
   deskripsi: "",
   estimasi_pembuatan: "",
   form_pendataan_url: "",
-  urutan_layanan: 1,
 }
 
 const REGEX_PHONE_CHAR = /^[0-9\+\-\s\(\)\.]*$/
@@ -91,6 +87,23 @@ function parseErrorMessage(err: SupabaseErrorLike | null | undefined, defaultMsg
   return defaultMsg
 }
 
+function formatTanggalIndo(dateString: string | null | undefined): string {
+  if (!dateString) return "-"
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return "-"
+    return new Intl.DateTimeFormat("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date)
+  } catch {
+    return "-"
+  }
+}
+
 export default function AdminLayananInformasiPage() {
   const [checkingSession, setCheckingSession] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -98,6 +111,7 @@ export default function AdminLayananInformasiPage() {
   // Pengaturan Singleton State
   const [loadingPengaturan, setLoadingPengaturan] = useState(true)
   const [submittingPengaturan, setSubmittingPengaturan] = useState(false)
+  const [isPengaturanOpen, setIsPengaturanOpen] = useState(false)
   const [pengaturan, setPengaturan] = useState<PengaturanLayananInformasi | null>(null)
   const [snapshotPengaturan, setSnapshotPengaturan] = useState<PengaturanLayananInformasi | null>(null)
   const [formPengaturan, setFormPengaturan] = useState<FormState>(INITIAL_FORM_STATE)
@@ -107,22 +121,43 @@ export default function AdminLayananInformasiPage() {
   const [loadingLayanan, setLoadingLayanan] = useState(true)
   const [layananList, setLayananList] = useState<LayananSuratDenganPersyaratan[]>([])
 
-  // Layanan Form State
+  // Layanan Form State (Controlled by Header button)
+  const [showLayananForm, setShowLayananForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formLayanan, setFormLayanan] = useState<FormLayananState>(INITIAL_LAYANAN_FORM)
   const [persyaratanRows, setPersyaratanRows] = useState<PersyaratanFormRow[]>([
-    { localId: "init-1", id: null, isi_persyaratan: "", urutan: 1 },
+    { localId: "init-1", id: null, isi_persyaratan: "" },
   ])
   const [fieldErrorsLayanan, setFieldErrorsLayanan] = useState<Record<string, string>>({})
   const [submittingLayanan, setSubmittingLayanan] = useState(false)
-
-  // Actions State
-  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null)
   const [deletingLayananId, setDeletingLayananId] = useState<string | null>(null)
 
   // Global Toast Messages
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      if (typeof window !== "undefined") {
+        localStorage.clear()
+        sessionStorage.clear()
+      }
+      const response = await fetch("/auth/signout", {
+        method: "POST",
+        credentials: "include",
+        redirect: "follow",
+      })
+      if (response.redirected) {
+        window.location.href = response.url
+      } else {
+        window.location.href = `/login?logout=success&t=${Date.now()}`
+      }
+    } catch (error) {
+      console.error("Logout error", error)
+      window.location.href = `/login?logout=success&t=${Date.now()}`
+    }
+  }
 
   const periksaAuth = async (): Promise<boolean> => {
     try {
@@ -171,7 +206,7 @@ export default function AdminLayananInformasiPage() {
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       setPesanError(parseErrorMessage(e, "Gagal memuat pengaturan pelayanan."))
-    } fontally: {
+    } finally {
       setLoadingPengaturan(false)
     }
   }
@@ -181,12 +216,6 @@ export default function AdminLayananInformasiPage() {
     try {
       const data = await fetchLayananSuratAdmin()
       setLayananList(data)
-
-      // Calculate next default urutan if not editing
-      if (editingId === null && data.length > 0) {
-        const maxUrutan = Math.max(...data.map((item) => item.urutan), 0)
-        setFormLayanan((prev) => ({ ...prev, urutan_layanan: maxUrutan + 1 }))
-      }
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       setPesanError(parseErrorMessage(e, "Gagal memuat daftar layanan surat admin."))
@@ -211,7 +240,7 @@ export default function AdminLayananInformasiPage() {
   }, [])
 
   // ==========================================
-  // HANDLERS FOR PENGATURAN FORM
+  // HANDLERS FOR PENGATURAN FORM (COLLAPSIBLE)
   // ==========================================
 
   const handlePengaturanChange = (
@@ -326,7 +355,7 @@ export default function AdminLayananInformasiPage() {
     }
 
     if (!validatePengaturanForm()) {
-      setPesanError("Silakan periksa kembali isian form pengaturan di bawah.")
+      setPesanError("Silakan periksa kembali isian form pengaturan.")
       return
     }
 
@@ -434,17 +463,44 @@ export default function AdminLayananInformasiPage() {
   }
 
   // ==========================================
-  // HANDLERS FOR LAYANAN SURAT & PERSYARATAN
+  // HANDLERS FOR LAYANAN FORM (ADD / EDIT)
   // ==========================================
+
+  const handleOpenAddForm = () => {
+    setEditingId(null)
+    setFormLayanan(INITIAL_LAYANAN_FORM)
+    setPersyaratanRows([
+      { localId: crypto.randomUUID(), id: null, isi_persyaratan: "" },
+    ])
+    setFieldErrorsLayanan({})
+    setPesanSukses(null)
+    setPesanError(null)
+    setShowLayananForm(true)
+
+    // Scroll smoothly to form
+    setTimeout(() => {
+      const formElement = document.getElementById("form-layanan-section")
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: "smooth" })
+      }
+    }, 50)
+  }
+
+  const handleCancelLayananForm = () => {
+    setShowLayananForm(false)
+    setEditingId(null)
+    setFormLayanan(INITIAL_LAYANAN_FORM)
+    setPersyaratanRows([
+      { localId: crypto.randomUUID(), id: null, isi_persyaratan: "" },
+    ])
+    setFieldErrorsLayanan({})
+  }
 
   const handleLayananChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target
-    setFormLayanan((prev) => ({
-      ...prev,
-      [name]: name === "urutan_layanan" ? Math.max(1, parseInt(value, 10) || 1) : value,
-    }))
+    setFormLayanan((prev) => ({ ...prev, [name]: value }))
 
     if (fieldErrorsLayanan[name]) {
       setFieldErrorsLayanan((prev) => {
@@ -463,7 +519,6 @@ export default function AdminLayananInformasiPage() {
         localId: crypto.randomUUID(),
         id: null,
         isi_persyaratan: "",
-        urutan: prev.length + 1,
       },
     ])
   }
@@ -473,10 +528,7 @@ export default function AdminLayananInformasiPage() {
       alert("Layanan surat wajib memiliki minimal 1 persyaratan.")
       return
     }
-    setPersyaratanRows((prev) => {
-      const filtered = prev.filter((r) => r.localId !== localId)
-      return filtered.map((r, idx) => ({ ...r, urutan: idx + 1 }))
-    })
+    setPersyaratanRows((prev) => prev.filter((r) => r.localId !== localId))
   }
 
   const handlePersyaratanChange = (localId: string, value: string) => {
@@ -492,37 +544,6 @@ export default function AdminLayananInformasiPage() {
     }
   }
 
-  const handleMovePersyaratan = (localId: string, direction: "up" | "down") => {
-    const index = persyaratanRows.findIndex((r) => r.localId === localId)
-    if (index < 0) return
-
-    const targetIndex = direction === "up" ? index - 1 : index + 1
-    if (targetIndex < 0 || targetIndex >= persyaratanRows.length) return
-
-    const newRows = [...persyaratanRows]
-    const temp = newRows[index]
-    newRows[index] = newRows[targetIndex]
-    newRows[targetIndex] = temp
-
-    setPersyaratanRows(newRows.map((r, idx) => ({ ...r, urutan: idx + 1 })))
-  }
-
-  const resetLayananForm = () => {
-    setEditingId(null)
-    const maxUrutan = Math.max(...layananList.map((item) => item.urutan), 0)
-    setFormLayanan({
-      nama_layanan: "",
-      deskripsi: "",
-      estimasi_pembuatan: "",
-      form_pendataan_url: "",
-      urutan_layanan: maxUrutan + 1,
-    })
-    setPersyaratanRows([
-      { localId: crypto.randomUUID(), id: null, isi_persyaratan: "", urutan: 1 },
-    ])
-    setFieldErrorsLayanan({})
-  }
-
   const handleStartEdit = (item: LayananSuratDenganPersyaratan) => {
     setEditingId(item.id)
     setFormLayanan({
@@ -530,7 +551,6 @@ export default function AdminLayananInformasiPage() {
       deskripsi: item.deskripsi || "",
       estimasi_pembuatan: item.estimasi_pembuatan,
       form_pendataan_url: item.form_pendataan_url,
-      urutan_layanan: item.urutan,
     })
 
     const rows: PersyaratanFormRow[] =
@@ -539,20 +559,22 @@ export default function AdminLayananInformasiPage() {
             localId: crypto.randomUUID(),
             id: p.id,
             isi_persyaratan: p.isi_persyaratan,
-            urutan: p.urutan,
           }))
-        : [{ localId: crypto.randomUUID(), id: null, isi_persyaratan: "", urutan: 1 }]
+        : [{ localId: crypto.randomUUID(), id: null, isi_persyaratan: "" }]
 
     setPersyaratanRows(rows)
     setFieldErrorsLayanan({})
     setPesanSukses(null)
     setPesanError(null)
+    setShowLayananForm(true)
 
     // Scroll smoothly to form
-    const formElement = document.getElementById("form-layanan-surat-section")
-    if (formElement) {
-      formElement.scrollIntoView({ behavior: "smooth" })
-    }
+    setTimeout(() => {
+      const formElement = document.getElementById("form-layanan-section")
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: "smooth" })
+      }
+    }, 50)
   }
 
   const validateLayananForm = (): boolean => {
@@ -588,12 +610,7 @@ export default function AdminLayananInformasiPage() {
     } else if (/\s/.test(urlTrim)) {
       errors.form_pendataan_url = "Link formulir pendataan tidak boleh memuat spasi."
     } else if (!getSafeHttpsUrl(urlTrim)) {
-      errors.form_pendataan_url = "Link formulir pendataan harus berupa URL HTTPS yang valid (contoh: https://docs.google.com/forms/d/e/...)."
-    }
-
-    // Urutan
-    if (!formLayanan.urutan_layanan || formLayanan.urutan_layanan < 1) {
-      errors.urutan_layanan = "Urutan harus minimal 1."
+      errors.form_pendataan_url = "Link formulir pendataan harus berupa URL HTTPS yang valid."
     }
 
     // Persyaratan
@@ -610,7 +627,7 @@ export default function AdminLayananInformasiPage() {
         }
       }
       if (emptyCount > 0 && !errors.persyaratan) {
-        errors.persyaratan = "Seluruh poin persyaratan wajib diisi (tidak boleh ada poin yang kosong)."
+        errors.persyaratan = "Seluruh poin persyaratan wajib diisi."
       }
     }
 
@@ -618,6 +635,7 @@ export default function AdminLayananInformasiPage() {
     return Object.keys(errors).length === 0
   }
 
+  // WORKFLOW AUTO-PUBLISH (CREATE & EDIT)
   const handleSimpanLayanan = async (e: FormEvent) => {
     e.preventDefault()
     setPesanSukses(null)
@@ -643,39 +661,31 @@ export default function AdminLayananInformasiPage() {
         return
       }
 
-      const parentPayload = {
-        nama_layanan: formLayanan.nama_layanan.trim(),
-        deskripsi: formLayanan.deskripsi.trim() || null,
-        estimasi_pembuatan: formLayanan.estimasi_pembuatan.trim(),
-        form_pendataan_url: getSafeHttpsUrl(formLayanan.form_pendataan_url.trim())!,
-        urutan: Number(formLayanan.urutan_layanan),
-      }
-
       if (editingId === null) {
-        // MODE TAMAH: Create Layanan sebagai Draft
+        // MODE TAMBAH: Auto-Publish Workflow
+        const nextUrutan =
+          layananList.length === 0
+            ? 1
+            : Math.max(...layananList.map((item) => item.urutan)) + 1
+
+        // STEP 1: Insert parent with is_active: false
         const { data: newParent, error: parentInsertError } = await supabase
           .from(LAYANAN_SURAT_TABLE)
           .insert({
-            ...parentPayload,
+            nama_layanan: formLayanan.nama_layanan.trim(),
+            deskripsi: formLayanan.deskripsi.trim() || null,
+            estimasi_pembuatan: formLayanan.estimasi_pembuatan.trim(),
+            form_pendataan_url: getSafeHttpsUrl(formLayanan.form_pendataan_url.trim())!,
             is_active: false,
+            urutan: nextUrutan,
           })
-          .select(`
-            id,
-            nama_layanan,
-            deskripsi,
-            estimasi_pembuatan,
-            form_pendataan_url,
-            is_active,
-            urutan,
-            created_at,
-            updated_at
-          `)
+          .select("id")
           .maybeSingle()
 
         if (parentInsertError) throw parentInsertError
         if (!newParent) throw new Error("Gagal membuat data utama layanan surat.")
 
-        // Insert Children
+        // STEP 2: Insert children with index + 1 automatic urutan
         const childPayloads = persyaratanRows.map((r, idx) => ({
           layanan_surat_id: newParent.id,
           isi_persyaratan: r.isi_persyaratan.trim(),
@@ -687,45 +697,52 @@ export default function AdminLayananInformasiPage() {
           .insert(childPayloads)
 
         if (childInsertError) {
-          // COMPENSATING ROLLBACK: Hapus parent yang baru dibuat jika child gagal
+          // COMPENSATING ROLLBACK
           await supabase.from(LAYANAN_SURAT_TABLE).delete().eq("id", newParent.id)
-          throw new Error(`Gagal menyimpan persyaratan. Data layanan dibatalkan otomatis: ${childInsertError.message}`)
+          throw new Error(`Gagal menyimpan persyaratan. Data layanan dibatalkan: ${childInsertError.message}`)
+        }
+
+        // STEP 3: Activate parent -> is_active = true
+        const { error: activateError } = await supabase
+          .from(LAYANAN_SURAT_TABLE)
+          .update({ is_active: true })
+          .eq("id", newParent.id)
+
+        if (activateError) {
+          // COMPENSATING ROLLBACK
+          await supabase.from(LAYANAN_SURAT_TABLE).delete().eq("id", newParent.id)
+          throw new Error(`Gagal mempublikasikan layanan. Data layanan dibatalkan: ${activateError.message}`)
         }
 
         await loadDataLayanan()
-        resetLayananForm()
-        setPesanSukses("Layanan surat baru berhasil dibuat sebagai Draft.")
+        handleCancelLayananForm()
+        setPesanSukses("Layanan berhasil ditambahkan dan langsung dipublikasikan.")
       } else {
-        // MODE EDIT: Update Parent & Rekonsiliasi Child secara berurutan & aman
-        const { data: updatedParent, error: parentUpdateError } = await supabase
+        // MODE EDIT: Update Parent & Rekonsiliasi Child
+        const { error: parentUpdateError } = await supabase
           .from(LAYANAN_SURAT_TABLE)
-          .update(parentPayload)
+          .update({
+            nama_layanan: formLayanan.nama_layanan.trim(),
+            deskripsi: formLayanan.deskripsi.trim() || null,
+            estimasi_pembuatan: formLayanan.estimasi_pembuatan.trim(),
+            form_pendataan_url: getSafeHttpsUrl(formLayanan.form_pendataan_url.trim())!,
+            is_active: true,
+          })
           .eq("id", editingId)
-          .select(`
-            id,
-            nama_layanan,
-            deskripsi,
-            estimasi_pembuatan,
-            form_pendataan_url,
-            is_active,
-            urutan,
-            created_at,
-            updated_at
-          `)
-          .maybeSingle()
 
         if (parentUpdateError) throw parentUpdateError
-        if (!updatedParent) throw new Error("Gagal memperbarui rincian data layanan surat.")
 
-        // Rekonsiliasi Persyaratan Child:
-        // 1. Child Existing (Update)
+        // Rekonsiliasi Persyaratan Child
         const existingRows = persyaratanRows.filter((r) => r.id !== null)
-        for (const row of existingRows) {
+        for (let idx = 0; idx < existingRows.length; idx++) {
+          const row = existingRows[idx]
+          const posUrutan = persyaratanRows.findIndex((r) => r.localId === row.localId) + 1
+
           const { error: errUpdateChild } = await supabase
             .from(PERSYARATAN_LAYANAN_SURAT_TABLE)
             .update({
               isi_persyaratan: row.isi_persyaratan.trim(),
-              urutan: row.urutan,
+              urutan: posUrutan,
             })
             .eq("id", row.id!)
             .eq("layanan_surat_id", editingId)
@@ -733,13 +750,12 @@ export default function AdminLayananInformasiPage() {
           if (errUpdateChild) throw errUpdateChild
         }
 
-        // 2. Child Baru (Insert)
         const newRows = persyaratanRows.filter((r) => r.id === null)
         if (newRows.length > 0) {
           const newChildPayloads = newRows.map((r) => ({
             layanan_surat_id: editingId,
             isi_persyaratan: r.isi_persyaratan.trim(),
-            urutan: r.urutan,
+            urutan: persyaratanRows.findIndex((row) => row.localId === r.localId) + 1,
           }))
 
           const { error: errInsertNewChild } = await supabase
@@ -749,7 +765,6 @@ export default function AdminLayananInformasiPage() {
           if (errInsertNewChild) throw errInsertNewChild
         }
 
-        // 3. Child Dihapus (Delete)
         const currentItem = layananList.find((item) => item.id === editingId)
         if (currentItem) {
           const keptChildIds = existingRows.map((r) => r.id!)
@@ -769,69 +784,14 @@ export default function AdminLayananInformasiPage() {
         }
 
         await loadDataLayanan()
-        resetLayananForm()
-        setPesanSukses("Perubahan layanan surat dan persyaratannya berhasil disimpan.")
+        handleCancelLayananForm()
+        setPesanSukses("Perubahan layanan surat berhasil disimpan.")
       }
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       setPesanError(parseErrorMessage(e, "Gagal menyimpan data layanan surat."))
     } finally {
       setSubmittingLayanan(false)
-    }
-  }
-
-  const handleToggleStatus = async (item: LayananSuratDenganPersyaratan) => {
-    setPesanSukses(null)
-    setPesanError(null)
-
-    if (togglingStatusId) return
-
-    const targetActive = !item.is_active
-
-    // Guard UI: cegah mengaktifkan jika tidak ada persyaratan
-    if (targetActive && item.persyaratan.length === 0) {
-      setPesanError("Layanan surat tidak dapat diaktifkan karena belum memiliki persyaratan.")
-      return
-    }
-
-    setTogglingStatusId(item.id)
-
-    try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession()
-
-      if (sessionError || !session) {
-        setPesanError("Sesi admin tidak tersedia. Silakan masuk kembali.")
-        return
-      }
-
-      const { data: updatedRow, error: updateError } = await supabase
-        .from(LAYANAN_SURAT_TABLE)
-        .update({ is_active: targetActive })
-        .eq("id", item.id)
-        .select("id, is_active")
-        .maybeSingle()
-
-      if (updateError) throw updateError
-
-      if (!updatedRow) {
-        setPesanError("Gagal memperbarui status layanan surat.")
-        return
-      }
-
-      await loadDataLayanan()
-      setPesanSukses(
-        targetActive
-          ? `Layanan surat '${item.nama_layanan}' berhasil diaktifkan.`
-          : `Layanan surat '${item.nama_layanan}' berhasil dinonaktifkan.`
-      )
-    } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Gagal mengubah status layanan surat."))
-    } finally {
-      setTogglingStatusId(null)
     }
   }
 
@@ -876,11 +836,11 @@ export default function AdminLayananInformasiPage() {
       }
 
       if (editingId === item.id) {
-        resetLayananForm()
+        handleCancelLayananForm()
       }
 
       await loadDataLayanan()
-      setPesanSukses(`Layanan surat '${item.nama_layanan}' beserta persyaratannya berhasil dihapus.`)
+      setPesanSukses(`Layanan surat '${item.nama_layanan}' berhasil dihapus.`)
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       setPesanError(parseErrorMessage(e, "Gagal menghapus layanan surat."))
@@ -905,43 +865,71 @@ export default function AdminLayananInformasiPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
-              <Link href="/admin" className="hover:text-gray-900">
-                Admin Panel
-              </Link>
-              <span>/</span>
-              <span className="text-gray-900">Layanan Informasi</span>
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation (Matching Kelola Kesenian Tradisional) */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <Link
+              href="/admin"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
+              title="Kembali ke Dashboard Admin"
+              aria-label="Kembali ke Dashboard Admin"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Kelola Layanan Informasi
+              </h1>
+              <p className="text-xs sm:text-sm text-amber-200/80">
+                Kelola layanan surat, persyaratan, jadwal pelayanan, kontak, dan saluran pengaduan nagari.
+              </p>
             </div>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900 sm:text-3xl">
-              Kelola Layanan Informasi
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              Atur jadwal, kontak pelayanan, serta daftar jenis layanan surat administrasi nagari.
-            </p>
           </div>
 
-          <Link
-            href="/admin"
-            className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Kembali ke Dashboard
-          </Link>
-        </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {!showLayananForm && (
+              <button
+                type="button"
+                onClick={handleOpenAddForm}
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                + Tambah Layanan Surat Baru
+              </button>
+            )}
 
-        {/* Alert Messages */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Global Toast Messages */}
         <div aria-live="polite">
           {pesanSukses && (
-            <div className="mb-6 rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm font-medium text-emerald-800 shadow-sm">
+            <div className="mb-6 rounded-lg border border-[#6b4b1d]/30 bg-[#f7f2e8] p-4 text-sm font-medium text-[#2c1b01] shadow-sm">
               <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 text-[#6b4b1d] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 <span>{pesanSukses}</span>
@@ -961,630 +949,566 @@ export default function AdminLayananInformasiPage() {
           )}
         </div>
 
-        {/* SECTION A: PENGATURAN PELAYANAN & PENGADUAN */}
-        {loadingPengaturan ? (
-          <div className="mb-8 rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent"></div>
-            <p className="mt-3 text-sm text-gray-600">Memuat pengaturan pelayanan...</p>
-          </div>
-        ) : !pengaturan ? (
-          <div className="mb-8 rounded-xl border border-red-200 bg-white p-8 text-center shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">Data Pengaturan Tidak Tersedia</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Data singleton pengaturan belum ditemukan di Supabase Development.
-            </p>
-            <button
-              onClick={loadDataPengaturan}
-              type="button"
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
-            >
-              Coba Lagi
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSimpanPengaturan} className="mb-10 space-y-6" noValidate>
-            <div className="border-b border-gray-300 pb-3">
-              <h2 className="text-xl font-bold text-gray-900">Bagian 1: Pengaturan Pelayanan & Saluran Pengaduan</h2>
-              <p className="text-xs text-gray-500">
-                Atur jadwal operasional, kontak pelayanan, serta saluran pengaduan masyarakat.
+        {/* COLLAPSIBLE SECTION: PENGATURAN PELAYANAN & SALURAN PENGADUAN (KREM HEADER) */}
+        <div className="mb-8 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setIsPengaturanOpen(!isPengaturanOpen)}
+            aria-expanded={isPengaturanOpen}
+            aria-controls="panel-pengaturan-pelayanan"
+            aria-label={isPengaturanOpen ? "Tutup Pengaturan Pelayanan" : "Buka Pengaturan Pelayanan"}
+            className="w-full flex items-center justify-between p-5 text-left bg-[#f7f2e8] hover:bg-[#ebdcc4] transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#6b4b1d]"
+          >
+            <div>
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                Pengaturan Pelayanan & Saluran Pengaduan
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Atur jadwal operasional, kontak kantor, lokasi, serta saluran pengaduan masyarakat.
               </p>
             </div>
 
-            {/* Status Information Box */}
-            <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-4 text-sm text-teal-900 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <span className="font-semibold">Slot Pengaturan:</span> Utama (`utama`)
-              </div>
-              {pengaturan.updated_at && (
-                <div className="text-xs text-teal-700">
-                  Terakhir diperbarui: {new Date(pengaturan.updated_at).toLocaleString("id-ID")}
+            <div className="flex items-center text-[#2c1b01]">
+              <svg
+                className={`h-5 w-5 transition-transform duration-200 ${isPengaturanOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+
+          {isPengaturanOpen && (
+            <div id="panel-pengaturan-pelayanan" className="p-6 border-t border-gray-200">
+              {loadingPengaturan ? (
+                <div className="py-6 text-center">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-[#6b4b1d] border-r-transparent"></div>
+                  <p className="mt-2 text-xs text-gray-600">Memuat pengaturan pelayanan...</p>
                 </div>
+              ) : !pengaturan ? (
+                <div className="p-4 text-center text-sm text-red-600">
+                  Data pengaturan pelayanan belum tersedia di database.
+                </div>
+              ) : (
+                <form onSubmit={handleSimpanPengaturan} className="space-y-6" noValidate>
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {/* Jadwal Pelayanan */}
+                    <div className="lg:col-span-2">
+                      <label htmlFor="jadwal_pelayanan" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Jadwal Pelayanan <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id="jadwal_pelayanan"
+                        name="jadwal_pelayanan"
+                        rows={3}
+                        value={formPengaturan.jadwal_pelayanan}
+                        onChange={handlePengaturanChange}
+                        aria-invalid={Boolean(fieldErrorsPengaturan.jadwal_pelayanan)}
+                        className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
+                          fieldErrorsPengaturan.jadwal_pelayanan
+                            ? "border-red-500 focus:ring-red-400"
+                            : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                        }`}
+                        placeholder={"Senin - Kamis: 08.00 - 16.00\nJum'at: 08.00 - 16.30\nSabtu - Minggu: Tutup"}
+                      />
+                      {fieldErrorsPengaturan.jadwal_pelayanan && (
+                        <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.jadwal_pelayanan}</p>
+                      )}
+                    </div>
+
+                    {/* Kontak Pelayanan */}
+                    <div className="space-y-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+                      <h3 className="text-sm font-bold text-gray-900 border-b pb-2">Kontak Pelayanan</h3>
+
+                      <div>
+                        <label htmlFor="whatsapp_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
+                          WhatsApp Pelayanan (Opsional)
+                        </label>
+                        <input
+                          type="text"
+                          id="whatsapp_pelayanan"
+                          name="whatsapp_pelayanan"
+                          value={formPengaturan.whatsapp_pelayanan}
+                          onChange={handlePengaturanChange}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                          placeholder="+62 823-1586-3113"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="email_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
+                          Email Pelayanan (Opsional)
+                        </label>
+                        <input
+                          type="email"
+                          id="email_pelayanan"
+                          name="email_pelayanan"
+                          value={formPengaturan.email_pelayanan}
+                          onChange={handlePengaturanChange}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                          placeholder="aiamanggihbarat02@gmail.com"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="telepon_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
+                            Telepon Utama
+                          </label>
+                          <input
+                            type="text"
+                            id="telepon_pelayanan"
+                            name="telepon_pelayanan"
+                            value={formPengaturan.telepon_pelayanan}
+                            onChange={handlePengaturanChange}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                            placeholder="082268789740"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="telepon_pelayanan_alternatif" className="block text-xs font-semibold text-gray-700 mb-1">
+                            Telepon Alternatif
+                          </label>
+                          <input
+                            type="text"
+                            id="telepon_pelayanan_alternatif"
+                            name="telepon_pelayanan_alternatif"
+                            value={formPengaturan.telepon_pelayanan_alternatif}
+                            onChange={handlePengaturanChange}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                            placeholder="082172235321"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lokasi & Pengaduan */}
+                    <div className="space-y-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+                      <h3 className="text-sm font-bold text-gray-900 border-b pb-2">Lokasi & Saluran Pengaduan</h3>
+
+                      <div>
+                        <label htmlFor="alamat_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
+                          Alamat Pelayanan (Opsional)
+                        </label>
+                        <textarea
+                          id="alamat_pelayanan"
+                          name="alamat_pelayanan"
+                          rows={2}
+                          value={formPengaturan.alamat_pelayanan}
+                          onChange={handlePengaturanChange}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                          placeholder="Kantor Wali Nagari Aia Manggih Barat"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="google_maps_url" className="block text-xs font-semibold text-gray-700 mb-1">
+                          Link Google Maps (HTTPS)
+                        </label>
+                        <input
+                          type="url"
+                          id="google_maps_url"
+                          name="google_maps_url"
+                          value={formPengaturan.google_maps_url}
+                          onChange={handlePengaturanChange}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                          placeholder="https://maps.google.com/?q=..."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="whatsapp_pengaduan" className="block text-xs font-semibold text-gray-700 mb-1">
+                            WhatsApp Pengaduan
+                          </label>
+                          <input
+                            type="text"
+                            id="whatsapp_pengaduan"
+                            name="whatsapp_pengaduan"
+                            value={formPengaturan.whatsapp_pengaduan}
+                            onChange={handlePengaturanChange}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                            placeholder="+62 823-1586-3113"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="form_pengaduan_url" className="block text-xs font-semibold text-gray-700 mb-1">
+                            Form Pengaduan (HTTPS)
+                          </label>
+                          <input
+                            type="url"
+                            id="form_pengaduan_url"
+                            name="form_pengaduan_url"
+                            value={formPengaturan.form_pengaduan_url}
+                            onChange={handlePengaturanChange}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                            placeholder="https://docs.google.com/forms/d/e/..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t pt-4">
+                    <button
+                      type="button"
+                      onClick={handleBatalkanPengaturan}
+                      disabled={submittingPengaturan}
+                      className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto"
+                    >
+                      Batalkan Perubahan
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={submittingPengaturan}
+                      className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto"
+                    >
+                      {submittingPengaturan ? "Menyimpan..." : "Simpan Pengaturan"}
+                    </button>
+                  </div>
+                </form>
               )}
             </div>
+          )}
+        </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Jadwal Pelayanan */}
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
-                <label htmlFor="jadwal_pelayanan" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Jadwal Pelayanan <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="jadwal_pelayanan"
-                  name="jadwal_pelayanan"
-                  rows={3}
-                  value={formPengaturan.jadwal_pelayanan}
-                  onChange={handlePengaturanChange}
-                  aria-invalid={Boolean(fieldErrorsPengaturan.jadwal_pelayanan)}
-                  aria-describedby={fieldErrorsPengaturan.jadwal_pelayanan ? "err-jadwal" : undefined}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
-                    fieldErrorsPengaturan.jadwal_pelayanan
-                      ? "border-red-500 focus:ring-red-400"
-                      : "border-gray-300 focus:border-teal-600 focus:ring-teal-500"
-                  }`}
-                  placeholder={"Senin - Kamis: 08.00 - 16.00\nJum'at: 08.00 - 16.30\nSabtu - Minggu: Tutup"}
-                />
-                <div className="mt-1 flex items-center justify-between">
-                  {fieldErrorsPengaturan.jadwal_pelayanan ? (
-                    <p id="err-jadwal" className="text-xs text-red-600">
-                      {fieldErrorsPengaturan.jadwal_pelayanan}
-                    </p>
-                  ) : (
-                    <span className="text-xs text-gray-400">Dukungan teks multiline</span>
-                  )}
-                  <span className="text-xs text-gray-400">
-                    {formPengaturan.jadwal_pelayanan.length}/5000
-                  </span>
-                </div>
+        {/* SECTION: FORM TAMBAH / EDIT LAYANAN SURAT (KREM HEADER, WHITE BODY) */}
+        {showLayananForm && (
+          <div id="form-layanan-section" className="mb-8 scroll-mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {/* Header Krem Section */}
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-[#2c1b01]">
+                  {editingId !== null ? "Edit Layanan Surat" : "Tambah Layanan Surat Baru"}
+                </h2>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  {editingId !== null
+                    ? "Ubah data layanan surat dan persyaratannya."
+                    : "Tambahkan jenis layanan surat dan persyaratannya."}
+                </p>
               </div>
 
-              {/* Kontak Pelayanan */}
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
-                <h3 className="text-base font-bold text-gray-900 border-b pb-2">Kontak Pelayanan</h3>
+              <button
+                type="button"
+                onClick={handleCancelLayananForm}
+                className="text-xs font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-1.5 shadow-sm"
+              >
+                ✕ Batal
+              </button>
+            </div>
 
-                <div>
-                  <label htmlFor="whatsapp_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
-                    WhatsApp Pelayanan (Opsional)
+            {/* Body Form Putih */}
+            <form onSubmit={handleSimpanLayanan} className="p-6 space-y-6" noValidate>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {/* Nama Layanan */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="nama_layanan" className="block text-sm font-semibold text-gray-700 mb-1">
+                    Nama Layanan Surat <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    id="whatsapp_pelayanan"
-                    name="whatsapp_pelayanan"
-                    value={formPengaturan.whatsapp_pelayanan}
-                    onChange={handlePengaturanChange}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    placeholder="+62 823-1586-3113"
+                    id="nama_layanan"
+                    name="nama_layanan"
+                    value={formLayanan.nama_layanan}
+                    onChange={handleLayananChange}
+                    aria-invalid={Boolean(fieldErrorsLayanan.nama_layanan)}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
+                      fieldErrorsLayanan.nama_layanan
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                    }`}
+                    placeholder="e.g. Surat Keterangan Domisili"
                   />
+                  {fieldErrorsLayanan.nama_layanan && (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.nama_layanan}</p>
+                  )}
                 </div>
 
-                <div>
-                  <label htmlFor="email_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
-                    Email Pelayanan (Opsional)
-                  </label>
-                  <input
-                    type="email"
-                    id="email_pelayanan"
-                    name="email_pelayanan"
-                    value={formPengaturan.email_pelayanan}
-                    onChange={handlePengaturanChange}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    placeholder="aiamanggihbarat02@gmail.com"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="telepon_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
-                      Telepon Utama
-                    </label>
-                    <input
-                      type="text"
-                      id="telepon_pelayanan"
-                      name="telepon_pelayanan"
-                      value={formPengaturan.telepon_pelayanan}
-                      onChange={handlePengaturanChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                      placeholder="082268789740"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="telepon_pelayanan_alternatif" className="block text-xs font-semibold text-gray-700 mb-1">
-                      Telepon Alternatif
-                    </label>
-                    <input
-                      type="text"
-                      id="telepon_pelayanan_alternatif"
-                      name="telepon_pelayanan_alternatif"
-                      value={formPengaturan.telepon_pelayanan_alternatif}
-                      onChange={handlePengaturanChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                      placeholder="082172235321"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Lokasi & Pengaduan */}
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
-                <h3 className="text-base font-bold text-gray-900 border-b pb-2">Lokasi & Saluran Pengaduan</h3>
-
-                <div>
-                  <label htmlFor="alamat_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
-                    Alamat Pelayanan (Opsional)
+                {/* Deskripsi */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="deskripsi" className="block text-sm font-semibold text-gray-700 mb-1">
+                    Deskripsi Layanan (Opsional)
                   </label>
                   <textarea
-                    id="alamat_pelayanan"
-                    name="alamat_pelayanan"
+                    id="deskripsi"
+                    name="deskripsi"
                     rows={2}
-                    value={formPengaturan.alamat_pelayanan}
-                    onChange={handlePengaturanChange}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    placeholder="Kantor Wali Nagari Aia Manggih Barat"
+                    value={formLayanan.deskripsi}
+                    onChange={handleLayananChange}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                    placeholder="Penjelasan singkat peruntukan surat..."
                   />
+                  {fieldErrorsLayanan.deskripsi && (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.deskripsi}</p>
+                  )}
                 </div>
 
-                <div>
-                  <label htmlFor="google_maps_url" className="block text-xs font-semibold text-gray-700 mb-1">
-                    Link Google Maps (HTTPS)
+                {/* Estimasi Pembuatan */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="estimasi_pembuatan" className="block text-sm font-semibold text-gray-700 mb-1">
+                    Estimasi Pembuatan <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="estimasi_pembuatan"
+                    name="estimasi_pembuatan"
+                    value={formLayanan.estimasi_pembuatan}
+                    onChange={handleLayananChange}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
+                      fieldErrorsLayanan.estimasi_pembuatan
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                    }`}
+                    placeholder="e.g. 1 hari kerja / Selesai hari yang sama"
+                  />
+                  {fieldErrorsLayanan.estimasi_pembuatan && (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.estimasi_pembuatan}</p>
+                  )}
+                </div>
+
+                {/* Form Pendataan URL */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="form_pendataan_url" className="block text-sm font-semibold text-gray-700 mb-1">
+                    Link Formulir Pendataan Online (HTTPS) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="url"
-                    id="google_maps_url"
-                    name="google_maps_url"
-                    value={formPengaturan.google_maps_url}
-                    onChange={handlePengaturanChange}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    placeholder="https://maps.google.com/?q=..."
+                    id="form_pendataan_url"
+                    name="form_pendataan_url"
+                    value={formLayanan.form_pendataan_url}
+                    onChange={handleLayananChange}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
+                      fieldErrorsLayanan.form_pendataan_url
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                    }`}
+                    placeholder="https://docs.google.com/forms/d/e/..."
                   />
+                  {fieldErrorsLayanan.form_pendataan_url && (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.form_pendataan_url}</p>
+                  )}
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* DYNAMIC PERSYARATAN SECTION (AUTOMATIC ORDERING) */}
+              <div className="border-t border-gray-200 pt-5 space-y-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <label htmlFor="whatsapp_pengaduan" className="block text-xs font-semibold text-gray-700 mb-1">
-                      WhatsApp Pengaduan
-                    </label>
-                    <input
-                      type="text"
-                      id="whatsapp_pengaduan"
-                      name="whatsapp_pengaduan"
-                      value={formPengaturan.whatsapp_pengaduan}
-                      onChange={handlePengaturanChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                      placeholder="+62 823-1586-3113"
-                    />
+                    <h3 className="text-sm font-bold text-gray-900">
+                      Poin-Poin Persyaratan Dokumen <span className="text-red-500">*</span>
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Urutan poin ditentukan otomatis berdasarkan urutan posisi input di bawah.
+                    </p>
                   </div>
 
-                  <div>
-                    <label htmlFor="form_pengaduan_url" className="block text-xs font-semibold text-gray-700 mb-1">
-                      Form Pengaduan (HTTPS)
-                    </label>
-                    <input
-                      type="url"
-                      id="form_pengaduan_url"
-                      name="form_pengaduan_url"
-                      value={formPengaturan.form_pengaduan_url}
-                      onChange={handlePengaturanChange}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                      placeholder="https://docs.google.com/forms/d/e/..."
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-              <button
-                type="button"
-                onClick={handleBatalkanPengaturan}
-                disabled={submittingPengaturan}
-                className="inline-flex min-h-[40px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto"
-              >
-                Batalkan Perubahan
-              </button>
-
-              <button
-                type="submit"
-                disabled={submittingPengaturan}
-                className="inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-6 py-2 text-sm font-semibold text-white shadow-md hover:bg-teal-700 disabled:opacity-50 sm:w-auto"
-              >
-                {submittingPengaturan ? "Menyimpan..." : "Simpan Pengaturan"}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* SECTION B: FORM TAMBAH / EDIT LAYANAN SURAT */}
-        <div id="form-layanan-surat-section" className="mb-10 space-y-6">
-          <div className="border-b border-gray-300 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                Bagian 2: {editingId !== null ? "Edit Layanan Surat" : "Tambah Layanan Surat Baru"}
-              </h2>
-              <p className="text-xs text-gray-500">
-                {editingId !== null
-                  ? "Perbarui rincian data utama dan poin persyaratan layanan surat."
-                  : "Layanan baru otomatis dibuat sebagai Draft. Aktifkan dari riwayat setelah siap dipublikasikan."}
-              </p>
-            </div>
-
-            {editingId !== null && (
-              <button
-                type="button"
-                onClick={resetLayananForm}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-md px-3 py-1.5 shadow-sm"
-              >
-                ✕ Batalkan Edit
-              </button>
-            )}
-          </div>
-
-          <form onSubmit={handleSimpanLayanan} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-6" noValidate>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {/* Nama Layanan */}
-              <div className="sm:col-span-2">
-                <label htmlFor="nama_layanan" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Nama Layanan Surat <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="nama_layanan"
-                  name="nama_layanan"
-                  value={formLayanan.nama_layanan}
-                  onChange={handleLayananChange}
-                  aria-invalid={Boolean(fieldErrorsLayanan.nama_layanan)}
-                  aria-describedby={fieldErrorsLayanan.nama_layanan ? "err-nama-layanan" : undefined}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
-                    fieldErrorsLayanan.nama_layanan
-                      ? "border-red-500 focus:ring-red-400"
-                      : "border-gray-300 focus:border-teal-600 focus:ring-teal-500"
-                  }`}
-                  placeholder="e.g. Surat Keterangan Domisili"
-                />
-                {fieldErrorsLayanan.nama_layanan && (
-                  <p id="err-nama-layanan" className="mt-1 text-xs text-red-600">
-                    {fieldErrorsLayanan.nama_layanan}
-                  </p>
-                )}
-              </div>
-
-              {/* Deskripsi */}
-              <div className="sm:col-span-2">
-                <label htmlFor="deskripsi" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Deskripsi Layanan (Opsional)
-                </label>
-                <textarea
-                  id="deskripsi"
-                  name="deskripsi"
-                  rows={2}
-                  value={formLayanan.deskripsi}
-                  onChange={handleLayananChange}
-                  aria-invalid={Boolean(fieldErrorsLayanan.deskripsi)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                  placeholder="Penjelasan singkat mengenai peruntukan atau ketentuan khusus jenis surat ini..."
-                />
-                {fieldErrorsLayanan.deskripsi && (
-                  <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.deskripsi}</p>
-                )}
-              </div>
-
-              {/* Estimasi Pembuatan */}
-              <div>
-                <label htmlFor="estimasi_pembuatan" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Estimasi Pembuatan <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="estimasi_pembuatan"
-                  name="estimasi_pembuatan"
-                  value={formLayanan.estimasi_pembuatan}
-                  onChange={handleLayananChange}
-                  aria-invalid={Boolean(fieldErrorsLayanan.estimasi_pembuatan)}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
-                    fieldErrorsLayanan.estimasi_pembuatan
-                      ? "border-red-500 focus:ring-red-400"
-                      : "border-gray-300 focus:border-teal-600 focus:ring-teal-500"
-                  }`}
-                  placeholder="e.g. 1 hari kerja / Selesai hari yang sama"
-                />
-                {fieldErrorsLayanan.estimasi_pembuatan && (
-                  <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.estimasi_pembuatan}</p>
-                )}
-              </div>
-
-              {/* Urutan Layanan */}
-              <div>
-                <label htmlFor="urutan_layanan" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Urutan Tampil <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="urutan_layanan"
-                  name="urutan_layanan"
-                  min={1}
-                  value={formLayanan.urutan_layanan}
-                  onChange={handleLayananChange}
-                  aria-invalid={Boolean(fieldErrorsLayanan.urutan_layanan)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
-                {fieldErrorsLayanan.urutan_layanan && (
-                  <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.urutan_layanan}</p>
-                )}
-              </div>
-
-              {/* Form Pendataan URL */}
-              <div className="sm:col-span-2">
-                <label htmlFor="form_pendataan_url" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Link Formulir Pendataan Online (HTTPS) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="url"
-                  id="form_pendataan_url"
-                  name="form_pendataan_url"
-                  value={formLayanan.form_pendataan_url}
-                  onChange={handleLayananChange}
-                  aria-invalid={Boolean(fieldErrorsLayanan.form_pendataan_url)}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
-                    fieldErrorsLayanan.form_pendataan_url
-                      ? "border-red-500 focus:ring-red-400"
-                      : "border-gray-300 focus:border-teal-600 focus:ring-teal-500"
-                  }`}
-                  placeholder="https://docs.google.com/forms/d/e/..."
-                />
-                {fieldErrorsLayanan.form_pendataan_url && (
-                  <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.form_pendataan_url}</p>
-                )}
-              </div>
-            </div>
-
-            {/* DYNAMIC PERSYARATAN SECTION */}
-            <div className="border-t border-gray-200 pt-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">
-                    Poin-Poin Persyaratan Dokumen <span className="text-red-500">*</span>
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    Tambahkan syarat-syarat yang wajib dibawa warga saat mengurus surat ini.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleAddPersyaratanRow}
-                  className="inline-flex items-center gap-1 rounded-lg border border-teal-600 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-100 shadow-sm"
-                >
-                  + Tambah Poin Persyaratan
-                </button>
-              </div>
-
-              {fieldErrorsLayanan.persyaratan && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700">
-                  {fieldErrorsLayanan.persyaratan}
-                </div>
-              )}
-
-              <div className="space-y-3">
-                {persyaratanRows.map((row, index) => (
-                  <div
-                    key={row.localId}
-                    className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-lg border border-gray-200 bg-gray-50/50 p-3"
+                  <button
+                    type="button"
+                    onClick={handleAddPersyaratanRow}
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] hover:bg-[#ebdcc4] shadow-sm transition-colors"
                   >
-                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-teal-600 text-xs font-bold text-white">
-                      {index + 1}
-                    </span>
+                    + Tambah Persyaratan
+                  </button>
+                </div>
 
-                    <input
-                      type="text"
-                      value={row.isi_persyaratan}
-                      onChange={(e) => handlePersyaratanChange(row.localId, e.target.value)}
-                      placeholder={`Contoh: Fotokopi KTP / KK (Poin ${index + 1})`}
-                      className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                    />
+                {fieldErrorsLayanan.persyaratan && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700">
+                    {fieldErrorsLayanan.persyaratan}
+                  </div>
+                )}
 
-                    <div className="flex items-center gap-1 justify-end">
-                      <button
-                        type="button"
-                        onClick={() => handleMovePersyaratan(row.localId, "up")}
-                        disabled={index === 0}
-                        title="Naikkan Urutan"
-                        className="rounded p-1 text-gray-500 hover:bg-gray-200 disabled:opacity-30 text-xs"
-                      >
-                        ▲
-                      </button>
+                <div className="space-y-3">
+                  {persyaratanRows.map((row, index) => (
+                    <div
+                      key={row.localId}
+                      className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50/50 p-2.5"
+                    >
+                      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#2c1b01] text-xs font-bold text-white">
+                        {index + 1}
+                      </span>
 
-                      <button
-                        type="button"
-                        onClick={() => handleMovePersyaratan(row.localId, "down")}
-                        disabled={index === persyaratanRows.length - 1}
-                        title="Turunkan Urutan"
-                        className="rounded p-1 text-gray-500 hover:bg-gray-200 disabled:opacity-30 text-xs"
-                      >
-                        ▼
-                      </button>
+                      <input
+                        type="text"
+                        value={row.isi_persyaratan}
+                        onChange={(e) => handlePersyaratanChange(row.localId, e.target.value)}
+                        placeholder={`Poin Persyaratan #${index + 1}`}
+                        className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                      />
 
                       <button
                         type="button"
                         onClick={() => handleRemovePersyaratanRow(row.localId)}
                         disabled={persyaratanRows.length <= 1}
-                        title="Hapus Poin"
-                        className="rounded p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-30 text-xs font-semibold"
+                        className="rounded px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-30"
                       >
                         Hapus
                       </button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* ACTION BUTTONS LAYANAN FORM */}
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t pt-4">
-              {editingId !== null && (
+              {/* ACTION BUTTONS */}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t pt-4">
                 <button
                   type="button"
-                  onClick={resetLayananForm}
+                  onClick={handleCancelLayananForm}
                   disabled={submittingLayanan}
-                  className="inline-flex min-h-[40px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto"
                 >
-                  Batalkan Edit
+                  Batal
                 </button>
-              )}
 
-              <button
-                type="submit"
-                disabled={submittingLayanan}
-                className="inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-6 py-2 text-sm font-semibold text-white shadow-md hover:bg-teal-700 disabled:opacity-50 sm:w-auto"
-              >
-                {submittingLayanan ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
-                    <span>Menyimpan...</span>
-                  </>
-                ) : editingId !== null ? (
-                  <span>Simpan Perubahan</span>
-                ) : (
-                  <span>Simpan sebagai Draft</span>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
+                <button
+                  type="submit"
+                  disabled={submittingLayanan}
+                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto"
+                >
+                  {submittingLayanan ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : editingId !== null ? (
+                    <span>Simpan Perubahan</span>
+                  ) : (
+                    <span>Simpan Layanan</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
-        {/* SECTION C: RIWAYAT DAFTAR LAYANAN SURAT */}
-        <div className="space-y-6">
-          <div className="border-b border-gray-300 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Bagian 3: Riwayat & Daftar Layanan Surat</h2>
-              <p className="text-xs text-gray-500">
-                Kelola publikasi, pengubahan, dan penghapusan jenis layanan surat administrasi nagari.
-              </p>
-            </div>
-
-            <div className="text-xs text-gray-500 font-medium">
-              Total: {layananList.length} Jenis Surat
-            </div>
+        {/* SECTION: DAFTAR LAYANAN SURAT (TABLE FORMAT MATCHING LEMBAGA ORGANISASI) */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Daftar Layanan Surat</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Kelola layanan surat yang tersedia untuk masyarakat.
+            </p>
           </div>
 
           {loadingLayanan ? (
             <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent"></div>
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent"></div>
               <p className="mt-3 text-sm text-gray-600">Memuat daftar layanan surat...</p>
             </div>
           ) : layananList.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-              <p className="text-sm font-medium text-gray-600">Belum ada layanan surat yang terdaftar.</p>
-              <p className="mt-1 text-xs text-gray-400">Gunakan form di atas untuk membuat jenis layanan surat baru.</p>
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center shadow-sm space-y-3">
+              <p className="text-sm font-medium text-gray-600">Belum ada layanan surat.</p>
+              {!showLayananForm && (
+                <button
+                  type="button"
+                  onClick={handleOpenAddForm}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6b4b1d] to-[#2c1b01] px-5 py-2.5 text-xs font-semibold text-white shadow-md hover:opacity-90"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Tambahkan Layanan Surat Baru</span>
+                </button>
+              )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {layananList.map((item) => (
-                <div
-                  key={item.id}
-                  className={`rounded-xl border bg-white p-5 shadow-sm transition-all ${
-                    item.is_active ? "border-emerald-300 bg-emerald-50/10" : "border-gray-200"
-                  }`}
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-700">
-                          #{item.urutan}
-                        </span>
+            <div>
+              {/* Desktop Table View */}
+              <div className="hidden overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:block">
+                <table className="w-full text-left text-sm text-gray-700">
+                  <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
+                    <tr>
+                      <th scope="col" className="w-[55%] px-6 py-4 font-bold">NAMA LAYANAN</th>
+                      <th scope="col" className="w-[28%] px-6 py-4 font-bold">TERAKHIR DIPERBARUI</th>
+                      <th scope="col" className="w-[17%] px-6 py-4 text-right font-bold">AKSI</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {layananList.map((item) => {
+                      const isDeleting = deletingLayananId === item.id
 
-                        <h3 className="text-lg font-bold text-gray-900">{item.nama_layanan}</h3>
+                      return (
+                        <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
+                          <td className="px-6 py-4 font-bold text-gray-900 break-words">
+                            {item.nama_layanan}
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 text-xs">
+                            {formatTanggalIndo(item.updated_at)}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEdit(item)}
+                                disabled={submittingLayanan || isDeleting}
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                Edit
+                              </button>
 
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                            item.is_active
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-amber-100 text-amber-800"
-                          }`}
-                        >
-                          {item.is_active ? "Aktif (Publik)" : "Draft"}
-                        </span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteLayanan(item)}
+                                disabled={isDeleting}
+                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50"
+                              >
+                                {isDeleting ? "Menghapus..." : "Hapus"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile List View */}
+              <div className="space-y-3 md:hidden">
+                {layananList.map((item) => {
+                  const isDeleting = deletingLayananId === item.id
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-2"
+                    >
+                      <div className="font-bold text-gray-900 text-sm break-words">
+                        {item.nama_layanan}
                       </div>
 
-                      {item.deskripsi && (
-                        <p className="text-sm text-gray-600 line-clamp-2">{item.deskripsi}</p>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                        <div>
-                          <span className="font-semibold text-gray-700">Estimasi:</span> {item.estimasi_pembuatan}
-                        </div>
-                        <div>
-                          <span className="font-semibold text-gray-700">Persyaratan:</span> {item.persyaratan.length} poin
-                        </div>
-                        {item.form_pendataan_url && (
-                          <div>
-                            <a
-                              href={item.form_pendataan_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-teal-600 hover:underline font-medium"
-                            >
-                              Form Pendataan ↗
-                            </a>
-                          </div>
-                        )}
+                      <div className="text-xs text-gray-500">
+                        <span className="font-medium text-gray-600">Terakhir diperbarui:</span>{" "}
+                        {formatTanggalIndo(item.updated_at)}
                       </div>
 
-                      {/* Display List of Requirements preview */}
-                      {item.persyaratan.length > 0 && (
-                        <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
-                          <p className="text-xs font-bold text-gray-700 mb-1.5">Poin Persyaratan:</p>
-                          <ol className="list-decimal list-inside space-y-1 text-xs text-gray-600">
-                            {item.persyaratan.map((p) => (
-                              <li key={p.id}>{p.isi_persyaratan}</li>
-                            ))}
-                          </ol>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action buttons per row */}
-                    <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
-                      {item.is_active ? (
+                      <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-2.5">
                         <button
                           type="button"
-                          onClick={() => handleToggleStatus(item)}
-                          disabled={togglingStatusId === item.id}
-                          className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-50 shadow-sm"
+                          onClick={() => handleStartEdit(item)}
+                          disabled={submittingLayanan || isDeleting}
+                          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
                         >
-                          {togglingStatusId === item.id ? "Memproses..." : "Nonaktifkan"}
+                          Edit
                         </button>
-                      ) : (
+
                         <button
                           type="button"
-                          onClick={() => handleToggleStatus(item)}
-                          disabled={togglingStatusId === item.id}
-                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 shadow-sm"
+                          onClick={() => handleDeleteLayanan(item)}
+                          disabled={isDeleting}
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50"
                         >
-                          {togglingStatusId === item.id ? "Memproses..." : "Aktifkan"}
+                          {isDeleting ? "Menghapus..." : "Hapus"}
                         </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => handleStartEdit(item)}
-                        disabled={submittingLayanan}
-                        className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-sm"
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteLayanan(item)}
-                        disabled={deletingLayananId === item.id}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 shadow-sm"
-                      >
-                        {deletingLayananId === item.id ? "Hapus..." : "Hapus"}
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>
