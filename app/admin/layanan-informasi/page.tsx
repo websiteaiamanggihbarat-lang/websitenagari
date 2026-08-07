@@ -67,15 +67,15 @@ interface PersyaratanFormRow {
 
 interface FormLayananState {
   nama_layanan: string
-  deskripsi: string
   estimasi_pembuatan: string
+  biaya: string
   form_pendataan_url: string
 }
 
 const INITIAL_LAYANAN_FORM: FormLayananState = {
   nama_layanan: "",
-  deskripsi: "",
   estimasi_pembuatan: "",
+  biaya: "Gratis",
   form_pendataan_url: "",
 }
 
@@ -270,6 +270,19 @@ export default function AdminLayananInformasiPage() {
     init()
   }, [])
 
+  // Auto dismiss success toast message after 4 seconds
+  useEffect(() => {
+    if (!pesanSukses) return
+
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+
+    return () => {
+      window.clearTimeout(timerId)
+    }
+  }, [pesanSukses])
+
   // ==========================================
   // HANDLERS FOR JADWAL PELAYANAN FORM
   // ==========================================
@@ -313,13 +326,6 @@ export default function AdminLayananInformasiPage() {
       return copy
     })
     if (jadwalSuccess) setJadwalSuccess(null)
-    if (jadwalError && !jadwalError.includes("tidak lengkap")) setJadwalError(null)
-  }
-
-  const handleBatalkanJadwal = () => {
-    setJadwalForm(jadwalSnapshot)
-    setFieldErrorsJadwal({})
-    setJadwalSuccess(null)
     if (jadwalError && !jadwalError.includes("tidak lengkap")) setJadwalError(null)
   }
 
@@ -417,7 +423,7 @@ export default function AdminLayananInformasiPage() {
         setJadwalSnapshot(rows)
       }
 
-      setJadwalSuccess("Jadwal pelayanan berhasil diperbarui.")
+      setPesanSukses("Jadwal pelayanan berhasil diperbarui.")
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       setJadwalError(parseErrorMessage(e, "Gagal menyimpan jadwal pelayanan."))
@@ -619,30 +625,13 @@ export default function AdminLayananInformasiPage() {
 
       setPengaturan(updatedParsed)
       setSnapshotPengaturan(updatedParsed)
-      setPesanSukses("Pengaturan kontak dan saluran pengaduan berhasil diperbarui.")
+      setPesanSukses("Pengaturan pelayanan berhasil diperbarui.")
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       setPesanError(parseErrorMessage(e, "Gagal menyimpan perubahan pengaturan."))
     } finally {
       setSubmittingPengaturan(false)
     }
-  }
-
-  const handleBatalkanPengaturan = () => {
-    if (!snapshotPengaturan) return
-    setFormPengaturan({
-      whatsapp_pelayanan: snapshotPengaturan.whatsapp_pelayanan || "",
-      email_pelayanan: snapshotPengaturan.email_pelayanan || "",
-      telepon_pelayanan: snapshotPengaturan.telepon_pelayanan || "",
-      telepon_pelayanan_alternatif: snapshotPengaturan.telepon_pelayanan_alternatif || "",
-      alamat_pelayanan: snapshotPengaturan.alamat_pelayanan || "",
-      google_maps_url: snapshotPengaturan.google_maps_url || "",
-      whatsapp_pengaduan: snapshotPengaturan.whatsapp_pengaduan || "",
-      form_pengaduan_url: snapshotPengaturan.form_pengaduan_url || "",
-    })
-    setFieldErrorsPengaturan({})
-    setPesanSukses(null)
-    setPesanError(null)
   }
 
   // ==========================================
@@ -730,8 +719,8 @@ export default function AdminLayananInformasiPage() {
     setEditingId(item.id)
     setFormLayanan({
       nama_layanan: item.nama_layanan,
-      deskripsi: item.deskripsi || "",
       estimasi_pembuatan: item.estimasi_pembuatan,
+      biaya: item.biaya || "Gratis",
       form_pendataan_url: item.form_pendataan_url,
     })
 
@@ -768,15 +757,18 @@ export default function AdminLayananInformasiPage() {
       errors.nama_layanan = "Nama layanan surat harus 2 sampai 200 karakter."
     }
 
-    if (formLayanan.deskripsi.length > 3000) {
-      errors.deskripsi = "Deskripsi layanan maksimal 3000 karakter."
-    }
-
     const estimasiTrim = formLayanan.estimasi_pembuatan.trim()
     if (!estimasiTrim) {
       errors.estimasi_pembuatan = "Estimasi pembuatan wajib diisi."
     } else if (estimasiTrim.length > 200) {
       errors.estimasi_pembuatan = "Estimasi pembuatan maksimal 200 karakter."
+    }
+
+    const biayaTrim = formLayanan.biaya.trim()
+    if (!biayaTrim) {
+      errors.biaya = "Informasi biaya layanan surat wajib diisi."
+    } else if (biayaTrim.length > 100) {
+      errors.biaya = "Informasi biaya layanan maksimal 100 karakter."
     }
 
     const urlTrim = formLayanan.form_pendataan_url.trim()
@@ -846,8 +838,8 @@ export default function AdminLayananInformasiPage() {
           .from(LAYANAN_SURAT_TABLE)
           .insert({
             nama_layanan: formLayanan.nama_layanan.trim(),
-            deskripsi: formLayanan.deskripsi.trim() || null,
             estimasi_pembuatan: formLayanan.estimasi_pembuatan.trim(),
+            biaya: formLayanan.biaya.trim(),
             form_pendataan_url: getSafeHttpsUrl(formLayanan.form_pendataan_url.trim())!,
             is_active: false,
             urutan: nextUrutan,
@@ -891,8 +883,8 @@ export default function AdminLayananInformasiPage() {
           .from(LAYANAN_SURAT_TABLE)
           .update({
             nama_layanan: formLayanan.nama_layanan.trim(),
-            deskripsi: formLayanan.deskripsi.trim() || null,
             estimasi_pembuatan: formLayanan.estimasi_pembuatan.trim(),
+            biaya: formLayanan.biaya.trim(),
             form_pendataan_url: getSafeHttpsUrl(formLayanan.form_pendataan_url.trim())!,
             is_active: true,
           })
@@ -1094,9 +1086,9 @@ export default function AdminLayananInformasiPage() {
         {/* Global Toast Messages */}
         <div aria-live="polite">
           {pesanSukses && (
-            <div className="mb-6 rounded-lg border border-[#6b4b1d]/30 bg-[#f7f2e8] p-4 text-sm font-medium text-[#2c1b01] shadow-sm">
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
               <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-[#6b4b1d] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 <span>{pesanSukses}</span>
@@ -1164,15 +1156,6 @@ export default function AdminLayananInformasiPage() {
                         Atur hari dan jam operasional pelayanan kantor nagari.
                       </p>
                     </div>
-
-                    {jadwalSuccess && (
-                      <div className="rounded-lg border border-[#6b4b1d]/30 bg-[#f7f2e8] p-3.5 text-xs font-medium text-[#2c1b01] shadow-sm flex items-center gap-2">
-                        <svg className="h-4 w-4 text-[#6b4b1d] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>{jadwalSuccess}</span>
-                      </div>
-                    )}
 
                     {jadwalError && (
                       <div className="rounded-lg border border-red-300 bg-red-50 p-3.5 text-xs font-medium text-red-800 shadow-sm flex items-center gap-2">
@@ -1388,16 +1371,7 @@ export default function AdminLayananInformasiPage() {
                         </div>
 
                         {/* Action Buttons for Jadwal */}
-                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
-                          <button
-                            type="button"
-                            onClick={handleBatalkanJadwal}
-                            disabled={submittingJadwal || !isJadwalDirty}
-                            className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
-                          >
-                            Batalkan Perubahan Jadwal
-                          </button>
-
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
                           <button
                             type="submit"
                             disabled={submittingJadwal || !isJadwalDirty}
@@ -1585,16 +1559,7 @@ export default function AdminLayananInformasiPage() {
                           </div>
                         </div>
 
-                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t pt-4">
-                          <button
-                            type="button"
-                            onClick={handleBatalkanPengaturan}
-                            disabled={submittingPengaturan}
-                            className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
-                          >
-                            Batalkan Perubahan
-                          </button>
-
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end border-t pt-4">
                           <button
                             type="submit"
                             disabled={submittingPengaturan}
@@ -1664,25 +1629,6 @@ export default function AdminLayananInformasiPage() {
                   )}
                 </div>
 
-                {/* Deskripsi */}
-                <div className="sm:col-span-2">
-                  <label htmlFor="deskripsi" className="block text-sm font-semibold text-gray-700 mb-1">
-                    Deskripsi Layanan (Opsional)
-                  </label>
-                  <textarea
-                    id="deskripsi"
-                    name="deskripsi"
-                    rows={2}
-                    value={formLayanan.deskripsi}
-                    onChange={handleLayananChange}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
-                    placeholder="Penjelasan singkat peruntukan surat..."
-                  />
-                  {fieldErrorsLayanan.deskripsi && (
-                    <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.deskripsi}</p>
-                  )}
-                </div>
-
                 {/* Estimasi Pembuatan */}
                 <div className="sm:col-span-2">
                   <label htmlFor="estimasi_pembuatan" className="block text-sm font-semibold text-gray-700 mb-1">
@@ -1703,6 +1649,29 @@ export default function AdminLayananInformasiPage() {
                   />
                   {fieldErrorsLayanan.estimasi_pembuatan && (
                     <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.estimasi_pembuatan}</p>
+                  )}
+                </div>
+
+                {/* Biaya */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="biaya" className="block text-sm font-semibold text-gray-700 mb-1">
+                    Biaya <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="biaya"
+                    name="biaya"
+                    value={formLayanan.biaya}
+                    onChange={handleLayananChange}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
+                      fieldErrorsLayanan.biaya
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                    }`}
+                    placeholder="Contoh: Gratis atau Rp10.000"
+                  />
+                  {fieldErrorsLayanan.biaya && (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.biaya}</p>
                   )}
                 </div>
 

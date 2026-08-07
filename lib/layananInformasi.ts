@@ -19,6 +19,7 @@ export type LayananSurat = {
   nama_layanan: string
   deskripsi: string | null
   estimasi_pembuatan: string
+  biaya: string
   form_pendataan_url: string
   is_active: boolean
   urutan: number
@@ -108,6 +109,7 @@ const SELECT_LAYANAN_SURAT = [
   "nama_layanan",
   "deskripsi",
   "estimasi_pembuatan",
+  "biaya",
   "form_pendataan_url",
   "is_active",
   "urutan",
@@ -301,6 +303,9 @@ function parseLayananSurat(row: unknown): LayananSurat {
   if (typeof r.estimasi_pembuatan !== "string" || r.estimasi_pembuatan.trim() === "") {
     throw new Error("Estimasi pembuatan layanan surat tidak valid.")
   }
+  if (typeof r.biaya !== "string" || r.biaya.trim() === "") {
+    throw new Error("Biaya layanan surat tidak valid.")
+  }
   if (typeof r.form_pendataan_url !== "string" || r.form_pendataan_url.trim() === "") {
     throw new Error("URL form pendataan layanan surat tidak valid.")
   }
@@ -313,6 +318,7 @@ function parseLayananSurat(row: unknown): LayananSurat {
         ? r.deskripsi
         : null,
     estimasi_pembuatan: r.estimasi_pembuatan,
+    biaya: r.biaya.trim(),
     form_pendataan_url: r.form_pendataan_url,
     is_active: Boolean(r.is_active),
     urutan: typeof r.urutan === "number" ? r.urutan : 1,
