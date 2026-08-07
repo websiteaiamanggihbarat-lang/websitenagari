@@ -4,18 +4,20 @@ import { useEffect, useState, FormEvent } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import {
-  fetchPengaturanLayananInformasi,
-  fetchLayananSuratAdmin,
+  fetchDataLayananInformasiAdmin,
+  fetchJadwalPelayananInformasi,
   getSafeHttpsUrl,
   PENGATURAN_LAYANAN_INFORMASI_TABLE,
   LAYANAN_SURAT_TABLE,
   PERSYARATAN_LAYANAN_SURAT_TABLE,
   PengaturanLayananInformasi,
   LayananSuratDenganPersyaratan,
+  JadwalPelayananInformasi,
+  HariPelayananKey,
+  HARI_PELAYANAN_LABEL,
 } from "@/lib/layananInformasi"
 
 interface FormState {
-  jadwal_pelayanan: string
   whatsapp_pelayanan: string
   email_pelayanan: string
   telepon_pelayanan: string
@@ -27,7 +29,6 @@ interface FormState {
 }
 
 const INITIAL_FORM_STATE: FormState = {
-  jadwal_pelayanan: "",
   whatsapp_pelayanan: "",
   email_pelayanan: "",
   telepon_pelayanan: "",
@@ -36,6 +37,26 @@ const INITIAL_FORM_STATE: FormState = {
   google_maps_url: "",
   whatsapp_pengaduan: "",
   form_pengaduan_url: "",
+}
+
+type JadwalPelayananFormRow = {
+  hari_key: HariPelayananKey
+  is_tutup: boolean
+  jam_buka: string
+  jam_tutup: string
+}
+
+function formatDbTimeToInputTime(val: string | null | undefined): string {
+  if (typeof val !== "string") return ""
+  const trimmed = val.trim()
+  if (!trimmed) return ""
+  const parts = trimmed.split(":")
+  if (parts.length >= 2) {
+    const hh = parts[0].padStart(2, "0")
+    const mm = parts[1].padStart(2, "0")
+    return `${hh}:${mm}`
+  }
+  return ""
 }
 
 interface PersyaratanFormRow {
@@ -79,7 +100,7 @@ function parseErrorMessage(err: SupabaseErrorLike | null | undefined, defaultMsg
     return "Anda tidak memiliki izin untuk melakukan operasi ini."
   }
   if (code === "P0001") {
-    return "Layanan surat aktif wajib memiliki minimal satu persyaratan."
+    return err.message || "Data tidak memenuhi aturan validasi database."
   }
   if (code === "PGRST116") {
     return "Data tidak ditemukan."
@@ -116,6 +137,14 @@ export default function AdminLayananInformasiPage() {
   const [snapshotPengaturan, setSnapshotPengaturan] = useState<PengaturanLayananInformasi | null>(null)
   const [formPengaturan, setFormPengaturan] = useState<FormState>(INITIAL_FORM_STATE)
   const [fieldErrorsPengaturan, setFieldErrorsPengaturan] = useState<Record<string, string>>({})
+
+  // Jadwal Pelayanan State
+  const [jadwalForm, setJadwalForm] = useState<JadwalPelayananFormRow[]>([])
+  const [jadwalSnapshot, setJadwalSnapshot] = useState<JadwalPelayananFormRow[]>([])
+  const [submittingJadwal, setSubmittingJadwal] = useState(false)
+  const [jadwalError, setJadwalError] = useState<string | null>(null)
+  const [jadwalSuccess, setJadwalSuccess] = useState<string | null>(null)
+  const [fieldErrorsJadwal, setFieldErrorsJadwal] = useState<Record<string, string>>({})
 
   // Layanan Surat List State
   const [loadingLayanan, setLoadingLayanan] = useState(true)
@@ -180,53 +209,55 @@ export default function AdminLayananInformasiPage() {
     }
   }
 
-  const loadDataPengaturan = async () => {
-    setLoadingPengaturan(true)
-    try {
-      const data = await fetchPengaturanLayananInformasi()
-      if (!data) {
-        setPengaturan(null)
-        setSnapshotPengaturan(null)
-        return
-      }
-
-      setPengaturan(data)
-      setSnapshotPengaturan(data)
-      setFormPengaturan({
-        jadwal_pelayanan: data.jadwal_pelayanan || "",
-        whatsapp_pelayanan: data.whatsapp_pelayanan || "",
-        email_pelayanan: data.email_pelayanan || "",
-        telepon_pelayanan: data.telepon_pelayanan || "",
-        telepon_pelayanan_alternatif: data.telepon_pelayanan_alternatif || "",
-        alamat_pelayanan: data.alamat_pelayanan || "",
-        google_maps_url: data.google_maps_url || "",
-        whatsapp_pengaduan: data.whatsapp_pengaduan || "",
-        form_pengaduan_url: data.form_pengaduan_url || "",
-      })
-    } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Gagal memuat pengaturan pelayanan."))
-    } finally {
-      setLoadingPengaturan(false)
-    }
-  }
-
-  const loadDataLayanan = async () => {
-    setLoadingLayanan(true)
-    try {
-      const data = await fetchLayananSuratAdmin()
-      setLayananList(data)
-    } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Gagal memuat daftar layanan surat admin."))
-    } finally {
-      setLoadingLayanan(false)
-    }
-  }
-
   const loadAllData = async () => {
     setPesanError(null)
-    await Promise.all([loadDataPengaturan(), loadDataLayanan()])
+    setLoadingPengaturan(true)
+    setLoadingLayanan(true)
+    setJadwalError(null)
+
+    try {
+      const dataAdmin = await fetchDataLayananInformasiAdmin()
+      setLayananList(dataAdmin.layanan)
+
+      if (dataAdmin.pengaturan) {
+        setPengaturan(dataAdmin.pengaturan)
+        setSnapshotPengaturan(dataAdmin.pengaturan)
+        setFormPengaturan({
+          whatsapp_pelayanan: dataAdmin.pengaturan.whatsapp_pelayanan || "",
+          email_pelayanan: dataAdmin.pengaturan.email_pelayanan || "",
+          telepon_pelayanan: dataAdmin.pengaturan.telepon_pelayanan || "",
+          telepon_pelayanan_alternatif: dataAdmin.pengaturan.telepon_pelayanan_alternatif || "",
+          alamat_pelayanan: dataAdmin.pengaturan.alamat_pelayanan || "",
+          google_maps_url: dataAdmin.pengaturan.google_maps_url || "",
+          whatsapp_pengaduan: dataAdmin.pengaturan.whatsapp_pengaduan || "",
+          form_pengaduan_url: dataAdmin.pengaturan.form_pengaduan_url || "",
+        })
+      } else {
+        setPengaturan(null)
+        setSnapshotPengaturan(null)
+      }
+
+      if (dataAdmin.jadwal && dataAdmin.jadwal.length === 7) {
+        const rows: JadwalPelayananFormRow[] = dataAdmin.jadwal.map((j) => ({
+          hari_key: j.hari_key,
+          is_tutup: j.is_tutup,
+          jam_buka: formatDbTimeToInputTime(j.jam_buka),
+          jam_tutup: formatDbTimeToInputTime(j.jam_tutup),
+        }))
+        setJadwalForm(rows)
+        setJadwalSnapshot(rows)
+      } else {
+        setJadwalForm([])
+        setJadwalSnapshot([])
+        setJadwalError("Data jadwal pelayanan tidak lengkap. Silakan periksa konfigurasi database.")
+      }
+    } catch (err: unknown) {
+      const e = err as SupabaseErrorLike
+      setPesanError(parseErrorMessage(e, "Gagal memuat data layanan informasi admin."))
+    } finally {
+      setLoadingPengaturan(false)
+      setLoadingLayanan(false)
+    }
   }
 
   useEffect(() => {
@@ -240,7 +271,168 @@ export default function AdminLayananInformasiPage() {
   }, [])
 
   // ==========================================
-  // HANDLERS FOR PENGATURAN FORM (COLLAPSIBLE)
+  // HANDLERS FOR JADWAL PELAYANAN FORM
+  // ==========================================
+
+  const handleJadwalStatusToggle = (hariKey: HariPelayananKey, isTutup: boolean) => {
+    setJadwalForm((prev) =>
+      prev.map((row) => {
+        if (row.hari_key === hariKey) {
+          if (isTutup) {
+            return { ...row, is_tutup: true, jam_buka: "", jam_tutup: "" }
+          } else {
+            return { ...row, is_tutup: false }
+          }
+        }
+        return row
+      })
+    )
+    setFieldErrorsJadwal((prev) => {
+      const copy = { ...prev }
+      delete copy[hariKey]
+      delete copy[`${hariKey}_buka`]
+      delete copy[`${hariKey}_tutup`]
+      return copy
+    })
+    if (jadwalSuccess) setJadwalSuccess(null)
+    if (jadwalError && !jadwalError.includes("tidak lengkap")) setJadwalError(null)
+  }
+
+  const handleJadwalTimeChange = (
+    hariKey: HariPelayananKey,
+    field: "jam_buka" | "jam_tutup",
+    value: string
+  ) => {
+    setJadwalForm((prev) =>
+      prev.map((row) => (row.hari_key === hariKey ? { ...row, [field]: value } : row))
+    )
+    setFieldErrorsJadwal((prev) => {
+      const copy = { ...prev }
+      delete copy[hariKey]
+      delete copy[`${hariKey}_${field === "jam_buka" ? "buka" : "tutup"}`]
+      return copy
+    })
+    if (jadwalSuccess) setJadwalSuccess(null)
+    if (jadwalError && !jadwalError.includes("tidak lengkap")) setJadwalError(null)
+  }
+
+  const handleBatalkanJadwal = () => {
+    setJadwalForm(jadwalSnapshot)
+    setFieldErrorsJadwal({})
+    setJadwalSuccess(null)
+    if (jadwalError && !jadwalError.includes("tidak lengkap")) setJadwalError(null)
+  }
+
+  const validateJadwalForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    if (jadwalForm.length !== 7) {
+      setJadwalError("Data jadwal pelayanan tidak lengkap. Silakan periksa konfigurasi database.")
+      return false
+    }
+
+    const validDays: HariPelayananKey[] = ["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"]
+    const dayKeys = new Set(jadwalForm.map((r) => r.hari_key))
+    if (dayKeys.size !== 7 || !validDays.every((d) => dayKeys.has(d))) {
+      setJadwalError("Struktur hari pada jadwal pelayanan tidak valid.")
+      return false
+    }
+
+    const REGEX_HHMM = /^([0-1][0-9]|2[0-3]):([0-5][0-9])$/
+
+    for (const row of jadwalForm) {
+      if (!row.is_tutup) {
+        if (!row.jam_buka) {
+          errors[`${row.hari_key}_buka`] = `Jam buka ${HARI_PELAYANAN_LABEL[row.hari_key]} wajib diisi.`
+        } else if (!REGEX_HHMM.test(row.jam_buka)) {
+          errors[`${row.hari_key}_buka`] = `Format jam buka ${HARI_PELAYANAN_LABEL[row.hari_key]} tidak valid.`
+        }
+
+        if (!row.jam_tutup) {
+          errors[`${row.hari_key}_tutup`] = `Jam tutup ${HARI_PELAYANAN_LABEL[row.hari_key]} wajib diisi.`
+        } else if (!REGEX_HHMM.test(row.jam_tutup)) {
+          errors[`${row.hari_key}_tutup`] = `Format jam tutup ${HARI_PELAYANAN_LABEL[row.hari_key]} tidak valid.`
+        }
+
+        if (row.jam_buka && row.jam_tutup && REGEX_HHMM.test(row.jam_buka) && REGEX_HHMM.test(row.jam_tutup)) {
+          if (row.jam_tutup <= row.jam_buka) {
+            errors[row.hari_key] = `Jam tutup ${HARI_PELAYANAN_LABEL[row.hari_key]} harus setelah jam buka.`
+          }
+        }
+      }
+    }
+
+    setFieldErrorsJadwal(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleSimpanJadwal = async (e: FormEvent) => {
+    e.preventDefault()
+    setJadwalSuccess(null)
+    setJadwalError(null)
+
+    if (submittingJadwal) return
+
+    if (!validateJadwalForm()) {
+      setJadwalError("Silakan periksa kembali isian jam pelayanan.")
+      return
+    }
+
+    setSubmittingJadwal(true)
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session) {
+        setJadwalError("Sesi admin tidak tersedia. Silakan masuk kembali.")
+        return
+      }
+
+      const payload = jadwalForm.map((row) => ({
+        hari_key: row.hari_key,
+        is_tutup: row.is_tutup,
+        jam_buka: row.is_tutup ? null : row.jam_buka,
+        jam_tutup: row.is_tutup ? null : row.jam_tutup,
+      }))
+
+      const { error: rpcError } = await supabase.rpc(
+        "update_jadwal_pelayanan_informasi",
+        { p_rows: payload }
+      )
+
+      if (rpcError) throw rpcError
+
+      const updatedJadwal = await fetchJadwalPelayananInformasi()
+      if (updatedJadwal && updatedJadwal.length === 7) {
+        const rows: JadwalPelayananFormRow[] = updatedJadwal.map((j) => ({
+          hari_key: j.hari_key,
+          is_tutup: j.is_tutup,
+          jam_buka: formatDbTimeToInputTime(j.jam_buka),
+          jam_tutup: formatDbTimeToInputTime(j.jam_tutup),
+        }))
+        setJadwalForm(rows)
+        setJadwalSnapshot(rows)
+      }
+
+      setJadwalSuccess("Jadwal pelayanan berhasil diperbarui.")
+    } catch (err: unknown) {
+      const e = err as SupabaseErrorLike
+      setJadwalError(parseErrorMessage(e, "Gagal menyimpan jadwal pelayanan."))
+    } finally {
+      setSubmittingJadwal(false)
+    }
+  }
+
+  const isJadwalDirty =
+    jadwalForm.length === 7 &&
+    jadwalSnapshot.length === 7 &&
+    JSON.stringify(jadwalForm) !== JSON.stringify(jadwalSnapshot)
+
+  // ==========================================
+  // HANDLERS FOR PENGATURAN FORM (KONTAK)
   // ==========================================
 
   const handlePengaturanChange = (
@@ -260,13 +452,6 @@ export default function AdminLayananInformasiPage() {
 
   const validatePengaturanForm = (): boolean => {
     const errors: Record<string, string> = {}
-
-    const jadwalTrim = formPengaturan.jadwal_pelayanan.trim()
-    if (!jadwalTrim) {
-      errors.jadwal_pelayanan = "Jadwal pelayanan wajib diisi."
-    } else if (formPengaturan.jadwal_pelayanan.length > 5000) {
-      errors.jadwal_pelayanan = "Jadwal pelayanan maksimal 5000 karakter."
-    }
 
     const waPelayananTrim = formPengaturan.whatsapp_pelayanan.trim()
     if (waPelayananTrim) {
@@ -355,7 +540,7 @@ export default function AdminLayananInformasiPage() {
     }
 
     if (!validatePengaturanForm()) {
-      setPesanError("Silakan periksa kembali isian form pengaturan.")
+      setPesanError("Silakan periksa kembali isian form kontak dan pengaduan.")
       return
     }
 
@@ -373,7 +558,6 @@ export default function AdminLayananInformasiPage() {
       }
 
       const payload = {
-        jadwal_pelayanan: formPengaturan.jadwal_pelayanan.trim(),
         whatsapp_pelayanan: formPengaturan.whatsapp_pelayanan.trim() || null,
         email_pelayanan: formPengaturan.email_pelayanan.trim() || null,
         telepon_pelayanan: formPengaturan.telepon_pelayanan.trim() || null,
@@ -435,7 +619,7 @@ export default function AdminLayananInformasiPage() {
 
       setPengaturan(updatedParsed)
       setSnapshotPengaturan(updatedParsed)
-      setPesanSukses("Pengaturan pelayanan berhasil diperbarui.")
+      setPesanSukses("Pengaturan kontak dan saluran pengaduan berhasil diperbarui.")
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       setPesanError(parseErrorMessage(e, "Gagal menyimpan perubahan pengaturan."))
@@ -447,7 +631,6 @@ export default function AdminLayananInformasiPage() {
   const handleBatalkanPengaturan = () => {
     if (!snapshotPengaturan) return
     setFormPengaturan({
-      jadwal_pelayanan: snapshotPengaturan.jadwal_pelayanan || "",
       whatsapp_pelayanan: snapshotPengaturan.whatsapp_pelayanan || "",
       email_pelayanan: snapshotPengaturan.email_pelayanan || "",
       telepon_pelayanan: snapshotPengaturan.telepon_pelayanan || "",
@@ -477,7 +660,6 @@ export default function AdminLayananInformasiPage() {
     setPesanError(null)
     setShowLayananForm(true)
 
-    // Scroll smoothly to form
     setTimeout(() => {
       const formElement = document.getElementById("form-layanan-section")
       if (formElement) {
@@ -568,7 +750,6 @@ export default function AdminLayananInformasiPage() {
     setPesanError(null)
     setShowLayananForm(true)
 
-    // Scroll smoothly to form
     setTimeout(() => {
       const formElement = document.getElementById("form-layanan-section")
       if (formElement) {
@@ -580,7 +761,6 @@ export default function AdminLayananInformasiPage() {
   const validateLayananForm = (): boolean => {
     const errors: Record<string, string> = {}
 
-    // Nama Layanan
     const namaTrim = formLayanan.nama_layanan.trim()
     if (!namaTrim) {
       errors.nama_layanan = "Nama layanan surat wajib diisi."
@@ -588,12 +768,10 @@ export default function AdminLayananInformasiPage() {
       errors.nama_layanan = "Nama layanan surat harus 2 sampai 200 karakter."
     }
 
-    // Deskripsi
     if (formLayanan.deskripsi.length > 3000) {
       errors.deskripsi = "Deskripsi layanan maksimal 3000 karakter."
     }
 
-    // Estimasi Pembuatan
     const estimasiTrim = formLayanan.estimasi_pembuatan.trim()
     if (!estimasiTrim) {
       errors.estimasi_pembuatan = "Estimasi pembuatan wajib diisi."
@@ -601,7 +779,6 @@ export default function AdminLayananInformasiPage() {
       errors.estimasi_pembuatan = "Estimasi pembuatan maksimal 200 karakter."
     }
 
-    // Form Pendataan URL
     const urlTrim = formLayanan.form_pendataan_url.trim()
     if (!urlTrim) {
       errors.form_pendataan_url = "Link formulir pendataan online wajib diisi."
@@ -613,7 +790,6 @@ export default function AdminLayananInformasiPage() {
       errors.form_pendataan_url = "Link formulir pendataan harus berupa URL HTTPS yang valid."
     }
 
-    // Persyaratan
     if (persyaratanRows.length === 0) {
       errors.persyaratan = "Minimal harus ada satu poin persyaratan."
     } else {
@@ -635,7 +811,6 @@ export default function AdminLayananInformasiPage() {
     return Object.keys(errors).length === 0
   }
 
-  // WORKFLOW AUTO-PUBLISH (CREATE & EDIT)
   const handleSimpanLayanan = async (e: FormEvent) => {
     e.preventDefault()
     setPesanSukses(null)
@@ -662,13 +837,11 @@ export default function AdminLayananInformasiPage() {
       }
 
       if (editingId === null) {
-        // MODE TAMBAH: Auto-Publish Workflow
         const nextUrutan =
           layananList.length === 0
             ? 1
             : Math.max(...layananList.map((item) => item.urutan)) + 1
 
-        // STEP 1: Insert parent with is_active: false
         const { data: newParent, error: parentInsertError } = await supabase
           .from(LAYANAN_SURAT_TABLE)
           .insert({
@@ -685,7 +858,6 @@ export default function AdminLayananInformasiPage() {
         if (parentInsertError) throw parentInsertError
         if (!newParent) throw new Error("Gagal membuat data utama layanan surat.")
 
-        // STEP 2: Insert children with index + 1 automatic urutan
         const childPayloads = persyaratanRows.map((r, idx) => ({
           layanan_surat_id: newParent.id,
           isi_persyaratan: r.isi_persyaratan.trim(),
@@ -697,28 +869,24 @@ export default function AdminLayananInformasiPage() {
           .insert(childPayloads)
 
         if (childInsertError) {
-          // COMPENSATING ROLLBACK
           await supabase.from(LAYANAN_SURAT_TABLE).delete().eq("id", newParent.id)
           throw new Error(`Gagal menyimpan persyaratan. Data layanan dibatalkan: ${childInsertError.message}`)
         }
 
-        // STEP 3: Activate parent -> is_active = true
         const { error: activateError } = await supabase
           .from(LAYANAN_SURAT_TABLE)
           .update({ is_active: true })
           .eq("id", newParent.id)
 
         if (activateError) {
-          // COMPENSATING ROLLBACK
           await supabase.from(LAYANAN_SURAT_TABLE).delete().eq("id", newParent.id)
           throw new Error(`Gagal mempublikasikan layanan. Data layanan dibatalkan: ${activateError.message}`)
         }
 
-        await loadDataLayanan()
+        await loadAllData()
         handleCancelLayananForm()
         setPesanSukses("Layanan berhasil ditambahkan dan langsung dipublikasikan.")
       } else {
-        // MODE EDIT: Update Parent & Rekonsiliasi Child
         const { error: parentUpdateError } = await supabase
           .from(LAYANAN_SURAT_TABLE)
           .update({
@@ -732,7 +900,6 @@ export default function AdminLayananInformasiPage() {
 
         if (parentUpdateError) throw parentUpdateError
 
-        // Rekonsiliasi Persyaratan Child
         const existingRows = persyaratanRows.filter((r) => r.id !== null)
         for (let idx = 0; idx < existingRows.length; idx++) {
           const row = existingRows[idx]
@@ -783,7 +950,7 @@ export default function AdminLayananInformasiPage() {
           }
         }
 
-        await loadDataLayanan()
+        await loadAllData()
         handleCancelLayananForm()
         setPesanSukses("Perubahan layanan surat berhasil disimpan.")
       }
@@ -839,7 +1006,7 @@ export default function AdminLayananInformasiPage() {
         handleCancelLayananForm()
       }
 
-      await loadDataLayanan()
+      await loadAllData()
       setPesanSukses(`Layanan surat '${item.nama_layanan}' berhasil dihapus.`)
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
@@ -981,197 +1148,465 @@ export default function AdminLayananInformasiPage() {
           </button>
 
           {isPengaturanOpen && (
-            <div id="panel-pengaturan-pelayanan" className="p-6 border-t border-gray-200">
+            <div id="panel-pengaturan-pelayanan" className="p-6 border-t border-gray-200 space-y-8">
               {loadingPengaturan ? (
                 <div className="py-6 text-center">
                   <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-[#6b4b1d] border-r-transparent"></div>
                   <p className="mt-2 text-xs text-gray-600">Memuat pengaturan pelayanan...</p>
                 </div>
-              ) : !pengaturan ? (
-                <div className="p-4 text-center text-sm text-red-600">
-                  Data pengaturan pelayanan belum tersedia di database.
-                </div>
               ) : (
-                <form onSubmit={handleSimpanPengaturan} className="space-y-6" noValidate>
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    {/* Jadwal Pelayanan */}
-                    <div className="lg:col-span-2">
-                      <label htmlFor="jadwal_pelayanan" className="block text-sm font-semibold text-gray-700 mb-1">
-                        Jadwal Pelayanan <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        id="jadwal_pelayanan"
-                        name="jadwal_pelayanan"
-                        rows={3}
-                        value={formPengaturan.jadwal_pelayanan}
-                        onChange={handlePengaturanChange}
-                        aria-invalid={Boolean(fieldErrorsPengaturan.jadwal_pelayanan)}
-                        className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
-                          fieldErrorsPengaturan.jadwal_pelayanan
-                            ? "border-red-500 focus:ring-red-400"
-                            : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
-                        }`}
-                        placeholder={"Senin - Kamis: 08.00 - 16.00\nJum'at: 08.00 - 16.30\nSabtu - Minggu: Tutup"}
-                      />
-                      {fieldErrorsPengaturan.jadwal_pelayanan && (
-                        <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.jadwal_pelayanan}</p>
-                      )}
+                <>
+                  {/* SUBSECTION 1: JADWAL PELAYANAN TERSTRUKTUR */}
+                  <div className="space-y-6">
+                    <div className="border-b border-gray-200 pb-3">
+                      <h3 className="text-base font-bold text-[#2c1b01]">Jadwal Pelayanan</h3>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        Atur hari dan jam operasional pelayanan kantor nagari.
+                      </p>
                     </div>
 
-                    {/* Kontak Pelayanan */}
-                    <div className="space-y-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
-                      <h3 className="text-sm font-bold text-gray-900 border-b pb-2">Kontak Pelayanan</h3>
-
-                      <div>
-                        <label htmlFor="whatsapp_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
-                          WhatsApp Pelayanan (Opsional)
-                        </label>
-                        <input
-                          type="text"
-                          id="whatsapp_pelayanan"
-                          name="whatsapp_pelayanan"
-                          value={formPengaturan.whatsapp_pelayanan}
-                          onChange={handlePengaturanChange}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
-                          placeholder="+62 823-1586-3113"
-                        />
+                    {jadwalSuccess && (
+                      <div className="rounded-lg border border-[#6b4b1d]/30 bg-[#f7f2e8] p-3.5 text-xs font-medium text-[#2c1b01] shadow-sm flex items-center gap-2">
+                        <svg className="h-4 w-4 text-[#6b4b1d] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>{jadwalSuccess}</span>
                       </div>
+                    )}
 
-                      <div>
-                        <label htmlFor="email_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
-                          Email Pelayanan (Opsional)
-                        </label>
-                        <input
-                          type="email"
-                          id="email_pelayanan"
-                          name="email_pelayanan"
-                          value={formPengaturan.email_pelayanan}
-                          onChange={handlePengaturanChange}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
-                          placeholder="aiamanggihbarat02@gmail.com"
-                        />
+                    {jadwalError && (
+                      <div className="rounded-lg border border-red-300 bg-red-50 p-3.5 text-xs font-medium text-red-800 shadow-sm flex items-center gap-2">
+                        <svg className="h-4 w-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{jadwalError}</span>
                       </div>
+                    )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="telepon_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
-                            Telepon Utama
-                          </label>
-                          <input
-                            type="text"
-                            id="telepon_pelayanan"
-                            name="telepon_pelayanan"
-                            value={formPengaturan.telepon_pelayanan}
-                            onChange={handlePengaturanChange}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
-                            placeholder="082268789740"
-                          />
+                    {jadwalForm.length !== 7 ? (
+                      <div className="p-4 rounded-lg bg-red-50 text-red-700 text-xs font-medium border border-red-200">
+                        Data jadwal pelayanan tidak lengkap. Silakan periksa konfigurasi database.
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSimpanJadwal} className="space-y-6" noValidate>
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                          <table className="w-full text-left text-sm text-gray-700">
+                            <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
+                              <tr>
+                                <th scope="col" className="w-[20%] px-5 py-3 font-bold">HARI</th>
+                                <th scope="col" className="w-[25%] px-5 py-3 font-bold">STATUS</th>
+                                <th scope="col" className="w-[27.5%] px-5 py-3 font-bold">JAM BUKA</th>
+                                <th scope="col" className="w-[27.5%] px-5 py-3 font-bold">JAM TUTUP</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {jadwalForm.map((row) => {
+                                const dayLabel = HARI_PELAYANAN_LABEL[row.hari_key]
+                                const hasRowError = Boolean(fieldErrorsJadwal[row.hari_key])
+                                const hasBukaError = Boolean(fieldErrorsJadwal[`${row.hari_key}_buka`])
+                                const hasTutupError = Boolean(fieldErrorsJadwal[`${row.hari_key}_tutup`])
+
+                                return (
+                                  <tr key={row.hari_key} className="hover:bg-gray-50/80 transition-colors">
+                                    <td className="px-5 py-3.5 font-bold text-gray-900">
+                                      {dayLabel}
+                                    </td>
+                                    <td className="px-5 py-3.5">
+                                      <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5">
+                                        <button
+                                          type="button"
+                                          aria-pressed={!row.is_tutup}
+                                          onClick={() => handleJadwalStatusToggle(row.hari_key, false)}
+                                          className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                            !row.is_tutup
+                                              ? "bg-[#2c1b01] text-white shadow-sm"
+                                              : "text-gray-600 hover:text-gray-900"
+                                          }`}
+                                        >
+                                          Buka
+                                        </button>
+                                        <button
+                                          type="button"
+                                          aria-pressed={row.is_tutup}
+                                          onClick={() => handleJadwalStatusToggle(row.hari_key, true)}
+                                          className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                            row.is_tutup
+                                              ? "bg-[#2c1b01] text-white shadow-sm"
+                                              : "text-gray-600 hover:text-gray-900"
+                                          }`}
+                                        >
+                                          Tutup
+                                        </button>
+                                      </div>
+                                    </td>
+                                    <td className="px-5 py-3.5">
+                                      <input
+                                        type="time"
+                                        aria-label={`Jam Buka ${dayLabel}`}
+                                        value={row.jam_buka}
+                                        disabled={row.is_tutup}
+                                        onChange={(e) => handleJadwalTimeChange(row.hari_key, "jam_buka", e.target.value)}
+                                        className={`w-full max-w-[160px] rounded-lg border px-3 py-1.5 text-xs text-gray-900 shadow-sm focus:outline-none focus:ring-1 ${
+                                          row.is_tutup
+                                            ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                                            : hasBukaError || hasRowError
+                                            ? "border-red-500 focus:border-red-500 focus:ring-red-400"
+                                            : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                                        }`}
+                                      />
+                                      {hasBukaError && (
+                                        <p className="mt-1 text-[11px] text-red-600">{fieldErrorsJadwal[`${row.hari_key}_buka`]}</p>
+                                      )}
+                                    </td>
+                                    <td className="px-5 py-3.5">
+                                      <input
+                                        type="time"
+                                        aria-label={`Jam Tutup ${dayLabel}`}
+                                        value={row.jam_tutup}
+                                        disabled={row.is_tutup}
+                                        onChange={(e) => handleJadwalTimeChange(row.hari_key, "jam_tutup", e.target.value)}
+                                        className={`w-full max-w-[160px] rounded-lg border px-3 py-1.5 text-xs text-gray-900 shadow-sm focus:outline-none focus:ring-1 ${
+                                          row.is_tutup
+                                            ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                                            : hasTutupError || hasRowError
+                                            ? "border-red-500 focus:border-red-500 focus:ring-red-400"
+                                            : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                                        }`}
+                                      />
+                                      {hasTutupError && (
+                                        <p className="mt-1 text-[11px] text-red-600">{fieldErrorsJadwal[`${row.hari_key}_tutup`]}</p>
+                                      )}
+                                      {hasRowError && (
+                                        <p className="mt-1 text-[11px] text-red-600">{fieldErrorsJadwal[row.hari_key]}</p>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
                         </div>
 
-                        <div>
-                          <label htmlFor="telepon_pelayanan_alternatif" className="block text-xs font-semibold text-gray-700 mb-1">
-                            Telepon Alternatif
-                          </label>
-                          <input
-                            type="text"
-                            id="telepon_pelayanan_alternatif"
-                            name="telepon_pelayanan_alternatif"
-                            value={formPengaturan.telepon_pelayanan_alternatif}
-                            onChange={handlePengaturanChange}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
-                            placeholder="082172235321"
-                          />
+                        {/* Mobile Stacked Card View */}
+                        <div className="space-y-3 md:hidden">
+                          {jadwalForm.map((row) => {
+                            const dayLabel = HARI_PELAYANAN_LABEL[row.hari_key]
+                            const hasRowError = Boolean(fieldErrorsJadwal[row.hari_key])
+                            const hasBukaError = Boolean(fieldErrorsJadwal[`${row.hari_key}_buka`])
+                            const hasTutupError = Boolean(fieldErrorsJadwal[`${row.hari_key}_tutup`])
+
+                            return (
+                              <div key={row.hari_key} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-gray-900 text-sm">{dayLabel}</span>
+
+                                  <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5">
+                                    <button
+                                      type="button"
+                                      aria-pressed={!row.is_tutup}
+                                      onClick={() => handleJadwalStatusToggle(row.hari_key, false)}
+                                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                        !row.is_tutup
+                                          ? "bg-[#2c1b01] text-white shadow-sm"
+                                          : "text-gray-600 hover:text-gray-900"
+                                      }`}
+                                    >
+                                      Buka
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-pressed={row.is_tutup}
+                                      onClick={() => handleJadwalStatusToggle(row.hari_key, true)}
+                                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                        row.is_tutup
+                                          ? "bg-[#2c1b01] text-white shadow-sm"
+                                          : "text-gray-600 hover:text-gray-900"
+                                      }`}
+                                    >
+                                      Tutup
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 pt-1">
+                                  <div>
+                                    <label htmlFor={`mobile_buka_${row.hari_key}`} className="block text-[11px] font-semibold text-gray-600 mb-1">
+                                      Jam Buka
+                                    </label>
+                                    <input
+                                      type="time"
+                                      id={`mobile_buka_${row.hari_key}`}
+                                      aria-label={`Jam Buka ${dayLabel}`}
+                                      value={row.jam_buka}
+                                      disabled={row.is_tutup}
+                                      onChange={(e) => handleJadwalTimeChange(row.hari_key, "jam_buka", e.target.value)}
+                                      className={`w-full rounded-lg border px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none ${
+                                        row.is_tutup
+                                          ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                                          : hasBukaError || hasRowError
+                                          ? "border-red-500 focus:ring-red-400"
+                                          : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                                      }`}
+                                    />
+                                    {hasBukaError && (
+                                      <p className="mt-1 text-[11px] text-red-600">{fieldErrorsJadwal[`${row.hari_key}_buka`]}</p>
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    <label htmlFor={`mobile_tutup_${row.hari_key}`} className="block text-[11px] font-semibold text-gray-600 mb-1">
+                                      Jam Tutup
+                                    </label>
+                                    <input
+                                      type="time"
+                                      id={`mobile_tutup_${row.hari_key}`}
+                                      aria-label={`Jam Tutup ${dayLabel}`}
+                                      value={row.jam_tutup}
+                                      disabled={row.is_tutup}
+                                      onChange={(e) => handleJadwalTimeChange(row.hari_key, "jam_tutup", e.target.value)}
+                                      className={`w-full rounded-lg border px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none ${
+                                        row.is_tutup
+                                          ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                                          : hasTutupError || hasRowError
+                                          ? "border-red-500 focus:ring-red-400"
+                                          : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                                      }`}
+                                    />
+                                    {hasTutupError && (
+                                      <p className="mt-1 text-[11px] text-red-600">{fieldErrorsJadwal[`${row.hari_key}_tutup`]}</p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {hasRowError && (
+                                  <p className="text-[11px] text-red-600 font-medium">{fieldErrorsJadwal[row.hari_key]}</p>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Lokasi & Pengaduan */}
-                    <div className="space-y-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
-                      <h3 className="text-sm font-bold text-gray-900 border-b pb-2">Lokasi & Saluran Pengaduan</h3>
+                        {/* Action Buttons for Jadwal */}
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
+                          <button
+                            type="button"
+                            onClick={handleBatalkanJadwal}
+                            disabled={submittingJadwal || !isJadwalDirty}
+                            className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
+                          >
+                            Batalkan Perubahan Jadwal
+                          </button>
 
-                      <div>
-                        <label htmlFor="alamat_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
-                          Alamat Pelayanan (Opsional)
-                        </label>
-                        <textarea
-                          id="alamat_pelayanan"
-                          name="alamat_pelayanan"
-                          rows={2}
-                          value={formPengaturan.alamat_pelayanan}
-                          onChange={handlePengaturanChange}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
-                          placeholder="Kantor Wali Nagari Aia Manggih Barat"
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor="google_maps_url" className="block text-xs font-semibold text-gray-700 mb-1">
-                          Link Google Maps (HTTPS)
-                        </label>
-                        <input
-                          type="url"
-                          id="google_maps_url"
-                          name="google_maps_url"
-                          value={formPengaturan.google_maps_url}
-                          onChange={handlePengaturanChange}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
-                          placeholder="https://maps.google.com/?q=..."
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="whatsapp_pengaduan" className="block text-xs font-semibold text-gray-700 mb-1">
-                            WhatsApp Pengaduan
-                          </label>
-                          <input
-                            type="text"
-                            id="whatsapp_pengaduan"
-                            name="whatsapp_pengaduan"
-                            value={formPengaturan.whatsapp_pengaduan}
-                            onChange={handlePengaturanChange}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
-                            placeholder="+62 823-1586-3113"
-                          />
+                          <button
+                            type="submit"
+                            disabled={submittingJadwal || !isJadwalDirty}
+                            className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
+                          >
+                            {submittingJadwal ? "Menyimpan..." : "Simpan Jadwal"}
+                          </button>
                         </div>
-
-                        <div>
-                          <label htmlFor="form_pengaduan_url" className="block text-xs font-semibold text-gray-700 mb-1">
-                            Form Pengaduan (HTTPS)
-                          </label>
-                          <input
-                            type="url"
-                            id="form_pengaduan_url"
-                            name="form_pengaduan_url"
-                            value={formPengaturan.form_pengaduan_url}
-                            onChange={handlePengaturanChange}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
-                            placeholder="https://docs.google.com/forms/d/e/..."
-                          />
-                        </div>
-                      </div>
-                    </div>
+                      </form>
+                    )}
                   </div>
 
-                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t pt-4">
-                    <button
-                      type="button"
-                      onClick={handleBatalkanPengaturan}
-                      disabled={submittingPengaturan}
-                      className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto"
-                    >
-                      Batalkan Perubahan
-                    </button>
+                  {/* SUBSECTION 2: KONTAK, LOKASI & SALURAN PENGADUAN */}
+                  <div className="border-t border-gray-200 pt-6">
+                    <div className="border-b border-gray-200 pb-3 mb-6">
+                      <h3 className="text-base font-bold text-[#2c1b01]">Kontak, Lokasi & Saluran Pengaduan</h3>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        Atur nomor telepon, email, alamat kantor, Google Maps, serta formulir pengaduan nagari.
+                      </p>
+                    </div>
 
-                    <button
-                      type="submit"
-                      disabled={submittingPengaturan}
-                      className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto"
-                    >
-                      {submittingPengaturan ? "Menyimpan..." : "Simpan Pengaturan"}
-                    </button>
+                    {!pengaturan ? (
+                      <div className="p-4 text-center text-sm text-red-600">
+                        Data pengaturan pelayanan belum tersedia di database.
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSimpanPengaturan} className="space-y-6" noValidate>
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                          {/* Kontak Pelayanan */}
+                          <div className="space-y-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+                            <h4 className="text-sm font-bold text-gray-900 border-b pb-2">Kontak Pelayanan</h4>
+
+                            <div>
+                              <label htmlFor="whatsapp_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
+                                WhatsApp Pelayanan (Opsional)
+                              </label>
+                              <input
+                                type="text"
+                                id="whatsapp_pelayanan"
+                                name="whatsapp_pelayanan"
+                                value={formPengaturan.whatsapp_pelayanan}
+                                onChange={handlePengaturanChange}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                placeholder="+62 823-1586-3113"
+                              />
+                              {fieldErrorsPengaturan.whatsapp_pelayanan && (
+                                <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.whatsapp_pelayanan}</p>
+                              )}
+                            </div>
+
+                            <div>
+                              <label htmlFor="email_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
+                                Email Pelayanan (Opsional)
+                              </label>
+                              <input
+                                type="email"
+                                id="email_pelayanan"
+                                name="email_pelayanan"
+                                value={formPengaturan.email_pelayanan}
+                                onChange={handlePengaturanChange}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                placeholder="aiamanggihbarat02@gmail.com"
+                              />
+                              {fieldErrorsPengaturan.email_pelayanan && (
+                                <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.email_pelayanan}</p>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label htmlFor="telepon_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
+                                  Telepon Utama
+                                </label>
+                                <input
+                                  type="text"
+                                  id="telepon_pelayanan"
+                                  name="telepon_pelayanan"
+                                  value={formPengaturan.telepon_pelayanan}
+                                  onChange={handlePengaturanChange}
+                                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                  placeholder="082268789740"
+                                />
+                                {fieldErrorsPengaturan.telepon_pelayanan && (
+                                  <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.telepon_pelayanan}</p>
+                                )}
+                              </div>
+
+                              <div>
+                                <label htmlFor="telepon_pelayanan_alternatif" className="block text-xs font-semibold text-gray-700 mb-1">
+                                  Telepon Alternatif
+                                </label>
+                                <input
+                                  type="text"
+                                  id="telepon_pelayanan_alternatif"
+                                  name="telepon_pelayanan_alternatif"
+                                  value={formPengaturan.telepon_pelayanan_alternatif}
+                                  onChange={handlePengaturanChange}
+                                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                  placeholder="082172235321"
+                                />
+                                {fieldErrorsPengaturan.telepon_pelayanan_alternatif && (
+                                  <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.telepon_pelayanan_alternatif}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Lokasi & Pengaduan */}
+                          <div className="space-y-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+                            <h4 className="text-sm font-bold text-gray-900 border-b pb-2">Lokasi & Saluran Pengaduan</h4>
+
+                            <div>
+                              <label htmlFor="alamat_pelayanan" className="block text-xs font-semibold text-gray-700 mb-1">
+                                Alamat Pelayanan (Opsional)
+                              </label>
+                              <textarea
+                                id="alamat_pelayanan"
+                                name="alamat_pelayanan"
+                                rows={2}
+                                value={formPengaturan.alamat_pelayanan}
+                                onChange={handlePengaturanChange}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                placeholder="Kantor Wali Nagari Aia Manggih Barat"
+                              />
+                              {fieldErrorsPengaturan.alamat_pelayanan && (
+                                <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.alamat_pelayanan}</p>
+                              )}
+                            </div>
+
+                            <div>
+                              <label htmlFor="google_maps_url" className="block text-xs font-semibold text-gray-700 mb-1">
+                                Link Google Maps (HTTPS)
+                              </label>
+                              <input
+                                type="url"
+                                id="google_maps_url"
+                                name="google_maps_url"
+                                value={formPengaturan.google_maps_url}
+                                onChange={handlePengaturanChange}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                placeholder="https://maps.google.com/?q=..."
+                              />
+                              {fieldErrorsPengaturan.google_maps_url && (
+                                <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.google_maps_url}</p>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label htmlFor="whatsapp_pengaduan" className="block text-xs font-semibold text-gray-700 mb-1">
+                                  WhatsApp Pengaduan
+                                </label>
+                                <input
+                                  type="text"
+                                  id="whatsapp_pengaduan"
+                                  name="whatsapp_pengaduan"
+                                  value={formPengaturan.whatsapp_pengaduan}
+                                  onChange={handlePengaturanChange}
+                                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                  placeholder="+62 823-1586-3113"
+                                />
+                                {fieldErrorsPengaturan.whatsapp_pengaduan && (
+                                  <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.whatsapp_pengaduan}</p>
+                                )}
+                              </div>
+
+                              <div>
+                                <label htmlFor="form_pengaduan_url" className="block text-xs font-semibold text-gray-700 mb-1">
+                                  Form Pengaduan (HTTPS)
+                                </label>
+                                <input
+                                  type="url"
+                                  id="form_pengaduan_url"
+                                  name="form_pengaduan_url"
+                                  value={formPengaturan.form_pengaduan_url}
+                                  onChange={handlePengaturanChange}
+                                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                  placeholder="https://docs.google.com/forms/d/e/..."
+                                />
+                                {fieldErrorsPengaturan.form_pengaduan_url && (
+                                  <p className="mt-1 text-xs text-red-600">{fieldErrorsPengaturan.form_pengaduan_url}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t pt-4">
+                          <button
+                            type="button"
+                            onClick={handleBatalkanPengaturan}
+                            disabled={submittingPengaturan}
+                            className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
+                          >
+                            Batalkan Perubahan
+                          </button>
+
+                          <button
+                            type="submit"
+                            disabled={submittingPengaturan}
+                            className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
+                          >
+                            {submittingPengaturan ? "Menyimpan..." : "Simpan Pengaturan"}
+                          </button>
+                        </div>
+                      </form>
+                    )}
                   </div>
-                </form>
+                </>
               )}
             </div>
           )}
@@ -1196,7 +1631,7 @@ export default function AdminLayananInformasiPage() {
               <button
                 type="button"
                 onClick={handleCancelLayananForm}
-                className="text-xs font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-1.5 shadow-sm"
+                className="text-xs font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-1.5 shadow-sm cursor-pointer"
               >
                 ✕ Batal
               </button>
@@ -1310,7 +1745,7 @@ export default function AdminLayananInformasiPage() {
                   <button
                     type="button"
                     onClick={handleAddPersyaratanRow}
-                    className="inline-flex items-center gap-1 rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] hover:bg-[#ebdcc4] shadow-sm transition-colors"
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] hover:bg-[#ebdcc4] shadow-sm transition-colors cursor-pointer"
                   >
                     + Tambah Persyaratan
                   </button>
@@ -1344,7 +1779,7 @@ export default function AdminLayananInformasiPage() {
                         type="button"
                         onClick={() => handleRemovePersyaratanRow(row.localId)}
                         disabled={persyaratanRows.length <= 1}
-                        className="rounded px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-30"
+                        className="rounded px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-30 cursor-pointer"
                       >
                         Hapus
                       </button>
@@ -1359,7 +1794,7 @@ export default function AdminLayananInformasiPage() {
                   type="button"
                   onClick={handleCancelLayananForm}
                   disabled={submittingLayanan}
-                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   Batal
                 </button>
@@ -1367,7 +1802,7 @@ export default function AdminLayananInformasiPage() {
                 <button
                   type="submit"
                   disabled={submittingLayanan}
-                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   {submittingLayanan ? (
                     <>
@@ -1406,7 +1841,7 @@ export default function AdminLayananInformasiPage() {
                 <button
                   type="button"
                   onClick={handleOpenAddForm}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6b4b1d] to-[#2c1b01] px-5 py-2.5 text-xs font-semibold text-white shadow-md hover:opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6b4b1d] to-[#2c1b01] px-5 py-2.5 text-xs font-semibold text-white shadow-md hover:opacity-90 cursor-pointer"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1445,7 +1880,7 @@ export default function AdminLayananInformasiPage() {
                                 type="button"
                                 onClick={() => handleStartEdit(item)}
                                 disabled={submittingLayanan || isDeleting}
-                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
                               >
                                 Edit
                               </button>
@@ -1454,7 +1889,7 @@ export default function AdminLayananInformasiPage() {
                                 type="button"
                                 onClick={() => handleDeleteLayanan(item)}
                                 disabled={isDeleting}
-                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50"
+                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                               >
                                 {isDeleting ? "Menghapus..." : "Hapus"}
                               </button>
@@ -1491,7 +1926,7 @@ export default function AdminLayananInformasiPage() {
                           type="button"
                           onClick={() => handleStartEdit(item)}
                           disabled={submittingLayanan || isDeleting}
-                          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
                         >
                           Edit
                         </button>
@@ -1500,7 +1935,7 @@ export default function AdminLayananInformasiPage() {
                           type="button"
                           onClick={() => handleDeleteLayanan(item)}
                           disabled={isDeleting}
-                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50"
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                         >
                           {isDeleting ? "Menghapus..." : "Hapus"}
                         </button>
