@@ -672,6 +672,53 @@ export default async function AdminPage() {
               </svg>
             </div>
           </Link>
+
+          {/* Kelola Layanan Informasi */}
+          <Link
+            href="/admin/layanan-informasi"
+            className="group flex min-h-[220px] flex-col rounded-xl border-2 border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-teal-600 hover:shadow-xl"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-teal-600 to-[#1a1200] shadow-md transition-transform group-hover:scale-110">
+              <svg
+                className="h-6 w-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+
+            <h2 className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-teal-700">
+              Kelola Layanan Informasi
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Atur jadwal, kontak pelayanan, saluran pengaduan, layanan surat, dan persyaratannya.
+            </p>
+
+            <div className="mt-auto flex items-center gap-1 pt-5 text-sm font-semibold text-teal-700">
+              Buka layanan informasi
+              <svg
+                className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </Link>
         </div>
       </div>
     </div>
