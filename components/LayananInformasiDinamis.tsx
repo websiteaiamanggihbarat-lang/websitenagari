@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import {
   fetchDataLayananInformasiPublik,
+  groupJadwalPelayanan,
   buildWhatsAppUrl,
   buildTelephoneUrl,
   buildGmailComposeUrl,
@@ -76,7 +77,7 @@ export default function LayananInformasiDinamis() {
         <button
           onClick={loadData}
           type="button"
-          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#6b4b1d] px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90 transition-all"
+          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#6b4b1d] px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90 transition-all cursor-pointer"
         >
           Coba Lagi
         </button>
@@ -86,6 +87,8 @@ export default function LayananInformasiDinamis() {
 
   const pengaturan = data?.pengaturan
   const layananList = data?.layanan || []
+  const jadwalList = data?.jadwal || []
+  const jadwalGroups = groupJadwalPelayanan(jadwalList)
 
   // Link Formatted Utilities
   const waPelayananUrl = buildWhatsAppUrl(pengaturan?.whatsapp_pelayanan)
@@ -251,19 +254,46 @@ export default function LayananInformasiDinamis() {
               </div>
             </div>
 
-            {/* Kartu Waktu Pelayanan */}
-            <div className="bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] shadow-lg">
-              <div className="flex items-center mb-8">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4">
-                  <svg className="w-6 h-6 text-white" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+            {/* Kartu Waktu Pelayanan (Structure Jadwal Terstruktur) */}
+            <div className="bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] shadow-lg flex flex-col justify-between">
+              <div>
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 flex-shrink-0">
+                    <svg className="w-6 h-6 text-white" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Waktu Pelayanan</h3>
+                    <p className="text-xs text-gray-600 mt-0.5">Jadwal operasional kantor wali nagari</p>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Waktu Pelayanan</h3>
-              </div>
 
-              <div className="text-gray-700 leading-relaxed text-base whitespace-pre-line font-medium">
-                {pengaturan.jadwal_pelayanan}
+                {jadwalGroups.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-white/60 border border-[#d1c2a0]/40 text-center text-sm font-medium text-gray-600 italic">
+                    Jadwal pelayanan belum tersedia.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {jadwalGroups.map((group, idx) => (
+                      <div
+                        key={`${group.hari_mulai}-${group.hari_selesai}-${idx}`}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white/80 gap-2 shadow-xs"
+                      >
+                        <span className="font-bold text-gray-900 text-base sm:text-lg">
+                          {group.label_hari}
+                        </span>
+                        <span
+                          className={`font-bold text-sm sm:text-base ${
+                            group.is_tutup ? "text-red-700" : "text-[#2c1b01]"
+                          }`}
+                        >
+                          {group.label_waktu}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -307,7 +337,7 @@ export default function LayananInformasiDinamis() {
                     onClick={() => toggleAccordion(item.id)}
                     aria-expanded={isOpen}
                     aria-controls={`panel-layanan-${item.id}`}
-                    className="w-full flex items-center justify-between p-6 text-left hover:bg-gray-50/80 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#6b4b1d]"
+                    className="w-full flex items-center justify-between p-6 text-left hover:bg-gray-50/80 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#6b4b1d] cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-gradient-to-br from-[#e6ddcf] to-[#f0e8db] rounded-lg flex items-center justify-center flex-shrink-0">
