@@ -12,14 +12,14 @@ const FORM_SARANA_AWAL = {
   tingkat_pendidikan: "PAUD",
   jenis_pengelolaan: "",
   alamat: "",
-  jumlah_siswa: "0",
-  jumlah_guru: "0",
-  jumlah_staf: "0",
+  jumlah_siswa: "",
+  jumlah_guru: "",
+  jumlah_staf: "",
   status_operasional: "aktif",
   nomor_kontak: "",
   lokasi_peta: "",
   keterangan: "",
-  urutan: "0",
+  urutan: "",
   is_active: true,
 }
 
@@ -1106,6 +1106,7 @@ export default function KelolaSaranaDetailAdmin() {
                         name="nama_sarana"
                         value={formSarana.nama_sarana}
                         onChange={ubahFormSarana}
+                        onFocus={(e) => e.currentTarget.select()}
                         placeholder="Contoh: SDN 01 Aia Manggih / TK Pembina"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                         required
@@ -1159,6 +1160,7 @@ export default function KelolaSaranaDetailAdmin() {
                       rows={2}
                       value={formSarana.alamat}
                       onChange={ubahFormSarana}
+                      onFocus={(e) => e.currentTarget.select()}
                       placeholder="Contoh: Jorong Padang Sarai, Nagari Aia Manggih Barat..."
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                       required
@@ -1177,6 +1179,8 @@ export default function KelolaSaranaDetailAdmin() {
                         name="jumlah_siswa"
                         value={formSarana.jumlah_siswa}
                         onChange={ubahFormSarana}
+                        onFocus={(e) => e.currentTarget.select()}
+                        placeholder="0"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                       />
                     </div>
@@ -1191,6 +1195,8 @@ export default function KelolaSaranaDetailAdmin() {
                         name="jumlah_guru"
                         value={formSarana.jumlah_guru}
                         onChange={ubahFormSarana}
+                        onFocus={(e) => e.currentTarget.select()}
+                        placeholder="0"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                       />
                     </div>
@@ -1205,6 +1211,8 @@ export default function KelolaSaranaDetailAdmin() {
                         name="jumlah_staf"
                         value={formSarana.jumlah_staf}
                         onChange={ubahFormSarana}
+                        onFocus={(e) => e.currentTarget.select()}
+                        placeholder="0"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                       />
                     </div>
@@ -1220,6 +1228,7 @@ export default function KelolaSaranaDetailAdmin() {
                         name="nomor_kontak"
                         value={formSarana.nomor_kontak}
                         onChange={ubahFormSarana}
+                        onFocus={(e) => e.currentTarget.select()}
                         placeholder="Contoh: 0812-3456-7890"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                       />
@@ -1234,6 +1243,7 @@ export default function KelolaSaranaDetailAdmin() {
                         name="lokasi_peta"
                         value={formSarana.lokasi_peta}
                         onChange={ubahFormSarana}
+                        onFocus={(e) => e.currentTarget.select()}
                         placeholder="https://maps.google.com/..."
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                       />

@@ -1213,6 +1213,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
                 type="text"
                 value={dataUtamaForm.nama}
                 onChange={(e) => setDataUtamaForm({ ...dataUtamaForm, nama: e.target.value })}
+                onFocus={(e) => e.currentTarget.select()}
                 disabled={savingDataUtama || Boolean(activeOperation)}
                 placeholder="Contoh: Posyandu Lansia Manggih"
                 className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
@@ -1232,6 +1233,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
                 rows={5}
                 value={dataUtamaForm.deskripsi}
                 onChange={(e) => setDataUtamaForm({ ...dataUtamaForm, deskripsi: e.target.value })}
+                onFocus={(e) => e.currentTarget.select()}
                 disabled={savingDataUtama || Boolean(activeOperation)}
                 placeholder="Tuliskan profil dan visi misi..."
                 className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
@@ -1251,6 +1253,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
                 rows={2}
                 value={dataUtamaForm.alamat}
                 onChange={(e) => setDataUtamaForm({ ...dataUtamaForm, alamat: e.target.value })}
+                onFocus={(e) => e.currentTarget.select()}
                 disabled={savingDataUtama || Boolean(activeOperation)}
                 placeholder="Jalan, Jorong, atau lokasi gedung..."
                 className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
@@ -1271,6 +1274,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
                   type="text"
                   value={dataUtamaForm.kontak}
                   onChange={(e) => setDataUtamaForm({ ...dataUtamaForm, kontak: e.target.value })}
+                  onFocus={(e) => e.currentTarget.select()}
                   disabled={savingDataUtama || Boolean(activeOperation)}
                   placeholder="Contoh: 0812-3456-7890"
                   className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
@@ -1623,6 +1627,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
                   type="text"
                   value={pengurusNamaJabatan}
                   onChange={(e) => setPengurusNamaJabatan(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
                   placeholder="Contoh: Ketua LPMN"
                   className="mt-1 block w-full rounded-xl border border-gray-300 px-3.5 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none"
                   required
@@ -1637,6 +1642,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
                   type="text"
                   value={pengurusNamaPengurus}
                   onChange={(e) => setPengurusNamaPengurus(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
                   placeholder="Contoh: H. Ahmad Sukarno, S.Pd."
                   className="mt-1 block w-full rounded-xl border border-gray-300 px-3.5 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none"
                 />

@@ -674,6 +674,7 @@ export default function AdminGaleriPage() {
                   maxLength={300}
                   value={teksAlt}
                   onChange={(e) => setTeksAlt(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
                   disabled={isSaving}
                   placeholder="Contoh: Dokumentasi kegiatan masyarakat Nagari Aia Manggih Barat."
                   className="block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y disabled:bg-gray-100 disabled:opacity-60"

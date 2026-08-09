@@ -697,6 +697,7 @@ export default function AdminKesenianTradisionalPage() {
                     required
                     value={formData.nama_kesenian}
                     onChange={(e) => setFormData({ ...formData, nama_kesenian: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Contoh: Randai Sanggar Sakato"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
@@ -732,6 +733,7 @@ export default function AdminKesenianTradisionalPage() {
                     required
                     value={formData.deskripsi_singkat}
                     onChange={(e) => setFormData({ ...formData, deskripsi_singkat: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Ringkasan singkat tentang kelompok kesenian ini..."
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                   />
@@ -746,6 +748,7 @@ export default function AdminKesenianTradisionalPage() {
                     rows={4}
                     value={formData.penjelasan_lengkap}
                     onChange={(e) => setFormData({ ...formData, penjelasan_lengkap: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Detail riwayat, struktur, keanggotaan, atau penjelasan mendalam..."
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                   />
@@ -760,6 +763,7 @@ export default function AdminKesenianTradisionalPage() {
                     type="text"
                     value={formData.nama_kelompok_pengelola}
                     onChange={(e) => setFormData({ ...formData, nama_kelompok_pengelola: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Contoh: Sanggar Seni Sakato"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
@@ -774,6 +778,7 @@ export default function AdminKesenianTradisionalPage() {
                     type="text"
                     value={formData.nama_ketua}
                     onChange={(e) => setFormData({ ...formData, nama_ketua: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Nama lengkap ketua..."
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
@@ -788,6 +793,7 @@ export default function AdminKesenianTradisionalPage() {
                     type="text"
                     value={formData.alamat}
                     onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Contoh: Padang Sarai, Jorong Kampung Padang"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
@@ -802,6 +808,7 @@ export default function AdminKesenianTradisionalPage() {
                     type="text"
                     value={formData.nomor_kontak}
                     onChange={(e) => setFormData({ ...formData, nomor_kontak: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Contoh: 081234567890"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
@@ -816,6 +823,7 @@ export default function AdminKesenianTradisionalPage() {
                     type="text"
                     value={formData.jadwal_latihan}
                     onChange={(e) => setFormData({ ...formData, jadwal_latihan: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Contoh: Setiap Sabtu malam pukul 20.00 WIB"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
@@ -830,6 +838,7 @@ export default function AdminKesenianTradisionalPage() {
                     type="url"
                     value={formData.tautan_peta}
                     onChange={(e) => setFormData({ ...formData, tautan_peta: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="https://maps.google.com/..."
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />

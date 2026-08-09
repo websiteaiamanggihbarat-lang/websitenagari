@@ -924,6 +924,7 @@ export default function AdminLembagaOrganisasiPage() {
                       type="text"
                       value={dataUtama.nama}
                       onChange={(e) => setDataUtama({ ...dataUtama, nama: e.target.value })}
+                      onFocus={(e) => e.currentTarget.select()}
                       disabled={submittingForm}
                       placeholder="Contoh: Posyandu Lansia Manggih"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
@@ -942,6 +943,7 @@ export default function AdminLembagaOrganisasiPage() {
                       rows={4}
                       value={dataUtama.deskripsi}
                       onChange={(e) => setDataUtama({ ...dataUtama, deskripsi: e.target.value })}
+                      onFocus={(e) => e.currentTarget.select()}
                       disabled={submittingForm}
                       placeholder="Tuliskan profil dan visi misi..."
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
@@ -960,6 +962,7 @@ export default function AdminLembagaOrganisasiPage() {
                       rows={2}
                       value={dataUtama.alamat}
                       onChange={(e) => setDataUtama({ ...dataUtama, alamat: e.target.value })}
+                      onFocus={(e) => e.currentTarget.select()}
                       disabled={submittingForm}
                       placeholder="Jalan, Jorong, atau lokasi gedung kantor..."
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
@@ -979,6 +982,7 @@ export default function AdminLembagaOrganisasiPage() {
                         type="text"
                         value={dataUtama.kontak}
                         onChange={(e) => setDataUtama({ ...dataUtama, kontak: e.target.value })}
+                        onFocus={(e) => e.currentTarget.select()}
                         disabled={submittingForm}
                         placeholder="Contoh: 0812-3456-7890"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
@@ -993,6 +997,7 @@ export default function AdminLembagaOrganisasiPage() {
                         rows={2}
                         value={dataUtama.jam_kerja}
                         onChange={(e) => setDataUtama({ ...dataUtama, jam_kerja: e.target.value })}
+                        onFocus={(e) => e.currentTarget.select()}
                         disabled={submittingForm}
                         placeholder="Contoh: Senin - Jumat (08.00 - 16.00 WIB)"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
@@ -1043,6 +1048,7 @@ export default function AdminLembagaOrganisasiPage() {
                                 onChange={(e) =>
                                   handleUpdatePengurusRow(p.clientId, "nama_jabatan", e.target.value)
                                 }
+                                onFocus={(e) => e.currentTarget.select()}
                                 disabled={submittingForm}
                                 placeholder="Nama Jabatan (misal: Ketua)"
                                 className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none disabled:opacity-50"
@@ -1061,6 +1067,7 @@ export default function AdminLembagaOrganisasiPage() {
                                 onChange={(e) =>
                                   handleUpdatePengurusRow(p.clientId, "nama_pengurus", e.target.value)
                                 }
+                                onFocus={(e) => e.currentTarget.select()}
                                 disabled={submittingForm}
                                 placeholder="Nama Pejabat (misal: Ahmad, S.Pd)"
                                 className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none disabled:opacity-50"

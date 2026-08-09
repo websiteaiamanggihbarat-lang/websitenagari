@@ -809,6 +809,7 @@ export default function AdminStrukturOrganisasiPage() {
                                 maxLength={200}
                                 value={namaPejabat}
                                 onChange={(e) => setNamaPejabat(e.target.value)}
+                                onFocus={(e) => e.currentTarget.select()}
                                 disabled={isSaving}
                                 placeholder="Masukkan nama pejabat..."
                                 className="block w-full min-w-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white disabled:bg-gray-100"

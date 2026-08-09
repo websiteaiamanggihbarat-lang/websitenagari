@@ -565,6 +565,7 @@ export default function SaranaPendidikanAdminIndex() {
                     name="tahun_pendataan"
                     value={formPendataan.tahun_pendataan}
                     onChange={ubahFormPendataan}
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     required
                   />
@@ -579,6 +580,7 @@ export default function SaranaPendidikanAdminIndex() {
                     name="sumber_data"
                     value={formPendataan.sumber_data}
                     onChange={ubahFormPendataan}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Contoh: Survei Lapangan Pemnag 2026"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     required
@@ -610,6 +612,7 @@ export default function SaranaPendidikanAdminIndex() {
                   rows={3}
                   value={formPendataan.keterangan}
                   onChange={ubahFormPendataan}
+                  onFocus={(e) => e.currentTarget.select()}
                   placeholder="Catatan tambahan mengenai periode pendataan ini..."
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                 />

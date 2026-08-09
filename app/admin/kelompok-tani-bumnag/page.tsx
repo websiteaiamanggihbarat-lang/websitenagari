@@ -576,6 +576,7 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, nama_entitas: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
@@ -597,6 +598,7 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, bidang_utama: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
@@ -613,6 +615,7 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, nama_pimpinan: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
@@ -631,6 +634,7 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, tahun_berdiri: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
@@ -648,6 +652,7 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, jumlah_anggota: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
@@ -664,6 +669,7 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, wilayah_kegiatan: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
@@ -680,6 +686,7 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, nomor_kontak: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
@@ -696,6 +703,7 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, tautan_peta: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
@@ -713,6 +721,7 @@ export default function AdminKelompokTaniBumnagPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, alamat: e.target.value })
                   }
+                  onFocus={(e) => e.currentTarget.select()}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                 />
               </div>
@@ -730,6 +739,7 @@ export default function AdminKelompokTaniBumnagPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, deskripsi: e.target.value })
                   }
+                  onFocus={(e) => e.currentTarget.select()}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                 />
               </div>

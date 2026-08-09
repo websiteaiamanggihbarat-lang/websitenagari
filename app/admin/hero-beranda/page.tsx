@@ -1064,6 +1064,7 @@ export default function AdminHeroBerandaPage() {
                       required
                       value={namaInternal}
                       onChange={(e) => setNamaInternal(e.target.value)}
+                      onFocus={(e) => e.currentTarget.select()}
                       placeholder="Contoh: Foto Bersama Perangkat Nagari 2026"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     />

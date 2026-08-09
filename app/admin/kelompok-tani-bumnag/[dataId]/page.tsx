@@ -996,6 +996,7 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
                                 [item.id]: e.target.value,
                               })
                             }
+                            onFocus={(e) => e.currentTarget.select()}
                             onBlur={(e) => handleCaptionBlur(item, e.target.value)}
                             placeholder="Tambahkan keterangan foto..."
                             className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none"
@@ -1092,6 +1093,7 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
                         onChange={(e) =>
                           setFormProdukData({ ...formProdukData, nama_produk_usaha: e.target.value })
                         }
+                        onFocus={(e) => e.currentTarget.select()}
                         className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:border-[#6b4b1d] focus:outline-none bg-white"
                       />
                     </div>
@@ -1107,6 +1109,8 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
                         onChange={(e) =>
                           setFormProdukData({ ...formProdukData, urutan: e.target.value })
                         }
+                        onFocus={(e) => e.currentTarget.select()}
+                        placeholder="0"
                         className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:border-[#6b4b1d] focus:outline-none bg-white"
                       />
                     </div>
@@ -1123,6 +1127,7 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
                       onChange={(e) =>
                         setFormProdukData({ ...formProdukData, deskripsi: e.target.value })
                       }
+                      onFocus={(e) => e.currentTarget.select()}
                       className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:border-[#6b4b1d] focus:outline-none bg-white resize-y"
                     />
                   </div>

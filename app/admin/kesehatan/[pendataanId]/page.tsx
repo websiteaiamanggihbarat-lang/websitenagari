@@ -1174,6 +1174,7 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                         name="nama_sarana"
                         value={formSarana.nama_sarana}
                         onChange={ubahFormSarana}
+                        onFocus={(e) => e.currentTarget.select()}
                         placeholder="Contoh: Pustu Padang Sarai / Posyandu Mawar 1"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                         required
@@ -1208,6 +1209,7 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                       rows={2}
                       value={formSarana.alamat}
                       onChange={ubahFormSarana}
+                      onFocus={(e) => e.currentTarget.select()}
                       placeholder="Contoh: Jorong Padang Sarai, Nagari Aia Manggih Barat..."
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                       required
@@ -1224,6 +1226,7 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                         name="nomor_kontak"
                         value={formSarana.nomor_kontak}
                         onChange={ubahFormSarana}
+                        onFocus={(e) => e.currentTarget.select()}
                         placeholder="Contoh: 0812-3456-7890"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                       />
@@ -1238,6 +1241,7 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                         name="tautan_peta"
                         value={formSarana.tautan_peta}
                         onChange={ubahFormSarana}
+                        onFocus={(e) => e.currentTarget.select()}
                         placeholder="https://maps.google.com/..."
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                       />

@@ -680,6 +680,7 @@ export default function InformasiPendudukAdmin() {
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     value={form.sumber_data}
                     onChange={ubahForm}
+                    onFocus={(e) => e.currentTarget.select()}
                     required
                   />
                 </div>
@@ -699,6 +700,7 @@ export default function InformasiPendudukAdmin() {
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     value={form.jumlah_penduduk}
                     onChange={ubahForm}
+                    onFocus={(e) => e.currentTarget.select()}
                     required
                   />
                 </div>
@@ -715,6 +717,7 @@ export default function InformasiPendudukAdmin() {
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     value={form.jumlah_kk}
                     onChange={ubahForm}
+                    onFocus={(e) => e.currentTarget.select()}
                     required
                   />
                 </div>
@@ -731,6 +734,7 @@ export default function InformasiPendudukAdmin() {
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     value={form.jumlah_laki_laki}
                     onChange={ubahForm}
+                    onFocus={(e) => e.currentTarget.select()}
                     required
                   />
                 </div>
@@ -747,6 +751,7 @@ export default function InformasiPendudukAdmin() {
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     value={form.jumlah_perempuan}
                     onChange={ubahForm}
+                    onFocus={(e) => e.currentTarget.select()}
                     required
                   />
                 </div>
@@ -801,6 +806,7 @@ export default function InformasiPendudukAdmin() {
                           onChange={(event) =>
                             ubahJumlahKelompok(index, event.target.value)
                           }
+                          onFocus={(e) => e.currentTarget.select()}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                           required
                         />
@@ -835,6 +841,7 @@ export default function InformasiPendudukAdmin() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                   value={form.keterangan}
                   onChange={ubahForm}
+                  onFocus={(e) => e.currentTarget.select()}
                 />
               </div>
 

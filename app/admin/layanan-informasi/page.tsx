@@ -1414,6 +1414,7 @@ export default function AdminLayananInformasiPage() {
                                 name="whatsapp_pelayanan"
                                 value={formPengaturan.whatsapp_pelayanan}
                                 onChange={handlePengaturanChange}
+                                onFocus={(e) => e.currentTarget.select()}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                 placeholder="+62 823-1586-3113"
                               />
@@ -1432,6 +1433,7 @@ export default function AdminLayananInformasiPage() {
                                 name="email_pelayanan"
                                 value={formPengaturan.email_pelayanan}
                                 onChange={handlePengaturanChange}
+                                onFocus={(e) => e.currentTarget.select()}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                 placeholder="aiamanggihbarat02@gmail.com"
                               />
@@ -1451,6 +1453,7 @@ export default function AdminLayananInformasiPage() {
                                   name="telepon_pelayanan"
                                   value={formPengaturan.telepon_pelayanan}
                                   onChange={handlePengaturanChange}
+                                  onFocus={(e) => e.currentTarget.select()}
                                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                   placeholder="082268789740"
                                 />
@@ -1469,6 +1472,7 @@ export default function AdminLayananInformasiPage() {
                                   name="telepon_pelayanan_alternatif"
                                   value={formPengaturan.telepon_pelayanan_alternatif}
                                   onChange={handlePengaturanChange}
+                                  onFocus={(e) => e.currentTarget.select()}
                                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                   placeholder="082172235321"
                                 />
@@ -1493,6 +1497,7 @@ export default function AdminLayananInformasiPage() {
                                 rows={2}
                                 value={formPengaturan.alamat_pelayanan}
                                 onChange={handlePengaturanChange}
+                                onFocus={(e) => e.currentTarget.select()}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                 placeholder="Kantor Wali Nagari Aia Manggih Barat"
                               />
@@ -1511,6 +1516,7 @@ export default function AdminLayananInformasiPage() {
                                 name="google_maps_url"
                                 value={formPengaturan.google_maps_url}
                                 onChange={handlePengaturanChange}
+                                onFocus={(e) => e.currentTarget.select()}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                 placeholder="https://maps.google.com/?q=..."
                               />
@@ -1530,6 +1536,7 @@ export default function AdminLayananInformasiPage() {
                                   name="whatsapp_pengaduan"
                                   value={formPengaturan.whatsapp_pengaduan}
                                   onChange={handlePengaturanChange}
+                                  onFocus={(e) => e.currentTarget.select()}
                                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                   placeholder="+62 823-1586-3113"
                                 />
@@ -1606,6 +1613,7 @@ export default function AdminLayananInformasiPage() {
                     name="nama_layanan"
                     value={formLayanan.nama_layanan}
                     onChange={handleLayananChange}
+                    onFocus={(e) => e.currentTarget.select()}
                     aria-invalid={Boolean(fieldErrorsLayanan.nama_layanan)}
                     className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
                       fieldErrorsLayanan.nama_layanan
@@ -1630,6 +1638,7 @@ export default function AdminLayananInformasiPage() {
                     name="estimasi_pembuatan"
                     value={formLayanan.estimasi_pembuatan}
                     onChange={handleLayananChange}
+                    onFocus={(e) => e.currentTarget.select()}
                     className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
                       fieldErrorsLayanan.estimasi_pembuatan
                         ? "border-red-500 focus:ring-red-400"
@@ -1653,6 +1662,7 @@ export default function AdminLayananInformasiPage() {
                     name="biaya"
                     value={formLayanan.biaya}
                     onChange={handleLayananChange}
+                    onFocus={(e) => e.currentTarget.select()}
                     className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
                       fieldErrorsLayanan.biaya
                         ? "border-red-500 focus:ring-red-400"
@@ -1676,6 +1686,7 @@ export default function AdminLayananInformasiPage() {
                     name="form_pendataan_url"
                     value={formLayanan.form_pendataan_url}
                     onChange={handleLayananChange}
+                    onFocus={(e) => e.currentTarget.select()}
                     className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
                       fieldErrorsLayanan.form_pendataan_url
                         ? "border-red-500 focus:ring-red-400"
@@ -1730,6 +1741,7 @@ export default function AdminLayananInformasiPage() {
                         type="text"
                         value={row.isi_persyaratan}
                         onChange={(e) => handlePersyaratanChange(row.localId, e.target.value)}
+                        onFocus={(e) => e.currentTarget.select()}
                         placeholder={`Poin Persyaratan #${index + 1}`}
                         className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                       />

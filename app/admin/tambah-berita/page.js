@@ -539,6 +539,7 @@ export default function TambahBerita() {
                   type="text"
                   value={judul}
                   onChange={(e) => setJudul(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
                   placeholder="Masukkan judul berita..."
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   required
@@ -553,6 +554,7 @@ export default function TambahBerita() {
                   rows={8}
                   value={konten}
                   onChange={(e) => setKonten(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
                   placeholder="Tuliskan isi berita Nagari di sini..."
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                   required
@@ -647,6 +649,7 @@ export default function TambahBerita() {
                 placeholder="Cari judul atau isi berita..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
                 className="w-full rounded-lg border border-gray-300 py-1.5 pl-9 pr-8 text-xs text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white cursor-pointer"
               />
               <svg

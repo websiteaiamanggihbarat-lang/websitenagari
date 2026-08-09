@@ -8,9 +8,9 @@ import { BUCKET_FOTO_KESEHATAN, PendataanKesehatan } from "@/lib/kesehatan"
 const FORM_PENDATAAN_AWAL = {
   tahun_pendataan: new Date().getFullYear().toString(),
   sumber_data: "",
-  wc_septic_tanah: "0",
-  wc_tanpa_septic: "0",
-  mck_sungai: "0",
+  wc_septic_tanah: "",
+  wc_tanpa_septic: "",
+  mck_sungai: "",
   status_publikasi: "draft",
   is_active: false,
   keterangan: "",
@@ -527,6 +527,7 @@ export default function KesehatanAdminIndex() {
                     name="sumber_data"
                     value={formPendataan.sumber_data}
                     onChange={ubahFormPendataan}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Contoh: Pendataan Kader Kesehatan Nagari 2026"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     required
@@ -556,6 +557,8 @@ export default function KesehatanAdminIndex() {
                       name="wc_septic_tanah"
                       value={formPendataan.wc_septic_tanah}
                       onChange={ubahFormPendataan}
+                      onFocus={(e) => e.currentTarget.select()}
+                      placeholder="0"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     />
                   </div>
@@ -570,6 +573,8 @@ export default function KesehatanAdminIndex() {
                       name="wc_tanpa_septic"
                       value={formPendataan.wc_tanpa_septic}
                       onChange={ubahFormPendataan}
+                      onFocus={(e) => e.currentTarget.select()}
+                      placeholder="0"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     />
                   </div>
@@ -584,6 +589,8 @@ export default function KesehatanAdminIndex() {
                       name="mck_sungai"
                       value={formPendataan.mck_sungai}
                       onChange={ubahFormPendataan}
+                      onFocus={(e) => e.currentTarget.select()}
+                      placeholder="0"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     />
                   </div>
@@ -600,6 +607,7 @@ export default function KesehatanAdminIndex() {
                   rows={3}
                   value={formPendataan.keterangan}
                   onChange={ubahFormPendataan}
+                  onFocus={(e) => e.currentTarget.select()}
                   placeholder="Catatan tambahan mengenai periode pendataan kesehatan ini..."
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                 />

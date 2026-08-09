@@ -970,6 +970,7 @@ export default function AdminPetaNagariPage() {
                     type="text"
                     value={formData.judul_peta}
                     onChange={handleJudulChange}
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Contoh: Peta Administrasi Nagari Aia Manggih Barat"
                     required
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
@@ -1014,6 +1015,7 @@ export default function AdminPetaNagariPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, tahun_peta: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     required
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                   />
@@ -1029,6 +1031,7 @@ export default function AdminPetaNagariPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, sumber_peta: e.target.value })
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                     placeholder="Masukkan sumber resmi peta"
                     required
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
@@ -1047,6 +1050,7 @@ export default function AdminPetaNagariPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, deskripsi: e.target.value })
                   }
+                  onFocus={(e) => e.currentTarget.select()}
                   placeholder="Keterangan singkat mengenai cakupan wilayah, legenda, atau catatan peta..."
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                 />
@@ -1061,6 +1065,7 @@ export default function AdminPetaNagariPage() {
                   type="text"
                   value={formData.teks_alt}
                   onChange={handleTeksAltChange}
+                  onFocus={(e) => e.currentTarget.select()}
                   placeholder="Contoh: Peta Administrasi Nagari Aia Manggih Barat"
                   required
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
