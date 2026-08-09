@@ -55,10 +55,6 @@ export default async function DaftarSekolahPerTingkatPage({ params }: PageProps)
               Beranda
             </Link>
             <span>/</span>
-            <Link href="/sarana-pendidikan" className="hover:text-[#2c1b01] transition-colors">
-              Sarana Pendidikan
-            </Link>
-            <span>/</span>
             <span className="font-semibold text-gray-900">{tingkatObj.label}</span>
           </nav>
 
@@ -78,13 +74,13 @@ export default async function DaftarSekolahPerTingkatPage({ params }: PageProps)
               </div>
 
               <Link
-                href="/sarana-pendidikan"
+                href="/"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-[#f7f2e8] hover:border-[#b6a587]"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                <span>Pilih Tingkat Lain</span>
+                <span>Kembali ke Beranda</span>
               </Link>
             </div>
 
@@ -140,10 +136,10 @@ export default async function DaftarSekolahPerTingkatPage({ params }: PageProps)
                 Saat ini belum ada sarana pendidikan untuk tingkat <span className="font-semibold">{tingkatObj.label}</span> yang terdaftar aktif dalam pendataan publik nagari.
               </p>
               <Link
-                href="/sarana-pendidikan"
+                href="/"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#2c1b01] px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-[#1a1200] transition-colors"
               >
-                &larr; Lihat Tingkat Pendidikan Lainnya
+                &larr; Kembali ke Beranda
               </Link>
             </div>
           )}

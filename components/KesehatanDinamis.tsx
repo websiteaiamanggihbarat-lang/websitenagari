@@ -48,6 +48,7 @@ export default async function KesehatanDinamis() {
 
   return (
     <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-right">
+      {/* 1. Header Kartu */}
       <div className="flex items-center mb-6">
         <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
           <svg
@@ -77,116 +78,110 @@ export default async function KesehatanDinamis() {
         </div>
       </div>
 
-      <div className="text-gray-700 leading-relaxed space-y-4">
-        <div>
-          <p className="mb-4">
-            Di Nagari Aia Manggih Barat terdapat sarana Kesehatan sebagai berikut:
+      <div className="text-gray-700 leading-relaxed space-y-5">
+        {/* 2. Deskripsi Singkat */}
+        <p>
+          Di Nagari Aia Manggih Barat terdapat sarana dan indikator kesehatan masyarakat sebagai berikut:
+        </p>
+
+        {/* 3. Tiga Kotak Statistik Sanitasi (WC Septic, WC Tanpa Septic, MCK Sungai) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 my-4">
+          {/* WC Septic */}
+          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+            <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
+              WC Septic
+            </div>
+            <div className="flex items-baseline justify-center gap-1.5 mt-2">
+              <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
+                {formatAngka(wcSeptic)}
+              </span>
+              <span className="text-xs font-medium text-gray-500 leading-none">
+                rumah
+              </span>
+            </div>
+          </div>
+
+          {/* WC Tanpa Septic */}
+          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+            <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
+              WC Tanpa Septic
+            </div>
+            <div className="flex items-baseline justify-center gap-1.5 mt-2">
+              <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
+                {formatAngka(wcTanpaSeptic)}
+              </span>
+              <span className="text-xs font-medium text-gray-500 leading-none">
+                rumah
+              </span>
+            </div>
+          </div>
+
+          {/* MCK Sungai */}
+          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+            <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
+              MCK Sungai
+            </div>
+            <div className="flex items-baseline justify-center gap-1.5 mt-2">
+              <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
+                {formatAngka(mckSungai)}
+              </span>
+              <span className="text-xs font-medium text-gray-500 leading-none">
+                rumah
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Tabel Daftar Jenis Sarana Kesehatan */}
+        <div className="border-t border-gray-200 pt-4">
+          <p className="mb-3 font-semibold text-gray-900">
+            Daftar sarana & tenaga kesehatan:
           </p>
 
-          <div className="overflow-x-auto mb-6 scroll-slide-right">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-[#f0e8db] border-b border-gray-300">
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900">
-                    No.
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900">
-                    Uraian
-                  </th>
-                  <th className="px-3 py-2 text-center font-semibold text-gray-900">
-                    Jumlah
-                  </th>
-                </tr>
-              </thead>
+          <div className="overflow-x-auto">
+            <div className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+              {/* Table Header */}
+              <div className="grid grid-cols-[40px_1fr_80px] bg-[#f0e8db] border-b border-gray-300 px-3.5 py-2.5 text-sm font-semibold text-gray-900">
+                <div>No.</div>
+                <div>Jenis Sarana</div>
+                <div className="text-center">Jumlah</div>
+              </div>
 
-              <tbody className="text-gray-700">
+              {/* Table Body Rows */}
+              <div className="divide-y divide-gray-200 bg-white">
                 {daftarSaranaRow.map((item) => (
-                  <tr key={item.slug} className="border-b border-gray-200 hover:bg-gray-100/60 transition-colors">
-                    <td className="px-3 py-2">{item.no}.</td>
-                    <td className="px-3 py-2">
-                      <Link
-                        href={`/kesehatan/${item.slug}`}
-                        className="text-gray-900 hover:text-[#2c1b01] hover:underline font-medium flex items-center gap-1 group/link"
-                      >
-                        <span>{item.nama}</span>
-                        <svg className="w-3.5 h-3.5 text-gray-400 group-hover/link:text-[#2c1b01] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2 text-center font-semibold">
+                  <Link
+                    key={item.slug}
+                    href={`/kesehatan/${item.slug}`}
+                    aria-label={`Lihat rincian sarana kesehatan ${item.nama}`}
+                    className="grid grid-cols-[40px_1fr_80px] items-center px-3.5 py-3 text-sm text-gray-900 hover:bg-[#f7f2e8] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#6b4b1d]"
+                  >
+                    <div className="font-medium text-gray-700">{item.no}.</div>
+                    <div className="font-semibold text-gray-900">{item.nama}</div>
+                    <div className="text-center font-semibold text-gray-900">
                       {formatAngka(item.jumlah)}
-                    </td>
-                  </tr>
+                    </div>
+                  </Link>
                 ))}
 
-                <tr>
-                  <td className="px-3 py-2">{noKaderPosyandu}.</td>
-                  <td className="px-3 py-2">Kader Posyandu</td>
-                  <td className="px-3 py-2 text-center font-semibold">
+                {/* Kader Posyandu Row (Non-clickable info row) */}
+                <div className="grid grid-cols-[40px_1fr_80px] items-center px-3.5 py-3 text-sm bg-white text-gray-900">
+                  <div className="font-medium text-gray-700">{noKaderPosyandu}.</div>
+                  <div className="font-semibold text-gray-900">Kader Posyandu</div>
+                  <div className="text-center font-semibold text-gray-900">
                     {formatAngka(jumlahKaderPosyandu)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="pt-4 border-t border-gray-200">
-          <p className="mb-4">
-            Sedangkan keadaan Kesehatan lingkungan Masyarakat dapat dilihat sebagai berikut:
-          </p>
-
-          <div className="overflow-x-auto scroll-slide-right">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-[#f0e8db] border-b border-gray-300">
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900">
-                    No.
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900">
-                    Uraian
-                  </th>
-                  <th className="px-3 py-2 text-center font-semibold text-gray-900">
-                    Jumlah
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="text-gray-700">
-                <tr className="border-b border-gray-200">
-                  <td className="px-3 py-2">1.</td>
-                  <td className="px-3 py-2">
-                    Rumah memiliki WC, dengan septic tanah
-                  </td>
-                  <td className="px-3 py-2 text-center font-semibold">
-                    {formatAngka(wcSeptic)}
-                  </td>
-                </tr>
-
-                <tr className="border-b border-gray-200">
-                  <td className="px-3 py-2">2.</td>
-                  <td className="px-3 py-2">
-                    Rumah memiliki WC, tanpa septic tanah
-                  </td>
-                  <td className="px-3 py-2 text-center font-semibold">
-                    {formatAngka(wcTanpaSeptic)}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td className="px-3 py-2">3.</td>
-                  <td className="px-3 py-2">
-                    Rumah memanfaatkan aliran Sungai untuk MCK
-                  </td>
-                  <td className="px-3 py-2 text-center font-semibold">
-                    {formatAngka(mckSungai)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        {pendataan?.sumber_data && (
+          <div className="pt-2 text-xs text-gray-500">
+            Sumber data: <span className="font-medium text-gray-700">{pendataan.sumber_data}</span>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

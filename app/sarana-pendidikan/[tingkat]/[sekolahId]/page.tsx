@@ -66,10 +66,6 @@ export default async function RincianSekolahPage({ params }: PageProps) {
               Beranda
             </Link>
             <span>/</span>
-            <Link href="/sarana-pendidikan" className="hover:text-[#2c1b01] transition-colors">
-              Sarana Pendidikan
-            </Link>
-            <span>/</span>
             <Link
               href={`/sarana-pendidikan/${tingkatObj.slug}`}
               className="hover:text-[#2c1b01] transition-colors"
@@ -286,10 +282,10 @@ export default async function RincianSekolahPage({ params }: PageProps) {
               </Link>
 
               <Link
-                href="/sarana-pendidikan"
+                href="/"
                 className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#5a3b0d] px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-[#1a1200] hover:to-[#2c1b01]"
               >
-                <span>Lihat Tingkat Pendidikan Lainnya</span>
+                <span>Kembali ke Beranda</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>

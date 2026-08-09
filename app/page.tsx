@@ -164,7 +164,7 @@ export default function Home() {
               </h3>
             </div>
 
-            <div className="text-gray-700 leading-relaxed space-y-4 text-base">
+            <div className="text-gray-700 leading-relaxed space-y-4 text-base text-justify">
               <p>
                 Nagari Aia Manggih Barat merupakan pemekaran
                 nagari yang dilakukan oleh Pemerintah
@@ -298,7 +298,7 @@ export default function Home() {
                   </h4>
                 </div>
 
-                <ul className="space-y-5">
+                <ul className="space-y-5 text-justify">
                   <li className="flex items-start group/item">
                     <div className="w-6 h-6 bg-[#e6ddcf] rounded-full flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover/item:bg-[#d1c2a0] transition-colors">
                       <span className="text-[#2c1b01] font-bold text-sm">
@@ -425,7 +425,7 @@ export default function Home() {
                 </h3>
               </div>
 
-              <div className="text-gray-700 leading-relaxed space-y-3">
+              <div className="text-gray-700 leading-relaxed space-y-3 text-justify">
                 <p>
                   Nagari Aia Manggih Barat merupakan daerah
                   dataran dan perbukitan dengan luas wilayah
@@ -481,7 +481,7 @@ export default function Home() {
                 </h3>
               </div>
 
-              <div className="text-gray-700 leading-relaxed space-y-4">
+              <div className="text-gray-700 leading-relaxed space-y-4 text-justify">
                 <p>
                   Nagari Aia Manggih Barat terdiri dari 2
                   jorong yaitu:
@@ -547,7 +547,7 @@ export default function Home() {
                 </h3>
               </div>
 
-              <div className="text-gray-700 leading-relaxed space-y-4">
+              <div className="text-gray-700 leading-relaxed space-y-4 text-justify">
                 <p>
                   Kehidupan sosial masyarakat nagari Aia
                   Manggih Barat ditandai dengan kuatnya nilai

@@ -46,15 +46,11 @@ const URUTAN_TINGKAT = [
   "Lainnya",
 ]
 
-function formatAngka(
-  nilai: number | null | undefined
-) {
+function formatAngka(nilai: number | null | undefined) {
   return Number(nilai || 0).toLocaleString("id-ID")
 }
 
-function formatTanggalWaktu(
-  nilai: string | null | undefined
-) {
+function formatTanggalWaktu(nilai: string | null | undefined) {
   if (!nilai) {
     return "-"
   }
@@ -67,51 +63,34 @@ function formatTanggalWaktu(
 }
 
 async function ambilDataSaranaPendidikan(): Promise<HasilDataSarana> {
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL
-
-  const supabaseAnonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return {
       pendataan: null,
       sarana: [],
-      error:
-        "Konfigurasi Supabase untuk Beranda belum tersedia.",
+      error: "Konfigurasi Supabase untuk Beranda belum tersedia.",
     }
   }
 
-  const supabase = createClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-
-      global: {
-        fetch: (input, init) =>
-          fetch(input, {
-            ...init,
-            cache: "no-store",
-          }),
-      },
-    }
-  )
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      fetch: (input, init) =>
+        fetch(input, {
+          ...init,
+          cache: "no-store",
+        }),
+    },
+  })
 
   try {
-    /*
-     * Policy publik hanya mengizinkan data yang:
-     * status_publikasi = dipublikasikan
-     * is_active = true
-     */
-    const {
-      data: dataPendataan,
-      error: pendataanError,
-    } = await supabase
+    const { data: dataPendataan, error: pendataanError } = await supabase
       .from("pendataan_sarana_pendidikan")
       .select(`
         id,
@@ -122,9 +101,7 @@ async function ambilDataSaranaPendidikan(): Promise<HasilDataSarana> {
       `)
       .eq("status_publikasi", "dipublikasikan")
       .eq("is_active", true)
-      .order("tahun_pendataan", {
-        ascending: false,
-      })
+      .order("tahun_pendataan", { ascending: false })
       .limit(1)
       .maybeSingle()
 
@@ -151,13 +128,9 @@ async function ambilDataSaranaPendidikan(): Promise<HasilDataSarana> {
       }
     }
 
-    const pendataan =
-      dataPendataan as PendataanSaranaPendidikan
+    const pendataan = dataPendataan as PendataanSaranaPendidikan
 
-    const {
-      data: dataSarana,
-      error: saranaError,
-    } = await supabase
+    const { data: dataSarana, error: saranaError } = await supabase
       .from("sarana_pendidikan")
       .select(`
         id,
@@ -178,12 +151,8 @@ async function ambilDataSaranaPendidikan(): Promise<HasilDataSarana> {
       `)
       .eq("pendataan_id", pendataan.id)
       .eq("is_active", true)
-      .order("urutan", {
-        ascending: true,
-      })
-      .order("nama_sarana", {
-        ascending: true,
-      })
+      .order("urutan", { ascending: true })
+      .order("nama_sarana", { ascending: true })
 
     if (saranaError) {
       console.error(
@@ -202,67 +171,43 @@ async function ambilDataSaranaPendidikan(): Promise<HasilDataSarana> {
 
     return {
       pendataan,
-      sarana:
-        (dataSarana as SaranaPendidikan[]) || [],
+      sarana: (dataSarana as SaranaPendidikan[]) || [],
       error: null,
     }
   } catch (error) {
-    console.error(
-      "Kesalahan membaca sarana pendidikan:",
-      error
-    )
+    console.error("Kesalahan membaca sarana pendidikan:", error)
 
     return {
       pendataan: null,
       sarana: [],
-      error:
-        "Terjadi kesalahan saat membaca sarana pendidikan.",
+      error: "Terjadi kesalahan saat membaca sarana pendidikan.",
     }
   }
 }
 
 export default async function SaranaPendidikanDinamis() {
-  /*
-   * Memastikan data dibaca ketika halaman diminta,
-   * bukan hanya pada saat proses build.
-   */
   await connection()
 
-  const {
-    pendataan,
-    sarana,
-    error,
-  } = await ambilDataSaranaPendidikan()
+  const { pendataan, sarana, error } = await ambilDataSaranaPendidikan()
 
-  /*
-   * Rekap hanya menghitung sarana yang
-   * status operasionalnya aktif.
-   */
   const saranaOperasional = sarana.filter(
-    (item) =>
-      item.status_operasional === "aktif"
+    (item) => item.status_operasional === "aktif"
   )
 
-  const ringkasanTingkat = URUTAN_TINGKAT.map(
-    (tingkat) => ({
-      tingkat,
-
-      jumlah: saranaOperasional.filter(
-        (item) =>
-          item.tingkat_pendidikan === tingkat
-      ).length,
-    })
-  ).filter((item) => item.jumlah > 0)
+  const ringkasanTingkat = URUTAN_TINGKAT.map((tingkat) => ({
+    tingkat,
+    jumlah: saranaOperasional.filter(
+      (item) => item.tingkat_pendidikan === tingkat
+    ).length,
+  })).filter((item) => item.jumlah > 0)
 
   const totalSiswa = saranaOperasional.reduce(
-    (total, item) =>
-      total + Number(item.jumlah_siswa || 0),
+    (total, item) => total + Number(item.jumlah_siswa || 0),
     0
   )
 
   const totalGuru = saranaOperasional.reduce(
-    (total, item) =>
-      total + Number(item.jumlah_guru || 0),
+    (total, item) => total + Number(item.jumlah_guru || 0),
     0
   )
 
@@ -297,10 +242,7 @@ export default async function SaranaPendidikanDinamis() {
           <p className="font-semibold">
             Data sarana pendidikan belum dapat dimuat.
           </p>
-
-          <p className="mt-1">
-            {error}
-          </p>
+          <p className="mt-1">{error}</p>
         </div>
       )}
 
@@ -310,10 +252,9 @@ export default async function SaranaPendidikanDinamis() {
           <p className="text-sm font-semibold text-gray-700">
             Belum ada data sarana pendidikan aktif.
           </p>
-
           <p className="mt-1 text-xs leading-relaxed text-gray-500">
-            Admin perlu memublikasikan dan mengaktifkan
-            salah satu tahun pendataan.
+            Admin perlu memublikasikan dan mengaktifkan salah satu tahun
+            pendataan.
           </p>
         </div>
       )}
@@ -329,27 +270,21 @@ export default async function SaranaPendidikanDinamis() {
               </span>
               , Nagari Aia Manggih Barat memiliki{" "}
               <span className="font-semibold">
-                {formatAngka(
-                  saranaOperasional.length
-                )}{" "}
-                sarana pendidikan operasional
+                {formatAngka(saranaOperasional.length)} sarana pendidikan
+                operasional
               </span>
               .
             </p>
 
             <div className="mt-3 space-y-1 text-sm">
               <p>
-                <span className="font-semibold">
-                  Sumber data
-                </span>
-                : {pendataan.sumber_data}
+                <span className="font-semibold">Sumber data</span>:{" "}
+                {pendataan.sumber_data}
               </p>
 
               <p className="text-xs text-gray-500">
                 Terakhir diperbarui:{" "}
-                {formatTanggalWaktu(
-                  pendataan.updated_at
-                )}
+                {formatTanggalWaktu(pendataan.updated_at)}
               </p>
             </div>
 
@@ -369,9 +304,7 @@ export default async function SaranaPendidikanDinamis() {
               </div>
               <div className="flex items-baseline justify-center gap-1.5 mt-2">
                 <span className="text-2xl sm:text-3xl font-bold text-[#2c1b01] leading-none">
-                  {formatAngka(
-                    saranaOperasional.length
-                  )}
+                  {formatAngka(saranaOperasional.length)}
                 </span>
               </div>
             </div>
@@ -413,75 +346,41 @@ export default async function SaranaPendidikanDinamis() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-[#f0e8db] border-b border-gray-300">
-                      <th className="px-3 py-2 text-left font-semibold text-gray-900">
-                        No.
-                      </th>
+                <div className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+                  {/* Table Header */}
+                  <div className="grid grid-cols-[40px_1fr_80px] bg-[#f0e8db] border-b border-gray-300 px-3.5 py-2.5 text-sm font-semibold text-gray-900">
+                    <div>No.</div>
+                    <div>Tingkat Pendidikan</div>
+                    <div className="text-center">Jumlah</div>
+                  </div>
 
-                      <th className="px-3 py-2 text-left font-semibold text-gray-900">
-                        Tingkat Pendidikan
-                      </th>
-
-                      <th className="px-3 py-2 text-center font-semibold text-gray-900">
-                        Jumlah
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
+                  {/* Table Body Rows */}
+                  <div className="divide-y divide-gray-200 bg-white">
                     {ringkasanTingkat.map((item, index) => {
                       const slug = getSlugByTingkat(item.tingkat)
                       return (
-                        <tr
+                        <Link
                           key={item.tingkat}
-                          className="border-b border-gray-200 hover:bg-[#f7f2e8]/60 transition-colors group/row"
+                          href={`/sarana-pendidikan/${slug}`}
+                          aria-label={`Lihat rincian sarana pendidikan tingkat ${item.tingkat}`}
+                          className="grid grid-cols-[40px_1fr_80px] items-center px-3.5 py-3 text-sm text-gray-900 hover:bg-[#f7f2e8] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#6b4b1d]"
                         >
-                          <td className="px-3 py-2.5">
+                          <div className="font-medium text-gray-700">
                             {index + 1}.
-                          </td>
-
-                          <td className="px-3 py-2.5">
-                            <Link
-                              href={`/sarana-pendidikan/${slug}`}
-                              className="font-semibold text-gray-900 group-hover/row:text-[#2c1b01] flex items-center justify-between hover:underline"
-                            >
-                              <span>{item.tingkat}</span>
-                              <span className="text-xs text-[#5a3b0d] font-normal group-hover/row:translate-x-0.5 transition-transform">
-                                Lihat daftar &rarr;
-                              </span>
-                            </Link>
-                          </td>
-
-                          <td className="px-3 py-2.5 text-center font-semibold">
-                            <Link
-                              href={`/sarana-pendidikan/${slug}`}
-                              className="inline-block px-2.5 py-0.5 rounded-md bg-white border border-gray-200 text-[#2c1b01] hover:bg-[#f0e8db] hover:border-[#b6a587] transition-all"
-                            >
-                              {formatAngka(item.jumlah)}
-                            </Link>
-                          </td>
-                        </tr>
+                          </div>
+                          <div className="font-semibold text-gray-900">
+                            {item.tingkat}
+                          </div>
+                          <div className="text-center font-semibold text-gray-900">
+                            {formatAngka(item.jumlah)}
+                          </div>
+                        </Link>
                       )
                     })}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
               </div>
             )}
-          </div>
-
-          {/* Tombol Utama Buka Katalog Sarana Pendidikan */}
-          <div className="pt-2">
-            <Link
-              href="/sarana-pendidikan"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#5a3b0d] px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-[#1a1200] hover:to-[#2c1b01] hover:shadow-lg"
-            >
-              <span>Lihat Semua Tingkat Sarana Pendidikan</span>
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </Link>
           </div>
         </div>
       )}
