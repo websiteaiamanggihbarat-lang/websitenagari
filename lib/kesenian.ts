@@ -98,8 +98,8 @@ export async function fetchKesenianAktifDenganCover(): Promise<KesenianDenganCov
       .from("kesenian_tradisional")
       .select("*")
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
-      .order("nama_kesenian", { ascending: true })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (errKesenian || !listKesenian) {
       if (errKesenian) {
@@ -161,8 +161,8 @@ export async function fetchDaftarKesenianAktif(): Promise<KesenianDenganCover[]>
       .from("kesenian_tradisional")
       .select("*")
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
-      .order("nama_kesenian", { ascending: true })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (errKesenian || !listKesenian) {
       if (errKesenian) {
@@ -208,7 +208,6 @@ export async function fetchDaftarKesenianAktif(): Promise<KesenianDenganCover[]>
 
 /**
  * Membaca detail satu kesenian tradisional aktif beserta seluruh foto galeri aktifnya.
- * Cover tampil paling awal, diikuti urutan ascending lalu created_at.
  */
 export async function fetchDetailKesenianAktif(
   kesenianId: string
@@ -237,7 +236,6 @@ export async function fetchDetailKesenianAktif(
       .select("*")
       .eq("kesenian_id", kesenianId)
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
       .order("created_at", { ascending: true })
 
     if (errGaleri) {
@@ -249,7 +247,6 @@ export async function fetchDetailKesenianAktif(
     const galeriUrut = [...galeri].sort((a, b) => {
       if (a.is_cover && !b.is_cover) return -1
       if (!a.is_cover && b.is_cover) return 1
-      if (a.urutan !== b.urutan) return a.urutan - b.urutan
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
       return dateA - dateB
@@ -296,7 +293,6 @@ export async function fetchGaleriAktifByKesenianId(
       .select("*")
       .eq("kesenian_id", kesenianId)
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
       .order("created_at", { ascending: true })
 
     if (errGaleri || !listGaleri) {
@@ -311,7 +307,6 @@ export async function fetchGaleriAktifByKesenianId(
     return [...galeri].sort((a, b) => {
       if (a.is_cover && !b.is_cover) return -1
       if (!a.is_cover && b.is_cover) return 1
-      if (a.urutan !== b.urutan) return a.urutan - b.urutan
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
       return dateA - dateB
@@ -441,8 +436,8 @@ export async function fetchDaftarKesenianAktifByKategori(
       .from("kesenian_tradisional")
       .select("*")
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
-      .order("nama_kesenian", { ascending: true })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (kategoriClean && kategoriClean.trim() && kategoriClean !== "semua") {
       query = query.eq("kategori", kategoriClean.trim())
@@ -509,8 +504,8 @@ export async function fetchDaftarKesenianAktifByJenis(
       .from("kesenian_tradisional")
       .select("*")
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
-      .order("nama_kesenian", { ascending: true })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (slugClean) {
       query = query.eq("jenis_slug", slugClean)

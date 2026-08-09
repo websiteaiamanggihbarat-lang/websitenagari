@@ -173,14 +173,10 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
   }
 
   useEffect(() => {
-    const init = async () => {
-      const authed = await periksaAuth()
-      if (authed) {
-        await loadDetail()
-      }
+    if (typeof window !== "undefined") {
+      window.location.href = "/admin/lembaga-organisasi"
     }
-    init()
-  }, [dataId])
+  }, [])
 
   // ============================================================================
   // SECTION 1: EDITABLE DATA UTAMA SUBMIT

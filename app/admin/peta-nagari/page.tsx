@@ -25,8 +25,6 @@ interface FormPetaState {
   tahun_peta: string
   sumber_peta: string
   teks_alt: string
-  urutan: string
-  is_active: boolean
 }
 
 export type CleanupTertunda = {
@@ -51,8 +49,6 @@ const FORM_AWAL: FormPetaState = {
   tahun_peta: new Date().getFullYear().toString(),
   sumber_peta: "",
   teks_alt: "",
-  urutan: "0",
-  is_active: false,
 }
 
 /**
@@ -200,7 +196,7 @@ export default function AdminPetaNagariPage() {
       setListPeta(data)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      setPesanError(`Gagal memuat data peta: ${msg}`)
+      setPesanError(`Gagal memuat daftar peta nagari: ${msg}`)
     } finally {
       setLoadingList(false)
     }
@@ -210,227 +206,229 @@ export default function AdminPetaNagariPage() {
     muatDataPeta()
   }, [])
 
-  // Clean up object URL preview ketika unmount atau file berubah
+  // Auto dismiss success toast message after 4 seconds
   useEffect(() => {
-    return () => {
-      if (gambarPreviewUrl) {
-        URL.revokeObjectURL(gambarPreviewUrl)
-      }
-    }
-  }, [gambarPreviewUrl])
+    if (!pesanSukses) return
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSukses])
 
-  const handleLogout = async () => {
-    setLoadingList(true)
-    await keluarDariAdmin("Logout error")
+  const bersihkanPreviewGambar = () => {
+    if (gambarPreviewUrl) {
+      URL.revokeObjectURL(gambarPreviewUrl)
+      setGambarPreviewUrl(null)
+    }
   }
 
   const handleOpenTambah = () => {
-    if (gambarPreviewUrl) {
-      URL.revokeObjectURL(gambarPreviewUrl)
-    }
+    setPesanSukses(null)
+    setPesanError(null)
     setEditingId(null)
     setEditingItem(null)
     setFormData(FORM_AWAL)
     setIsTeksAltManual(false)
     setGambarFile(null)
-    setGambarPreviewUrl(null)
+    bersihkanPreviewGambar()
     setDokumenFile(null)
     setHapusPdfExisting(false)
-    setPesanSukses(null)
-    setPesanError(null)
     setIsFormOpen(true)
   }
 
   const handleOpenEdit = (item: PetaNagari) => {
-    if (gambarPreviewUrl) {
-      URL.revokeObjectURL(gambarPreviewUrl)
-    }
+    setPesanSukses(null)
+    setPesanError(null)
     setEditingId(item.id)
     setEditingItem(item)
     setFormData({
-      judul_peta: item.judul_peta || "",
-      jenis_peta: item.jenis_peta || "administrasi",
+      judul_peta: item.judul_peta,
+      jenis_peta: item.jenis_peta,
       deskripsi: item.deskripsi || "",
-      tahun_peta: (item.tahun_peta ?? new Date().getFullYear()).toString(),
-      sumber_peta: item.sumber_peta || "",
-      teks_alt: item.teks_alt || "",
-      urutan: (item.urutan ?? 0).toString(),
-      is_active: item.is_active,
+      tahun_peta: item.tahun_peta.toString(),
+      sumber_peta: item.sumber_peta,
+      teks_alt: item.teks_alt,
     })
     setIsTeksAltManual(true)
     setGambarFile(null)
-    setGambarPreviewUrl(null)
+    bersihkanPreviewGambar()
     setDokumenFile(null)
     setHapusPdfExisting(false)
-    setPesanSukses(null)
-    setPesanError(null)
     setIsFormOpen(true)
   }
 
   const handleBatalForm = () => {
-    if (gambarPreviewUrl) {
-      URL.revokeObjectURL(gambarPreviewUrl)
-    }
     setIsFormOpen(false)
     setEditingId(null)
     setEditingItem(null)
     setFormData(FORM_AWAL)
     setIsTeksAltManual(false)
     setGambarFile(null)
-    setGambarPreviewUrl(null)
+    bersihkanPreviewGambar()
     setDokumenFile(null)
     setHapusPdfExisting(false)
   }
 
   const handleJudulChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
-    const updatedForm = { ...formData, judul_peta: val }
-    if (!isTeksAltManual && !editingId) {
-      updatedForm.teks_alt = val ? `Peta ${val}` : ""
+    if (!isTeksAltManual) {
+      setFormData({
+        ...formData,
+        judul_peta: val,
+        teks_alt: val,
+      })
+    } else {
+      setFormData({
+        ...formData,
+        judul_peta: val,
+      })
     }
-    setFormData(updatedForm)
   }
 
   const handleTeksAltChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsTeksAltManual(true)
-    setFormData({ ...formData, teks_alt: e.target.value })
+    setFormData({
+      ...formData,
+      teks_alt: e.target.value,
+    })
   }
 
   const handleGambarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    if (gambarPreviewUrl) {
-      URL.revokeObjectURL(gambarPreviewUrl)
-      setGambarPreviewUrl(null)
-    }
-
-    if (!file) {
+    setPesanError(null)
+    const files = e.target.files
+    if (!files || files.length === 0) {
       setGambarFile(null)
+      bersihkanPreviewGambar()
       return
     }
 
-    // Validasi MIME & Ukuran Gambar
-    if (!MIME_GAMBAR_PETA.includes(file.type as any)) {
+    const file = files[0]
+    if (!MIME_GAMBAR_PETA.includes(file.type as typeof MIME_GAMBAR_PETA[number])) {
       setPesanError("Format gambar harus JPEG, PNG, atau WebP.")
       e.target.value = ""
       setGambarFile(null)
+      bersihkanPreviewGambar()
       return
     }
 
     if (file.size > MAKS_UKURAN_GAMBAR_PETA) {
-      setPesanError("Ukuran gambar maksimal 15 MB.")
+      setPesanError("Ukuran gambar tidak boleh melebihi 15 MB.")
       e.target.value = ""
       setGambarFile(null)
+      bersihkanPreviewGambar()
       return
     }
 
-    setPesanError(null)
     setGambarFile(file)
+    bersihkanPreviewGambar()
     setGambarPreviewUrl(URL.createObjectURL(file))
   }
 
   const handleDokumenFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    if (!file) {
+    setPesanError(null)
+    const files = e.target.files
+    if (!files || files.length === 0) {
       setDokumenFile(null)
       return
     }
 
-    // Validasi MIME & Ukuran PDF
-    if (!MIME_DOKUMEN_PETA.includes(file.type as any)) {
-      setPesanError("Format dokumen harus PDF.")
+    const file = files[0]
+    if (!MIME_DOKUMEN_PETA.includes(file.type as typeof MIME_DOKUMEN_PETA[number])) {
+      setPesanError("Format dokumen pendukung harus PDF.")
       e.target.value = ""
       setDokumenFile(null)
       return
     }
 
     if (file.size > MAKS_UKURAN_DOKUMEN_PETA) {
-      setPesanError("Ukuran dokumen maksimal 30 MB.")
+      setPesanError("Ukuran dokumen PDF tidak boleh melebihi 30 MB.")
       e.target.value = ""
       setDokumenFile(null)
       return
     }
 
-    setPesanError(null)
-    setHapusPdfExisting(false) // Memilih PDF baru otomatis membatalkan tanda hapus PDF existing
     setDokumenFile(file)
+    setHapusPdfExisting(false)
   }
 
   const handleHapusPdfExistingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const isChecked = e.target.checked
-    setHapusPdfExisting(isChecked)
-    if (isChecked) {
-      setDokumenFile(null) // Menandai hapus PDF existing otomatis mereset file PDF baru
+    const dicentang = e.target.checked
+    setHapusPdfExisting(dicentang)
+    if (dicentang) {
+      setDokumenFile(null)
     }
+  }
+
+  const handleLogout = async () => {
+    await keluarDariAdmin("Logout error")
+  }
+
+  const validateClientForm = (): boolean => {
+    if (!formData.judul_peta.trim()) {
+      setPesanError("Judul Peta wajib diisi.")
+      return false
+    }
+    if (!formData.tahun_peta.trim()) {
+      setPesanError("Tahun Peta wajib diisi.")
+      return false
+    }
+    const tahunNum = parseInt(formData.tahun_peta.trim(), 10)
+    if (isNaN(tahunNum) || tahunNum < 1900 || tahunNum > 2100) {
+      setPesanError("Tahun Peta tidak valid (1900-2100).")
+      return false
+    }
+    if (!formData.sumber_peta.trim()) {
+      setPesanError("Sumber Peta wajib diisi.")
+      return false
+    }
+    if (!formData.teks_alt.trim()) {
+      setPesanError("Teks Alternatif Gambar wajib diisi.")
+      return false
+    }
+    return true
   }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (loadingForm) return
-
     setPesanSukses(null)
     setPesanError(null)
 
-    // 1. Validasi Metadata dasar
-    const judulClean = formData.judul_peta.trim()
-    const sumberClean = formData.sumber_peta.trim()
-    const teksAltClean = formData.teks_alt.trim()
-    const deskripsiClean = formData.deskripsi.trim()
-
-    if (!judulClean) {
-      setPesanError("Judul Peta wajib diisi.")
-      return
-    }
-
-    if (!isJenisPeta(formData.jenis_peta)) {
-      setPesanError("Jenis Peta tidak valid.")
-      return
-    }
-
-    const tahunNum = parseInt(formData.tahun_peta, 10)
-    if (isNaN(tahunNum) || tahunNum < 1900 || tahunNum > 2100) {
-      setPesanError("Tahun Peta harus berupa angka rentang 1900 - 2100.")
-      return
-    }
-
-    if (!sumberClean) {
-      setPesanError("Sumber Peta wajib diisi.")
-      return
-    }
-
-    if (!teksAltClean) {
-      setPesanError("Teks Alternatif Gambar wajib diisi.")
-      return
-    }
-
-    const urutanNum = parseInt(formData.urutan, 10)
-    if (isNaN(urutanNum) || urutanNum < 0) {
-      setPesanError("Urutan Tampil minimal 0.")
-      return
-    }
+    if (loadingForm) return
+    if (!validateClientForm()) return
 
     setLoadingForm(true)
 
+    const validSesi = await periksaSesi()
+    if (!validSesi) {
+      setLoadingForm(false)
+      return
+    }
+
+    const judulClean = formData.judul_peta.trim()
+    const deskripsiClean = formData.deskripsi.trim()
+    const tahunNum = parseInt(formData.tahun_peta.trim(), 10)
+    const sumberClean = formData.sumber_peta.trim()
+    const teksAltClean = formData.teks_alt.trim()
+
     // ==========================================
-    // MODE EDIT TERPADU (TAHAP 05B)
+    // MODE EDIT PETA NAGARI
     // ==========================================
     if (editingId && editingItem) {
+      const petaId = editingId
+      const timestamp = Date.now()
+      const randomSuffix = crypto.randomUUID().slice(0, 8)
+
+      let gambarPathBaru = editingItem.gambar_storage_path
+      let gambarUrlBaru = editingItem.gambar_url
+
+      let pdfPathBaru = hapusPdfExisting ? null : editingItem.file_storage_path
+      let pdfUrlBaru = hapusPdfExisting ? null : editingItem.file_url
+
+      const gambarPathLama = editingItem.gambar_storage_path
+      const pdfPathLama = editingItem.file_storage_path
+
       try {
-        const petaId = editingId
-        const timestamp = Date.now()
-        const randomSuffix = crypto.randomUUID().slice(0, 8)
-
-        const gambarUrlLama = editingItem.gambar_url
-        const gambarPathLama = editingItem.gambar_storage_path
-        const pdfUrlLama = editingItem.file_url
-        const pdfPathLama = editingItem.file_storage_path
-
-        let gambarUrlBaru = gambarUrlLama
-        let gambarPathBaru = gambarPathLama
-
-        let pdfUrlBaru = pdfUrlLama
-        let pdfPathBaru = pdfPathLama
-
-        // Step 1: Upload Gambar Baru jika dipilih
+        // Step 1: Handle Gambar Baru (jika ada)
         if (gambarFile) {
           const namaGambarAman = buatNamaFileAman(gambarFile.name)
           gambarPathBaru = `peta-nagari/${petaId}/gambar/${timestamp}-${randomSuffix}-${namaGambarAman}`
@@ -440,7 +438,7 @@ export default function AdminPetaNagariPage() {
             .upload(gambarPathBaru, gambarFile, { upsert: false })
 
           if (errUploadGambarBaru) {
-            setPesanError(`Gagal mengunggah gambar peta baru: ${errUploadGambarBaru.message}`)
+            setPesanError(`Gagal mengunggah gambar baru: ${errUploadGambarBaru.message}`)
             setLoadingForm(false)
             return
           }
@@ -461,7 +459,6 @@ export default function AdminPetaNagariPage() {
             .upload(pdfPathBaru, dokumenFile, { upsert: false })
 
           if (errUploadPdfBaru) {
-            // Rollback Gambar Baru jika sempat diunggah
             if (gambarFile && gambarPathBaru !== gambarPathLama) {
               await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathBaru)
             }
@@ -481,7 +478,7 @@ export default function AdminPetaNagariPage() {
           pdfPathBaru = null
         }
 
-        // Step 3: Update Database (Satu Payload Terpadu)
+        // Step 3: Update Database (Tanpa mengubah is_active status)
         const payloadEdit = {
           judul_peta: judulClean,
           jenis_peta: formData.jenis_peta,
@@ -493,8 +490,6 @@ export default function AdminPetaNagariPage() {
           file_url: pdfUrlBaru,
           file_storage_path: pdfPathBaru,
           teks_alt: teksAltClean,
-          urutan: urutanNum,
-          is_active: formData.is_active,
         }
 
         const { error: errEditDb } = await supabase
@@ -503,7 +498,6 @@ export default function AdminPetaNagariPage() {
           .eq("id", petaId)
 
         if (errEditDb) {
-          // Rollback file baru jika DB Update Gagal
           if (gambarFile && gambarPathBaru !== gambarPathLama) {
             await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathBaru)
           }
@@ -524,10 +518,9 @@ export default function AdminPetaNagariPage() {
           return
         }
 
-        // Step 4: Cleanup File Lama (Hanya Setelah DB Update Berhasil!)
+        // Step 4: Cleanup File Lama
         const peringatanCleanup: string[] = []
 
-        // Cleanup Gambar Lama jika diganti
         if (gambarFile && gambarPathLama && gambarPathBaru !== gambarPathLama) {
           const resCleanGambar = await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathLama)
           if (!resCleanGambar.berhasil) {
@@ -542,7 +535,6 @@ export default function AdminPetaNagariPage() {
           }
         }
 
-        // Cleanup PDF Lama jika diganti atau dihapus
         if ((dokumenFile || hapusPdfExisting) && pdfPathLama && pdfPathBaru !== pdfPathLama) {
           const resCleanPdf = await hapusFileJikaAda(BUCKET_DOKUMEN_PETA_NAGARI, pdfPathLama)
           if (!resCleanPdf.berhasil) {
@@ -561,7 +553,7 @@ export default function AdminPetaNagariPage() {
           setPesanSukses(
             `Perubahan peta "${judulClean}" berhasil disimpan! Catatan: ${peringatanCleanup.join(
               "; "
-            )}. Silakan bersihkan file tertunda jika diperlukan.`
+            )}.`
           )
         } else {
           setPesanSukses(`Perubahan peta "${judulClean}" berhasil disimpan!`)
@@ -579,7 +571,7 @@ export default function AdminPetaNagariPage() {
     }
 
     // ==========================================
-    // MODE TAMBAH PETA BARU (SAFE CREATE FLOW)
+    // MODE TAMBAH PETA BARU (SAFE CREATE FLOW - OTOMATIS AKTIF)
     // ==========================================
     if (!gambarFile) {
       setPesanError("Gambar Utama Peta wajib diunggah untuk peta baru.")
@@ -624,17 +616,8 @@ export default function AdminPetaNagariPage() {
           .upload(pdfStoragePath, dokumenFile, { upsert: false })
 
         if (errUploadPdf) {
-          const { error: errRollbackGambar } = await supabase.storage
-            .from(BUCKET_GAMBAR_PETA_NAGARI)
-            .remove([gambarStoragePath])
-
-          const statusRollback = errRollbackGambar
-            ? `Gambar baru gagal dibersihkan dari Storage (Path: ${gambarStoragePath}).`
-            : "Gambar baru berhasil dibersihkan dari Storage."
-
-          setPesanError(
-            `Gagal mengunggah file PDF: ${errUploadPdf.message}. ${statusRollback}`
-          )
+          await supabase.storage.from(BUCKET_GAMBAR_PETA_NAGARI).remove([gambarStoragePath])
+          setPesanError(`Gagal mengunggah file PDF: ${errUploadPdf.message}. Gambar baru telah dibersihkan.`)
           setLoadingForm(false)
           return
         }
@@ -645,7 +628,7 @@ export default function AdminPetaNagariPage() {
         pdfPublicUrl = dataUrlPdf.publicUrl
       }
 
-      // Step 3: Insert Record ke Database
+      // Step 3: Insert Record ke Database (is_active: true -> Otomatis Aktif)
       const payloadInsert = {
         id: petaId,
         judul_peta: judulClean,
@@ -658,8 +641,8 @@ export default function AdminPetaNagariPage() {
         file_url: pdfPublicUrl,
         file_storage_path: pdfStoragePath,
         teks_alt: teksAltClean,
-        is_active: formData.is_active,
-        urutan: urutanNum,
+        is_active: true, // OTOMATIS AKTIF SAAT CREATE
+        urutan: 0,
       }
 
       const { error: errInsertDb } = await supabase
@@ -667,38 +650,15 @@ export default function AdminPetaNagariPage() {
         .insert(payloadInsert)
 
       if (errInsertDb) {
-        const rollbackErrors: string[] = []
-
-        const { error: errRbImg } = await supabase.storage
-          .from(BUCKET_GAMBAR_PETA_NAGARI)
-          .remove([gambarStoragePath])
-        if (errRbImg) {
-          rollbackErrors.push(`Gambar gagal dibersihkan (Path: ${gambarStoragePath})`)
-        } else {
-          rollbackErrors.push("Gambar berhasil dibersihkan")
-        }
-
+        await supabase.storage.from(BUCKET_GAMBAR_PETA_NAGARI).remove([gambarStoragePath])
         if (pdfStoragePath) {
-          const { error: errRbPdf } = await supabase.storage
-            .from(BUCKET_DOKUMEN_PETA_NAGARI)
-            .remove([pdfStoragePath])
-          if (errRbPdf) {
-            rollbackErrors.push(`PDF gagal dibersihkan (Path: ${pdfStoragePath})`)
-          } else {
-            rollbackErrors.push("PDF berhasil dibersihkan")
-          }
+          await supabase.storage.from(BUCKET_DOKUMEN_PETA_NAGARI).remove([pdfStoragePath])
         }
-
-        const rollbackReport = rollbackErrors.join(", ")
 
         if (errInsertDb.code === "23505") {
-          setPesanError(
-            `Peta dengan jenis, judul, tahun, dan sumber yang sama sudah tersedia. Rollback file: ${rollbackReport}.`
-          )
+          setPesanError("Peta dengan jenis, judul, tahun, dan sumber yang sama sudah tersedia.")
         } else {
-          setPesanError(
-            `Gagal menyimpan data ke database: ${errInsertDb.message}. Rollback file: ${rollbackReport}.`
-          )
+          setPesanError(`Gagal menyimpan data ke database: ${errInsertDb.message}.`)
         }
         setLoadingForm(false)
         return
@@ -715,9 +675,7 @@ export default function AdminPetaNagariPage() {
     }
   }
 
-  // ==========================================
-  // TOGGLE STATUS AKTIF / NONAKTIF CEPAT
-  // ==========================================
+  // Toggle Status Aktif / Nonaktif
   const handleToggleStatus = async (item: PetaNagari) => {
     setPesanSukses(null)
     setPesanError(null)
@@ -748,9 +706,7 @@ export default function AdminPetaNagariPage() {
     }
   }
 
-  // ==========================================
-  // SAFE DELETE FLOW FINAL (HAPUS / RETRY)
-  // ==========================================
+  // Safe Delete Completer
   const handleHapusRecord = async (item: PetaNagari) => {
     const isRetryMode = retryDeleteIds.includes(item.id)
     const pesanKonfirmasi = isRetryMode
@@ -768,7 +724,6 @@ export default function AdminPetaNagariPage() {
     const pdfPathLama = item.file_storage_path
 
     try {
-      // Step 1: Penonaktifan DB Eksplisit
       if (item.is_active) {
         const { error: errNonaktif } = await supabase
           .from("peta_nagari")
@@ -782,9 +737,7 @@ export default function AdminPetaNagariPage() {
         }
       }
 
-      // Step 2: Hapus PDF jika record mempunyai PDF
       if (pdfPathLama) {
-        // 2a. Update DB set PDF pair NULL terlebih dahulu
         const { error: errNullPdf } = await supabase
           .from("peta_nagari")
           .update({ file_url: null, file_storage_path: null })
@@ -796,7 +749,6 @@ export default function AdminPetaNagariPage() {
           return
         }
 
-        // 2b. Hapus PDF dari Storage
         const resPdf = await hapusFileJikaAda(BUCKET_DOKUMEN_PETA_NAGARI, pdfPathLama)
         if (!resPdf.berhasil) {
           tambahCleanupTertunda(
@@ -804,34 +756,33 @@ export default function AdminPetaNagariPage() {
             BUCKET_DOKUMEN_PETA_NAGARI,
             pdfPathLama,
             "dokumen",
-            `File PDF peta "${item.judul_peta}" gagal dihapus dari Storage.`
+            `PDF peta "${item.judul_peta}" gagal dihapus saat penghapusan`
           )
-          setPesanError(
-            `Gagal menghapus file PDF dari Storage: ${resPdf.errorMessage}. Record peta telah dinonaktifkan di database dan pasangan PDF diatur NULL.`
-          )
-          await muatDataPeta()
-          setProcessingDeleteId(null)
-          return
         }
       }
 
-      // Step 3: Hapus Gambar Utama dari Storage
-      if (gambarPathLama) {
-        const resGambar = await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathLama)
-        if (!resGambar.berhasil) {
-          if (!retryDeleteIds.includes(petaId)) {
-            setRetryDeleteIds((prev) => [...prev, petaId])
-          }
-          setPesanError(
-            `Gagal menghapus gambar utama dari Storage: ${resGambar.errorMessage}. Record peta tetap dinonaktifkan di database. Silakan coba tombol "Retry Hapus".`
-          )
-          await muatDataPeta()
-          setProcessingDeleteId(null)
-          return
-        }
+      const { error: errNullGambar } = await supabase
+        .from("peta_nagari")
+        .update({ gambar_url: "", gambar_storage_path: "" })
+        .eq("id", petaId)
+
+      if (errNullGambar) {
+        setPesanError(`Gagal memperbarui database pasangan gambar: ${errNullGambar.message}. Hapus dibatalkan.`)
+        setProcessingDeleteId(null)
+        return
       }
 
-      // Step 4: Hapus Record Database Utama
+      const resGambar = await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathLama)
+      if (!resGambar.berhasil) {
+        tambahCleanupTertunda(
+          petaId,
+          BUCKET_GAMBAR_PETA_NAGARI,
+          gambarPathLama,
+          "gambar",
+          `Gambar peta "${item.judul_peta}" gagal dihapus saat penghapusan`
+        )
+      }
+
       const { error: errDeleteDb } = await supabase
         .from("peta_nagari")
         .delete()
@@ -841,17 +792,16 @@ export default function AdminPetaNagariPage() {
         if (!retryDeleteIds.includes(petaId)) {
           setRetryDeleteIds((prev) => [...prev, petaId])
         }
-        setPesanError(
-          `File gambar dan PDF di Storage telah berhasil dibersihkan, namun gagal menghapus record database: ${errDeleteDb.message}. Gunakan tombol "Retry Hapus" untuk mencoba menghapus record database kembali.`
-        )
-      } else {
-        setRetryDeleteIds((prev) => prev.filter((id) => id !== petaId))
-        setPesanSukses(`Peta "${item.judul_peta}" beserta seluruh filenya berhasil dihapus total.`)
+        setPesanError(`Storage file berhasil dibersihkan, tetapi gagal menghapus record database: ${errDeleteDb.message}. Tombol 'Retry Hapus' telah diaktifkan.`)
+        setProcessingDeleteId(null)
+        return
+      }
 
-        // Jika item yang sedang dibuka di form adalah item yang dihapus, tutup form
-        if (editingId === petaId) {
-          handleBatalForm()
-        }
+      setRetryDeleteIds((prev) => prev.filter((id) => id !== petaId))
+      setPesanSukses(`Peta Nagari "${item.judul_peta}" beserta seluruh file Storage berhasil dihapus.`)
+
+      if (editingId === petaId) {
+        handleBatalForm()
       }
 
       await muatDataPeta()
@@ -863,29 +813,21 @@ export default function AdminPetaNagariPage() {
     }
   }
 
-  // ==========================================
-  // RETRY CLEANUP FILE TERTUNDA
-  // ==========================================
   const handleRetryCleanup = async (item: CleanupTertunda) => {
-    try {
-      const res = await hapusFileJikaAda(item.bucket, item.path)
-      if (res.berhasil) {
-        setCleanupTertunda((prev) => prev.filter((c) => c.id !== item.id))
-        setPesanSukses(`Pembersihan file tertunda (${item.path}) berhasil diselesaikan!`)
-      } else {
-        setPesanError(`Pembersihan file tertunda (${item.path}) gagal: ${res.errorMessage}`)
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setPesanError(`Gagal membersihkan file tertunda: ${msg}`)
+    const res = await hapusFileJikaAda(item.bucket, item.path)
+    if (res.berhasil) {
+      setCleanupTertunda((prev) => prev.filter((c) => c.id !== item.id))
+      setPesanSukses(`Pembersihan file tertunda (${item.jenis}) berhasil!`)
+    } else {
+      setPesanError(`Gagal membersihkan file tertunda: ${res.errorMessage}`)
     }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
-      {/* Top Header Navigation */}
-      <div className="bg-[#2c1b01] text-white shadow-md mb-6">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+      {/* Top Header Navigation (Matching Kelola Layanan Informasi) */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
             <Link
               href="/admin"
@@ -893,18 +835,8 @@ export default function AdminPetaNagariPage() {
               title="Kembali ke Dashboard Admin"
               aria-label="Kembali ke Dashboard Admin"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </Link>
             <div>
@@ -912,7 +844,7 @@ export default function AdminPetaNagariPage() {
                 Kelola Peta Nagari
               </h1>
               <p className="text-xs sm:text-sm text-amber-200/80">
-                Tambah dan kelola peta administrasi, kebencanaan, dan peta tematik Nagari Aia Manggih Barat
+                Kelola peta administrasi, kebencanaan, dan peta tematik Nagari Aia Manggih Barat.
               </p>
             </div>
           </div>
@@ -924,20 +856,10 @@ export default function AdminPetaNagariPage() {
                 onClick={handleOpenTambah}
                 className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
               >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                + Tambah Peta
+                Tambah Peta Nagari Baru
               </button>
             )}
 
@@ -947,12 +869,7 @@ export default function AdminPetaNagariPage() {
               disabled={loadingList || loadingForm}
               className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -966,65 +883,31 @@ export default function AdminPetaNagariPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        {/* Notifications */}
-        {pesanSukses && (
-          <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Global Toast Notifications */}
+        <div aria-live="polite">
+          {pesanSukses && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
               <div className="flex items-center gap-2">
-                <svg
-                  className="h-5 w-5 text-green-600 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
+                <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 <span>{pesanSukses}</span>
               </div>
-              <button
-                onClick={() => setPesanSukses(null)}
-                className="text-green-600 hover:text-green-800 font-bold"
-              >
-                ×
-              </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {pesanError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
+          {pesanError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
               <div className="flex items-center gap-2">
-                <svg
-                  className="h-5 w-5 text-red-600 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
+                <svg className="h-5 w-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="leading-relaxed">{pesanError}</span>
+                <span>{pesanError}</span>
               </div>
-              <button
-                onClick={() => setPesanError(null)}
-                className="text-red-600 hover:text-red-800 font-bold"
-              >
-                ×
-              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Pembersihan File Tertunda Alert */}
         {cleanupTertunda.length > 0 && (
@@ -1060,23 +943,27 @@ export default function AdminPetaNagariPage() {
           </div>
         )}
 
-        {/* Form Container (Tambah / Edit) */}
+        {/* SECTION: FORM TAMBAH / EDIT PETA NAGARI (KREM HEADER, WHITE BODY) */}
         {isFormOpen && (
-          <div className="rounded-2xl border border-[#e6ddcf] bg-[#fdfbf7] p-6 sm:p-8 shadow-md">
-            <div className="flex items-center justify-between border-b border-[#e6ddcf] pb-4 mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
+          <div id="form-peta-section" className="mb-8 scroll-mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {/* Header Krem Section (Samakan Gaya Layanan Informasi) */}
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
                 {editingId ? "Edit Peta Nagari" : "Tambah Peta Nagari Baru"}
               </h2>
-              <span className="text-xs text-gray-500 font-medium">
-                {editingId ? "Mode Edit Peta & File" : "Mode Tambah Baru"}
-              </span>
+              <p className="text-xs text-gray-600 mt-0.5">
+                {editingId
+                  ? "Ubah data dan dokumen peta Nagari."
+                  : "Tambahkan jenis peta administrasi, kebencanaan, atau tematik."}
+              </p>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-6">
+            {/* Body Form Putih */}
+            <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
               {/* Baris 1: Judul & Jenis */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Judul Peta <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1085,12 +972,12 @@ export default function AdminPetaNagariPage() {
                     onChange={handleJudulChange}
                     placeholder="Contoh: Peta Administrasi Nagari Aia Manggih Barat"
                     required
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-[#2c1b01] focus:ring-2 focus:ring-[#2c1b01]/20 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Jenis Peta <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -1102,7 +989,7 @@ export default function AdminPetaNagariPage() {
                       })
                     }
                     required
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-[#2c1b01] focus:ring-2 focus:ring-[#2c1b01]/20 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                   >
                     {PILIHAN_JENIS_PETA.map((opsi) => (
                       <option key={opsi.value} value={opsi.value}>
@@ -1116,7 +1003,7 @@ export default function AdminPetaNagariPage() {
               {/* Baris 2: Tahun & Sumber */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Tahun Peta <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1128,12 +1015,12 @@ export default function AdminPetaNagariPage() {
                       setFormData({ ...formData, tahun_peta: e.target.value })
                     }
                     required
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-[#2c1b01] focus:ring-2 focus:ring-[#2c1b01]/20 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Sumber Peta <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1144,14 +1031,14 @@ export default function AdminPetaNagariPage() {
                     }
                     placeholder="Masukkan sumber resmi peta"
                     required
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-[#2c1b01] focus:ring-2 focus:ring-[#2c1b01]/20 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                   />
                 </div>
               </div>
 
               {/* Baris 3: Deskripsi */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Deskripsi Peta (Opsional)
                 </label>
                 <textarea
@@ -1161,15 +1048,33 @@ export default function AdminPetaNagariPage() {
                     setFormData({ ...formData, deskripsi: e.target.value })
                   }
                   placeholder="Keterangan singkat mengenai cakupan wilayah, legenda, atau catatan peta..."
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-[#2c1b01] focus:ring-2 focus:ring-[#2c1b01]/20 focus:outline-none"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                 />
               </div>
 
-              {/* Baris 4: Input Gambar & File PDF */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-[#e6ddcf]">
+              {/* Baris 4: Teks Alternatif Gambar */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Teks Alternatif Gambar <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.teks_alt}
+                  onChange={handleTeksAltChange}
+                  placeholder="Contoh: Peta Administrasi Nagari Aia Manggih Barat"
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Digunakan untuk aksesibilitas pembaca layar gambar peta.
+                </p>
+              </div>
+
+              {/* Baris 5: Input Gambar & File PDF */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
                 {/* Gambar Input / Preview */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     {editingId ? "Ganti Gambar Utama Peta (Opsional)" : "Gambar Utama Peta *"}
                   </label>
 
@@ -1178,7 +1083,7 @@ export default function AdminPetaNagariPage() {
                     accept="image/jpeg,image/png,image/webp"
                     onChange={handleGambarFileChange}
                     required={!editingId}
-                    className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#2c1b01] file:text-white hover:file:bg-[#4a3210] cursor-pointer"
+                    className="w-full text-sm text-gray-600 file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#2c1b01] file:text-white hover:file:bg-[#6b4b1d] cursor-pointer"
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     {editingId
@@ -1188,21 +1093,21 @@ export default function AdminPetaNagariPage() {
 
                   {/* Preview Gambar Baru atau Existing */}
                   {gambarPreviewUrl ? (
-                    <div className="mt-3 relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-1">
+                    <div className="mt-3 relative aspect-video w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-1">
                       <p className="text-[11px] font-semibold text-green-700 mb-1">✓ Preview Gambar Baru Terpilih:</p>
                       <img
                         src={gambarPreviewUrl}
                         alt="Preview gambar baru"
-                        className="h-full w-full object-contain rounded-lg"
+                        className="h-full w-full object-contain rounded"
                       />
                     </div>
                   ) : editingItem?.gambar_url ? (
-                    <div className="mt-3 relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-1">
+                    <div className="mt-3 relative aspect-video w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-1">
                       <p className="text-[11px] font-medium text-gray-500 mb-1">Gambar Utama Saat Ini:</p>
                       <img
                         src={editingItem.gambar_url}
                         alt={editingItem.teks_alt || editingItem.judul_peta}
-                        className="h-full w-full object-contain rounded-lg"
+                        className="h-full w-full object-contain rounded"
                       />
                     </div>
                   ) : null}
@@ -1210,7 +1115,7 @@ export default function AdminPetaNagariPage() {
 
                 {/* PDF Input / Options */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     {editingId ? "Kelola Dokumen PDF (Opsional)" : "Dokumen PDF Peta (Opsional)"}
                   </label>
 
@@ -1219,7 +1124,7 @@ export default function AdminPetaNagariPage() {
                     accept="application/pdf"
                     onChange={handleDokumenFileChange}
                     disabled={hapusPdfExisting}
-                    className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#2c1b01] file:text-white hover:file:bg-[#4a3210] cursor-pointer disabled:opacity-50"
+                    className="w-full text-sm text-gray-600 file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#2c1b01] file:text-white hover:file:bg-[#6b4b1d] cursor-pointer disabled:opacity-50"
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     {editingId
@@ -1229,7 +1134,7 @@ export default function AdminPetaNagariPage() {
 
                   {/* Status & Options PDF Existing */}
                   {editingItem?.file_url && (
-                    <div className="mt-3 rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+                    <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3 space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-semibold text-gray-700">PDF Terpasang Saat Ini:</span>
                         <a
@@ -1265,104 +1170,30 @@ export default function AdminPetaNagariPage() {
                 </div>
               </div>
 
-              {/* Baris 5: Teks Alternatif & Urutan */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-[#e6ddcf]">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
-                    Teks Alternatif Gambar <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.teks_alt}
-                    onChange={handleTeksAltChange}
-                    placeholder="Contoh: Peta Administrasi Nagari Aia Manggih Barat"
-                    required
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-[#2c1b01] focus:ring-2 focus:ring-[#2c1b01]/20 focus:outline-none"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Digunakan untuk aksesibilitas pembaca layar gambar peta.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
-                    Urutan Tampil
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formData.urutan}
-                    onChange={(e) =>
-                      setFormData({ ...formData, urutan: e.target.value })
-                    }
-                    required
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-[#2c1b01] focus:ring-2 focus:ring-[#2c1b01]/20 focus:outline-none"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Nomor urutan tampil pada slider beranda (0, 1, 2, ...).
-                  </p>
-                </div>
-              </div>
-
-              {/* Baris 6: Status Aktif */}
-              <div className="pt-2">
-                <label className="inline-flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_active}
-                    onChange={(e) =>
-                      setFormData({ ...formData, is_active: e.target.checked })
-                    }
-                    className="h-5 w-5 rounded border-gray-300 text-[#2c1b01] focus:ring-[#2c1b01] cursor-pointer"
-                  />
-                  <span className="text-sm font-semibold text-gray-900">
-                    Tampilkan pada beranda (Status Aktif Publik)
-                  </span>
-                </label>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e6ddcf]">
+              {/* Action Buttons (Single Batal Button + Save) */}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
                 <button
                   type="button"
                   onClick={handleBatalForm}
                   disabled={loadingForm}
-                  className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60 transition cursor-pointer"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={loadingForm}
-                  className="inline-flex items-center rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#5a3b0d] px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:from-[#1a1200] hover:to-[#2c1b01] disabled:opacity-60 transition cursor-pointer"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   {loadingForm ? (
-                    <span className="flex items-center gap-2">
-                      <svg
-                        className="animate-spin h-4 w-4 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      Menyimpan...
-                    </span>
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
+                      <span>Menyimpan...</span>
+                    </>
                   ) : editingId ? (
-                    "Simpan Perubahan Peta"
+                    <span>Simpan Perubahan Peta</span>
                   ) : (
-                    "Simpan Peta Baru"
+                    <span>Simpan Peta Baru</span>
                   )}
                 </button>
               </div>
@@ -1371,7 +1202,7 @@ export default function AdminPetaNagariPage() {
         )}
 
         {/* Tabel Daftar Peta Nagari */}
-        <div className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900 tracking-tight">
@@ -1388,26 +1219,8 @@ export default function AdminPetaNagariPage() {
 
           {loadingList ? (
             <div className="py-12 text-center text-sm text-gray-500">
-              <svg
-                className="animate-spin h-8 w-8 text-[#2c1b01] mx-auto mb-3"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              Memuat daftar peta nagari...
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent mb-3"></div>
+              <p>Memuat daftar peta nagari...</p>
             </div>
           ) : listPeta.length === 0 ? (
             <div className="py-12 text-center rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-6">
@@ -1434,18 +1247,16 @@ export default function AdminPetaNagariPage() {
           ) : (
             <div className="overflow-x-auto rounded-xl border border-gray-200">
               <table className="w-full text-left text-sm border-collapse">
-                <thead>
-                  <tr className="bg-[#f0e8db] border-b border-gray-300 text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                    <th className="px-4 py-3.5 w-24">Preview</th>
-                    <th className="px-4 py-3.5">Judul & Jenis</th>
-                    <th className="px-4 py-3.5">Tahun & Sumber</th>
-                    <th className="px-4 py-3.5">Dokumen PDF</th>
-                    <th className="px-4 py-3.5 text-center">Status</th>
-                    <th className="px-4 py-3.5 text-center w-20">Urutan</th>
-                    <th className="px-4 py-3.5 text-right w-64">Aksi</th>
+                <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
+                  <tr>
+                    <th scope="col" className="px-6 py-4 font-bold w-24">Preview</th>
+                    <th scope="col" className="px-6 py-4 font-bold">Judul & Jenis</th>
+                    <th scope="col" className="px-6 py-4 font-bold">Tahun & Sumber</th>
+                    <th scope="col" className="px-6 py-4 font-bold">Dokumen PDF</th>
+                    <th scope="col" className="px-6 py-4 text-right font-bold w-64">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className="divide-y divide-gray-100 bg-white">
                   {listPeta.map((item) => {
                     const isProcessing =
                       processingToggleId === item.id ||
@@ -1457,10 +1268,10 @@ export default function AdminPetaNagariPage() {
                     return (
                       <tr
                         key={item.id}
-                        className="hover:bg-[#f7f2e8]/50 transition-colors"
+                        className="hover:bg-gray-50/80 transition-colors"
                       >
                         {/* Preview */}
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4">
                           <div className="relative aspect-video w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 p-0.5">
                             <img
                               src={item.gambar_url}
@@ -1471,12 +1282,12 @@ export default function AdminPetaNagariPage() {
                         </td>
 
                         {/* Judul & Jenis */}
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4">
                           <div className="font-bold text-gray-900">
                             {item.judul_peta}
                           </div>
                           <div className="mt-1">
-                            <span className="inline-flex items-center rounded-md bg-[#f0e8db] px-2.5 py-0.5 text-xs font-semibold text-[#2c1b01] border border-[#e6ddcf]">
+                            <span className="inline-flex items-center rounded-md bg-[#f7f2e8] px-2.5 py-0.5 text-xs font-semibold text-[#6b4b1d] border border-gray-200">
                               {getLabelJenisPeta(item.jenis_peta)}
                             </span>
                           </div>
@@ -1488,7 +1299,7 @@ export default function AdminPetaNagariPage() {
                         </td>
 
                         {/* Tahun & Sumber */}
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4">
                           <div className="text-xs font-semibold text-gray-900">
                             Tahun: {item.tahun_peta}
                           </div>
@@ -1498,7 +1309,7 @@ export default function AdminPetaNagariPage() {
                         </td>
 
                         {/* Dokumen PDF */}
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4">
                           {item.file_url ? (
                             <a
                               href={item.file_url}
@@ -1529,34 +1340,16 @@ export default function AdminPetaNagariPage() {
                           )}
                         </td>
 
-                        {/* Status */}
-                        <td className="px-4 py-3 text-center">
-                          {item.is_active ? (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-                              ● Aktif
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
-                              ○ Nonaktif
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Urutan */}
-                        <td className="px-4 py-3 text-center font-bold text-gray-900">
-                          {item.urutan}
-                        </td>
-
                         {/* Aksi (Edit, Aktifkan/Nonaktifkan, Hapus/Retry) */}
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
                             {/* Tombol Edit */}
                             <button
                               type="button"
                               onClick={() => handleOpenEdit(item)}
                               disabled={isProcessing}
                               aria-label={`Edit ${item.judul_peta}`}
-                              className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-gray-950 text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer"
+                              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
                             >
                               Edit
                             </button>
@@ -1567,10 +1360,10 @@ export default function AdminPetaNagariPage() {
                               onClick={() => handleToggleStatus(item)}
                               disabled={isProcessing}
                               aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.judul_peta}`}
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer ${
+                              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all disabled:opacity-50 cursor-pointer ${
                                 item.is_active
-                                  ? "bg-gray-200 hover:bg-gray-300 text-gray-800"
-                                  : "bg-green-600 hover:bg-green-700 text-white"
+                                  ? "border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                  : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
                               }`}
                             >
                               {processingToggleId === item.id
@@ -1586,11 +1379,7 @@ export default function AdminPetaNagariPage() {
                               onClick={() => handleHapusRecord(item)}
                               disabled={isProcessing}
                               aria-label={`${isRetryMode ? "Retry Hapus" : "Hapus"} ${item.judul_peta}`}
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50 cursor-pointer ${
-                                isRetryMode
-                                  ? "bg-amber-600 hover:bg-amber-700 text-white"
-                                  : "bg-red-600 hover:bg-red-700 text-white"
-                              }`}
+                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                             >
                               {processingDeleteId === item.id
                                 ? "..."

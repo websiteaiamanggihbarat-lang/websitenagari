@@ -51,18 +51,6 @@ function keAngka(nilai: any): number {
   return Number.isFinite(angka) ? angka : 0
 }
 
-function formatAngka(nilai: any): string {
-  return Number(nilai || 0).toLocaleString("id-ID")
-}
-
-function buatNamaFileAman(namaFile: string): string {
-  return String(namaFile || "foto")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9._-]/g, "-")
-    .replace(/-+/g, "-")
-}
-
 function ambilPathFotoDariUrl(fotoUrl: string | null | undefined): string | null {
   if (!fotoUrl) return null
   const penanda = `/storage/v1/object/public/${BUCKET_FOTO_KESEHATAN}/`
@@ -109,6 +97,9 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     ? params.pendataanId[0]
     : params?.pendataanId || ""
 
+  const formRef = useRef<HTMLDivElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
   const [detailPendataan, setDetailPendataan] = useState<PendataanKesehatan | null>(null)
   const [loadingPendataan, setLoadingPendataan] = useState(true)
   const [pendataanError, setPendataanError] = useState("")
@@ -121,10 +112,10 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     nomor_kontak: "",
     tautan_peta: "",
     keterangan: "",
-    urutan: "0",
     is_active: true,
   })
   const [editingSaranaId, setEditingSaranaId] = useState<string | null>(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
   const [saranaList, setSaranaList] = useState<SaranaKesehatan[]>([])
 
   // State Table Detail 1: Fasilitas
@@ -148,12 +139,12 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
   const [existingStoragePath, setExistingStoragePath] = useState("")
   const [previewFotoUrl, setPreviewFotoUrl] = useState("")
 
-  const [searchQuery, setSearchQuery] = useState("")
+  const [filterJenis, setFilterJenis] = useState("semua")
   const [loading, setLoading] = useState(false)
   const [loadingSarana, setLoadingSarana] = useState(true)
-  const [error, setError] = useState("")
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [pesanSukses, setPesanSukses] = useState<string | null>(null)
+  const [pesanError, setPesanError] = useState<string | null>(null)
 
   const periksaSesi = async () => {
     const {
@@ -162,7 +153,6 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     } = await supabase.auth.getSession()
 
     if (sessionError || !session) {
-      alert("Sesi admin tidak terbaca. Silakan login ulang.")
       window.location.href = "/login"
       return null
     }
@@ -209,7 +199,6 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     }
 
     setLoadingSarana(true)
-    setError("")
 
     const session = await periksaSesi()
     if (!session) {
@@ -221,12 +210,11 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
       .from("sarana_kesehatan")
       .select("*")
       .eq("pendataan_id", id)
-      .order("urutan", { ascending: true })
-      .order("nama_sarana", { ascending: true })
+      .order("created_at", { ascending: false })
 
     if (fetchError) {
       console.error("fetch sarana error:", fetchError)
-      setError(fetchError.message || "Gagal memuat daftar sarana kesehatan.")
+      setPesanError(fetchError.message || "Gagal memuat daftar sarana kesehatan.")
       setSaranaList([])
     } else {
       setSaranaList(data || [])
@@ -244,6 +232,15 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     }
   }, [pendataanId])
 
+  // Auto dismiss success toast message after 4000ms
+  useEffect(() => {
+    if (!pesanSukses) return
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSukses])
+
   useEffect(() => {
     if (!fotoFile) {
       setPreviewFotoUrl(existingFotoUrl || "")
@@ -258,43 +255,12 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     }
   }, [fotoFile, existingFotoUrl])
 
-  useEffect(() => {
-    let timeoutId: number
-
-    const logoutOtomatis = async () => {
-      await keluarDariAdmin("Auto logout error")
-    }
-
-    const resetTimer = () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      timeoutId = window.setTimeout(logoutOtomatis, 5 * 60 * 1000)
-    }
-
-    const events = ["mousemove", "keydown", "mousedown", "touchstart"]
-    events.forEach((event) => window.addEventListener(event, resetTimer))
-    resetTimer()
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      events.forEach((event) => window.removeEventListener(event, resetTimer))
-    }
-  }, [])
-
   const saranaTersaring = useMemo(() => {
-    const kataKunci = searchQuery.trim().toLowerCase()
-    if (!kataKunci) return saranaList
-
-    return saranaList.filter((item) =>
-      [
-        item.nama_sarana,
-        getLabelJenisSarana(item.jenis_slug),
-        item.alamat,
-        item.nomor_kontak,
-        item.status_operasional,
-        item.keterangan,
-      ].some((nilai) => String(nilai || "").toLowerCase().includes(kataKunci))
-    )
-  }, [saranaList, searchQuery])
+    if (!filterJenis || filterJenis === "semua") {
+      return saranaList
+    }
+    return saranaList.filter((item) => item.jenis_slug === filterJenis)
+  }, [saranaList, filterJenis])
 
   const ubahFormSarana = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -316,7 +282,6 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
       nomor_kontak: "",
       tautan_peta: "",
       keterangan: "",
-      urutan: "0",
       is_active: true,
     })
     setEditingSaranaId(null)
@@ -336,6 +301,22 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
+  }
+
+  const handleOpenTambah = () => {
+    resetFormSarana()
+    setPesanSukses(null)
+    setPesanError(null)
+    setIsFormOpen(true)
+
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 50)
+  }
+
+  const handleBatalForm = () => {
+    resetFormSarana()
+    setIsFormOpen(false)
   }
 
   // --- HANDLER BARIS FASILITAS ---
@@ -415,61 +396,207 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     setFormIndikatorList((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const pilihFoto = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null
-    if (!file) {
-      setFotoFile(null)
-      return
+  // --- BACA DATA RINCIAN DARI DATABASE ---
+  const fetchRincianSarana = async (saranaId: string) => {
+    setLoadingFasilitas(true)
+    setLoadingTenaga(true)
+    setLoadingIndikator(true)
+
+    try {
+      const { data: dataFas } = await supabase
+        .from("fasilitas_sarana_kesehatan")
+        .select("*")
+        .eq("sarana_kesehatan_id", saranaId)
+        .order("urutan", { ascending: true })
+
+      if (dataFas && dataFas.length > 0) {
+        setExistingFasilitasIds(dataFas.map((f) => f.id))
+        setFormFasilitasList(
+          dataFas.map((f) => ({
+            id: f.id,
+            nama_fasilitas: f.nama_fasilitas || "",
+            jumlah: (f.jumlah ?? 1).toString(),
+            urutan: (f.urutan ?? 0).toString(),
+            is_active: Boolean(f.is_active ?? true),
+          }))
+        )
+      } else {
+        setExistingFasilitasIds([])
+        setFormFasilitasList([])
+      }
+
+      const { data: dataTenaga } = await supabase
+        .from("tenaga_kesehatan_sarana")
+        .select("*")
+        .eq("sarana_kesehatan_id", saranaId)
+        .order("urutan", { ascending: true })
+
+      if (dataTenaga && dataTenaga.length > 0) {
+        setExistingTenagaIds(dataTenaga.map((t) => t.id))
+        setFormTenagaList(
+          dataTenaga.map((t) => ({
+            id: t.id,
+            jenis_tenaga: t.jenis_tenaga || "",
+            jumlah: (t.jumlah ?? 1).toString(),
+            urutan: (t.urutan ?? 0).toString(),
+            is_active: Boolean(t.is_active ?? true),
+          }))
+        )
+      } else {
+        setExistingTenagaIds([])
+        setFormTenagaList([])
+      }
+
+      const { data: dataInd } = await supabase
+        .from("indikator_tambahan_kesehatan")
+        .select("*")
+        .eq("sarana_kesehatan_id", saranaId)
+        .order("urutan", { ascending: true })
+
+      if (dataInd && dataInd.length > 0) {
+        setExistingIndikatorIds(dataInd.map((i) => i.id))
+        setFormIndikatorList(
+          dataInd.map((i) => ({
+            id: i.id,
+            nama_indikator: i.nama_indikator || "",
+            nilai_indikator: i.nilai_indikator || "",
+            satuan: i.satuan || "",
+            keterangan: i.keterangan || "",
+            urutan: (i.urutan ?? 0).toString(),
+            is_active: Boolean(i.is_active ?? true),
+          }))
+        )
+      } else {
+        setExistingIndikatorIds([])
+        setFormIndikatorList([])
+      }
+    } catch (err) {
+      console.error("fetchRincianSarana error:", err)
+    } finally {
+      setLoadingFasilitas(false)
+      setLoadingTenaga(false)
+      setLoadingIndikator(false)
+    }
+  }
+
+  const mulaiEditSarana = (item: SaranaKesehatan) => {
+    setPesanSukses(null)
+    setPesanError(null)
+
+    setEditingSaranaId(item.id)
+    setFormSarana({
+      nama_sarana: item.nama_sarana || "",
+      jenis_slug: item.jenis_slug || "posyandu",
+      alamat: item.alamat || "",
+      status_operasional: item.status_operasional || "aktif",
+      nomor_kontak: item.nomor_kontak || "",
+      tautan_peta: item.tautan_peta || "",
+      keterangan: item.keterangan || "",
+      is_active: Boolean(item.is_active),
+    })
+
+    setFotoFile(null)
+    setExistingFotoUrl(item.foto_url || "")
+    setExistingStoragePath(item.storage_path || "")
+    setPreviewFotoUrl(item.foto_url || "")
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
     }
 
-    const tipeYangDiizinkan = ["image/jpeg", "image/png", "image/webp"]
-    if (!tipeYangDiizinkan.includes(file.type)) {
-      alert("Format foto harus JPG, PNG, atau WEBP.")
-      event.target.value = ""
-      setFotoFile(null)
+    fetchRincianSarana(item.id)
+    setIsFormOpen(true)
+
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 50)
+  }
+
+  const handleToggleActiveSarana = async (item: SaranaKesehatan) => {
+    if (loading) return
+
+    const session = await periksaSesi()
+    if (!session) return
+
+    setPesanSukses(null)
+    setPesanError(null)
+    setLoading(true)
+
+    try {
+      const statusBaru = !item.is_active
+      const { error: errToggle } = await supabase
+        .from("sarana_kesehatan")
+        .update({ is_active: statusBaru })
+        .eq("id", item.id)
+        .eq("pendataan_id", pendataanId)
+
+      if (errToggle) {
+        setPesanError(`Gagal mengubah status aktif sarana: ${errToggle.message}`)
+      } else {
+        setPesanSukses(
+          statusBaru
+            ? `Sarana kesehatan "${item.nama_sarana}" berhasil diaktifkan.`
+            : `Sarana kesehatan "${item.nama_sarana}" berhasil dinonaktifkan.`
+        )
+      }
+
+      await fetchSarana(pendataanId)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan saat mengubah status sarana: ${msg}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const pilihFoto = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      setPesanError("File foto sarana harus berupa gambar (JPG, PNG, WEBP).")
       return
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert("Ukuran foto maksimal 2 MB.")
-      event.target.value = ""
-      setFotoFile(null)
+      setPesanError("Ukuran file foto maksimal 2 MB.")
       return
     }
 
     setFotoFile(file)
   }
 
-  const uploadFotoProses = async (saranaId: string) => {
-    if (!fotoFile) return null
+  const uploadFotoProses = async (
+    targetSaranaId: string
+  ): Promise<{ fotoUrl: string; storagePath: string } | null> => {
+    if (!fotoFile || !targetSaranaId) return null
 
-    const namaAman = buatNamaFileAman(fotoFile.name)
-    const kodeUnik =
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : Math.random().toString(36).slice(2)
+    const namaFileClean = String(fotoFile.name || "foto")
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9._-]/g, "-")
 
-    const pathFoto = `sarana-kesehatan/${saranaId}/${Date.now()}-${kodeUnik}-${namaAman}`
+    const storagePath = `sarana/${targetSaranaId}/${Date.now()}-${namaFileClean}`
 
-    const { error: uploadError } = await supabase.storage
+    const { error: errUpload } = await supabase.storage
       .from(BUCKET_FOTO_KESEHATAN)
-      .upload(pathFoto, fotoFile, {
+      .upload(storagePath, fotoFile, {
         cacheControl: "3600",
         upsert: false,
-        contentType: fotoFile.type,
+        contentType: fotoFile.type || "image/jpeg",
       })
 
-    if (uploadError) {
-      throw new Error(`Gagal mengunggah foto ke Storage: ${uploadError.message}`)
+    if (errUpload) {
+      throw new Error(`Upload foto ke Storage gagal: ${errUpload.message}`)
     }
 
     const { data: publicData } = supabase.storage
       .from(BUCKET_FOTO_KESEHATAN)
-      .getPublicUrl(pathFoto)
+      .getPublicUrl(storagePath)
 
     return {
-      fotoUrl: publicData?.publicUrl || null,
-      storagePath: pathFoto,
+      fotoUrl: publicData?.publicUrl || "",
+      storagePath,
     }
   }
 
@@ -477,37 +604,34 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     event.preventDefault()
     if (loading) return
 
-    if (!detailPendataan || !pendataanId) {
-      alert("Periode pendataan kesehatan tidak valid.")
+    setPesanSukses(null)
+    setPesanError(null)
+
+    if (!pendataanId) {
+      setPesanError("ID Pendataan tidak valid. Mohon kembali ke halaman riwayat pendataan.")
       return
     }
 
     if (!formSarana.nama_sarana.trim()) {
-      alert("Nama sarana kesehatan wajib diisi.")
+      setPesanError("Nama sarana kesehatan wajib diisi.")
       return
     }
 
     if (!formSarana.alamat.trim()) {
-      alert("Alamat wajib diisi.")
+      setPesanError("Alamat sarana wajib diisi.")
       return
     }
 
-    const urutan = keAngka(formSarana.urutan)
-    if (urutan < 0) {
-      alert("Urutan tidak boleh kurang dari nol.")
-      return
-    }
-
-    // Validasi Tautan Peta Sesuai Constraint Database (Koreksi 1: Wajib HTTPS)
+    // Validasi Tautan Peta
     if (formSarana.tautan_peta.trim()) {
       const tautanVal = formSarana.tautan_peta.trim()
       if (!tautanVal.startsWith("https://")) {
-        alert("Tautan Google Maps wajib diawali dengan https:// (tidak menerima http://)")
+        setPesanError("Tautan Google Maps wajib diawali dengan https://")
         return
       }
     }
 
-    // Validasi Fasilitas (Cek Duplikat jika editingSaranaId valid)
+    // Validasi Fasilitas (Cek Duplikat)
     if (editingSaranaId) {
       const fasMap = new Set()
       for (let i = 0; i < formFasilitasList.length; i++) {
@@ -517,19 +641,19 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
 
         if (namaTrim.length > 0) {
           if (jml < 1) {
-            alert(`Jumlah fasilitas pada baris ke-${i + 1} minimal 1.`)
+            setPesanError(`Jumlah fasilitas pada baris ke-${i + 1} minimal 1.`)
             return
           }
           const lower = namaTrim.toLowerCase()
           if (fasMap.has(lower)) {
-            alert(`Nama fasilitas "${namaTrim}" ditulis lebih dari satu kali. Mohon gabungkan atau ubah nama duplikat.`)
+            setPesanError(`Nama fasilitas "${namaTrim}" ditulis lebih dari satu kali. Mohon gabungkan nama duplikat.`)
             return
           }
           fasMap.add(lower)
         }
       }
 
-      // Validasi Tenaga Kesehatan (Cek Duplikat & Minimal 1)
+      // Validasi Tenaga Kesehatan
       const tngMap = new Set()
       for (let i = 0; i < formTenagaList.length; i++) {
         const itemTng = formTenagaList[i]
@@ -537,23 +661,23 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
         const jml = keAngka(itemTng.jumlah)
 
         if (!jenisTrim) {
-          alert(`Jenis tenaga kesehatan pada baris ke-${i + 1} wajib diisi.`)
+          setPesanError(`Jenis tenaga kesehatan pada baris ke-${i + 1} wajib diisi.`)
           return
         }
         if (jml < 1) {
-          alert(`Jumlah tenaga kesehatan pada baris ke-${i + 1} minimal 1.`)
+          setPesanError(`Jumlah tenaga kesehatan pada baris ke-${i + 1} minimal 1.`)
           return
         }
 
         const lower = jenisTrim.toLowerCase()
         if (tngMap.has(lower)) {
-          alert(`Jenis tenaga kesehatan "${jenisTrim}" ditulis lebih dari satu kali. Mohon gabungkan atau ubah nama duplikat.`)
+          setPesanError(`Jenis tenaga kesehatan "${jenisTrim}" ditulis lebih dari satu kali. Mohon gabungkan nama duplikat.`)
           return
         }
         tngMap.add(lower)
       }
 
-      // Validasi Indikator Tambahan (Cek Duplikat & Terisi)
+      // Validasi Indikator Tambahan
       const indMap = new Set()
       for (let i = 0; i < formIndikatorList.length; i++) {
         const itemInd = formIndikatorList[i]
@@ -562,12 +686,12 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
 
         if (namaTrim.length > 0 || nilaiTrim.length > 0) {
           if (!namaTrim || !nilaiTrim) {
-            alert(`Nama dan Nilai indikator tambahan pada baris ke-${i + 1} wajib diisi.`)
+            setPesanError(`Nama dan Nilai indikator tambahan pada baris ke-${i + 1} wajib diisi.`)
             return
           }
           const lower = namaTrim.toLowerCase()
           if (indMap.has(lower)) {
-            alert(`Nama indikator "${namaTrim}" ditulis lebih dari satu kali. Mohon gabungkan atau ubah nama duplikat.`)
+            setPesanError(`Nama indikator "${namaTrim}" ditulis lebih dari satu kali. Mohon gabungkan nama duplikat.`)
             return
           }
           indMap.add(lower)
@@ -576,7 +700,6 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     }
 
     setLoading(true)
-    setError("")
 
     const session = await periksaSesi()
     if (!session) {
@@ -590,12 +713,12 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
         nama_sarana: formSarana.nama_sarana.trim(),
         jenis_slug: formSarana.jenis_slug,
         alamat: formSarana.alamat.trim(),
-        status_operasional: formSarana.status_operasional,
+        status_operasional: formSarana.status_operasional || "aktif",
         nomor_kontak: formSarana.nomor_kontak.trim() || null,
         tautan_peta: formSarana.tautan_peta.trim() || null,
         keterangan: formSarana.keterangan.trim() || null,
-        urutan,
-        is_active: Boolean(formSarana.is_active),
+        urutan: 0,
+        is_active: editingSaranaId ? Boolean(formSarana.is_active) : true,
       }
 
       let activeSaranaId = editingSaranaId
@@ -642,8 +765,7 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
           }
         }
       } else {
-        // --- PROSES TAMBAH SARANA BARU (KOREKSI 4) ---
-        // 1. Insert record sarana tanpa foto lebih dulu
+        // --- PROSES TAMBAH SARANA BARU (Otomatis Active) ---
         const { data: saranaBaru, error: insertError } = await supabase
           .from("sarana_kesehatan")
           .insert([{ ...dataSaranaBase, foto_url: null, storage_path: null }])
@@ -653,7 +775,6 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
         if (insertError) throw insertError
         activeSaranaId = saranaBaru.id
 
-        // 2. Upload foto menggunakan saranaId
         if (fotoFile && activeSaranaId) {
           try {
             const resUpload = await uploadFotoProses(activeSaranaId)
@@ -668,7 +789,6 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
 
               if (errUpdFoto) {
                 console.error("Gagal mengupdate URL foto ke DB:", errUpdFoto)
-                // Hapus file baru dari Storage agar tidak menjadi file yatim (Koreksi 4)
                 if (resUpload.storagePath) {
                   await supabase.storage
                     .from(BUCKET_FOTO_KESEHATAN)
@@ -684,7 +804,7 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
         }
       }
 
-      // --- SINKRONISASI 3 TABEL RINCIAN (Hanya Jika ActiveSaranaId Berasal dari Sarana Valid) ---
+      // --- SINKRONISASI 3 TABEL RINCIAN ---
       if (activeSaranaId && editingSaranaId) {
         // 1. Sinkronisasi Fasilitas
         const fasValid = formFasilitasList
@@ -698,55 +818,33 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
           }))
           .filter((f) => f.nama_fasilitas.length > 0 && f.jumlah >= 1)
 
-        const currentFasIds = fasValid.map((f) => f.id).filter(Boolean)
-        const fasToUpdate = fasValid.filter((f) => Boolean(f.id))
-        const fasToInsert = fasValid.filter((f) => !f.id)
+        const currentFasIds = fasValid.map((f) => f.id).filter((id): id is string => Boolean(id))
+        const deletedFasIds = existingFasilitasIds.filter((id) => !currentFasIds.includes(id))
 
-        for (const itemUpd of fasToUpdate) {
-          const { error: errUpdFas } = await supabase
-            .from("fasilitas_sarana_kesehatan")
-            .update({
-              nama_fasilitas: itemUpd.nama_fasilitas,
-              jumlah: itemUpd.jumlah,
-              urutan: itemUpd.urutan,
-              is_active: itemUpd.is_active,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", itemUpd.id)
-            .eq("sarana_kesehatan_id", activeSaranaId)
-
-          if (errUpdFas) {
-            if (errUpdFas.code === "23505") {
-              alert(`Gagal memperbarui fasilitas "${itemUpd.nama_fasilitas}": Terjadi duplikasi nama fasilitas pada sarana ini.`)
-            } else {
-              throw errUpdFas
-            }
-          }
+        if (deletedFasIds.length > 0) {
+          await supabase.from("fasilitas_sarana_kesehatan").delete().in("id", deletedFasIds)
         }
 
-        if (fasToInsert.length > 0) {
-          const { error: errInsFas } = await supabase.from("fasilitas_sarana_kesehatan").insert(
-            fasToInsert.map((f) => ({
+        for (const fasItem of fasValid) {
+          if (fasItem.id) {
+            await supabase
+              .from("fasilitas_sarana_kesehatan")
+              .update({
+                nama_fasilitas: fasItem.nama_fasilitas,
+                jumlah: fasItem.jumlah,
+                urutan: fasItem.urutan,
+                is_active: fasItem.is_active,
+              })
+              .eq("id", fasItem.id)
+          } else {
+            await supabase.from("fasilitas_sarana_kesehatan").insert({
               sarana_kesehatan_id: activeSaranaId,
-              nama_fasilitas: f.nama_fasilitas,
-              jumlah: f.jumlah,
-              urutan: f.urutan,
-              is_active: f.is_active,
-            }))
-          )
-
-          if (errInsFas) {
-            if (errInsFas.code === "23505") {
-              alert("Gagal menambahkan fasilitas: Terjadi duplikasi nama fasilitas pada sarana ini.")
-            } else {
-              throw errInsFas
-            }
+              nama_fasilitas: fasItem.nama_fasilitas,
+              jumlah: fasItem.jumlah,
+              urutan: fasItem.urutan,
+              is_active: fasItem.is_active,
+            })
           }
-        }
-
-        const fasToDelete = existingFasilitasIds.filter((id) => !currentFasIds.includes(id))
-        if (fasToDelete.length > 0) {
-          await supabase.from("fasilitas_sarana_kesehatan").delete().in("id", fasToDelete).eq("sarana_kesehatan_id", activeSaranaId)
         }
 
         // 2. Sinkronisasi Tenaga Kesehatan
@@ -761,58 +859,36 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
           }))
           .filter((t) => t.jenis_tenaga.length > 0 && t.jumlah >= 1)
 
-        const currentTngIds = tngValid.map((t) => t.id).filter(Boolean)
-        const tngToUpdate = tngValid.filter((t) => Boolean(t.id))
-        const tngToInsert = tngValid.filter((t) => !t.id)
+        const currentTngIds = tngValid.map((t) => t.id).filter((id): id is string => Boolean(id))
+        const deletedTngIds = existingTenagaIds.filter((id) => !currentTngIds.includes(id))
 
-        for (const itemUpd of tngToUpdate) {
-          const { error: errUpdTng } = await supabase
-            .from("tenaga_kesehatan_sarana")
-            .update({
-              jenis_tenaga: itemUpd.jenis_tenaga,
-              jumlah: itemUpd.jumlah,
-              urutan: itemUpd.urutan,
-              is_active: itemUpd.is_active,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", itemUpd.id)
-            .eq("sarana_kesehatan_id", activeSaranaId)
-
-          if (errUpdTng) {
-            if (errUpdTng.code === "23505") {
-              alert(`Gagal memperbarui tenaga kesehatan "${itemUpd.jenis_tenaga}": Terjadi duplikasi jenis tenaga pada sarana ini.`)
-            } else {
-              throw errUpdTng
-            }
-          }
+        if (deletedTngIds.length > 0) {
+          await supabase.from("tenaga_kesehatan_sarana").delete().in("id", deletedTngIds)
         }
 
-        if (tngToInsert.length > 0) {
-          const { error: errInsTng } = await supabase.from("tenaga_kesehatan_sarana").insert(
-            tngToInsert.map((t) => ({
+        for (const tngItem of tngValid) {
+          if (tngItem.id) {
+            await supabase
+              .from("tenaga_kesehatan_sarana")
+              .update({
+                jenis_tenaga: tngItem.jenis_tenaga,
+                jumlah: tngItem.jumlah,
+                urutan: tngItem.urutan,
+                is_active: tngItem.is_active,
+              })
+              .eq("id", tngItem.id)
+          } else {
+            await supabase.from("tenaga_kesehatan_sarana").insert({
               sarana_kesehatan_id: activeSaranaId,
-              jenis_tenaga: t.jenis_tenaga,
-              jumlah: t.jumlah,
-              urutan: t.urutan,
-              is_active: t.is_active,
-            }))
-          )
-
-          if (errInsTng) {
-            if (errInsTng.code === "23505") {
-              alert("Gagal menambahkan tenaga kesehatan: Terjadi duplikasi jenis tenaga pada sarana ini.")
-            } else {
-              throw errInsTng
-            }
+              jenis_tenaga: tngItem.jenis_tenaga,
+              jumlah: tngItem.jumlah,
+              urutan: tngItem.urutan,
+              is_active: tngItem.is_active,
+            })
           }
         }
 
-        const tngToDelete = existingTenagaIds.filter((id) => !currentTngIds.includes(id))
-        if (tngToDelete.length > 0) {
-          await supabase.from("tenaga_kesehatan_sarana").delete().in("id", tngToDelete).eq("sarana_kesehatan_id", activeSaranaId)
-        }
-
-        // 3. Sinkronisasi Indikator Tambahan (Koreksi 2: Kolom Satuan & Keterangan)
+        // 3. Sinkronisasi Indikator Tambahan
         const indValid = formIndikatorList
           .map((i, idx) => ({
             id: i.id || null,
@@ -826,236 +902,88 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
           }))
           .filter((i) => i.nama_indikator.length > 0 && i.nilai_indikator.length > 0)
 
-        const currentIndIds = indValid.map((i) => i.id).filter(Boolean)
-        const indToUpdate = indValid.filter((i) => Boolean(i.id))
-        const indToInsert = indValid.filter((i) => !i.id)
+        const currentIndIds = indValid.map((i) => i.id).filter((id): id is string => Boolean(id))
+        const deletedIndIds = existingIndikatorIds.filter((id) => !currentIndIds.includes(id))
 
-        for (const itemUpd of indToUpdate) {
-          const { error: errUpdInd } = await supabase
-            .from("indikator_tambahan_kesehatan")
-            .update({
-              nama_indikator: itemUpd.nama_indikator,
-              nilai_indikator: itemUpd.nilai_indikator,
-              satuan: itemUpd.satuan,
-              keterangan: itemUpd.keterangan,
-              urutan: itemUpd.urutan,
-              is_active: itemUpd.is_active,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", itemUpd.id)
-            .eq("sarana_kesehatan_id", activeSaranaId)
-
-          if (errUpdInd) {
-            if (errUpdInd.code === "23505") {
-              alert(`Gagal memperbarui indikator "${itemUpd.nama_indikator}": Terjadi duplikasi nama indikator pada sarana ini.`)
-            } else {
-              throw errUpdInd
-            }
-          }
+        if (deletedIndIds.length > 0) {
+          await supabase.from("indikator_tambahan_kesehatan").delete().in("id", deletedIndIds)
         }
 
-        if (indToInsert.length > 0) {
-          const { error: errInsInd } = await supabase.from("indikator_tambahan_kesehatan").insert(
-            indToInsert.map((i) => ({
+        for (const indItem of indValid) {
+          if (indItem.id) {
+            await supabase
+              .from("indikator_tambahan_kesehatan")
+              .update({
+                nama_indikator: indItem.nama_indikator,
+                nilai_indikator: indItem.nilai_indikator,
+                satuan: indItem.satuan,
+                keterangan: indItem.keterangan,
+                urutan: indItem.urutan,
+                is_active: indItem.is_active,
+              })
+              .eq("id", indItem.id)
+          } else {
+            await supabase.from("indikator_tambahan_kesehatan").insert({
               sarana_kesehatan_id: activeSaranaId,
-              nama_indikator: i.nama_indikator,
-              nilai_indikator: i.nilai_indikator,
-              satuan: i.satuan,
-              keterangan: i.keterangan,
-              urutan: i.urutan,
-              is_active: i.is_active,
-            }))
-          )
-
-          if (errInsInd) {
-            if (errInsInd.code === "23505") {
-              alert("Gagal menambahkan indikator tambahan: Terjadi duplikasi nama indikator pada sarana ini.")
-            } else {
-              throw errInsInd
-            }
+              nama_indikator: indItem.nama_indikator,
+              nilai_indikator: indItem.nilai_indikator,
+              satuan: indItem.satuan,
+              keterangan: indItem.keterangan,
+              urutan: indItem.urutan,
+              is_active: indItem.is_active,
+            })
           }
         }
+      }
 
-        const indToDelete = existingIndikatorIds.filter((id) => !currentIndIds.includes(id))
-        if (indToDelete.length > 0) {
-          await supabase.from("indikator_tambahan_kesehatan").delete().in("id", indToDelete).eq("sarana_kesehatan_id", activeSaranaId)
+      if (editingSaranaId) {
+        setPesanSukses("Data sarana kesehatan berhasil diperbarui.")
+      } else {
+        if (!isFotoUploadSuccess) {
+          setPesanSukses("Sarana kesehatan berhasil ditambahkan (tanpa foto karena upload foto gagal).")
+        } else {
+          setPesanSukses("Sarana kesehatan berhasil ditambahkan.")
         }
       }
 
-      if (!isFotoUploadSuccess) {
-        alert("Data sarana kesehatan berhasil disimpan, namun unggah foto gagal. File foto telah dibersihkan dari Storage.")
-      } else {
-        alert(
-          editingSaranaId
-            ? "Sarana kesehatan berhasil diperbarui!"
-            : "Sarana kesehatan berhasil ditambahkan! Silakan pilih 'Edit' pada sarana ini untuk mengelola rincian Fasilitas, Tenaga Kesehatan, dan Indikator Tambahan."
-        )
-      }
-
-      resetFormSarana()
+      handleBatalForm()
       await fetchSarana(pendataanId)
-    } catch (simpanError: any) {
-      console.error("simpan sarana error:", simpanError)
-
-      if (simpanError?.code === "23505") {
-        alert("Nama sarana kesehatan tersebut sudah tersedia pada periode pendataan ini. Mohon gunakan nama yang berbeda.")
-      } else {
-        alert(`Gagal menyimpan sarana kesehatan: ${simpanError?.message || "Terjadi kesalahan."}`)
-      }
+    } catch (simpanErr: any) {
+      console.error("simpan sarana error:", simpanErr)
+      setPesanError(`Gagal menyimpan sarana kesehatan: ${simpanErr?.message || "Terjadi kesalahan."}`)
     } finally {
       setLoading(false)
     }
   }
 
-  const mulaiEditSarana = async (item: SaranaKesehatan) => {
-    if (item.pendataan_id !== pendataanId) {
-      alert("Sarana kesehatan ini tidak terikat pada periode pendataan ini.")
-      return
-    }
-
-    setEditingSaranaId(item.id)
-    setLoadingFasilitas(true)
-    setLoadingTenaga(true)
-    setLoadingIndikator(true)
-
-    setFormSarana({
-      nama_sarana: item.nama_sarana || "",
-      jenis_slug: item.jenis_slug || "posyandu",
-      alamat: item.alamat || "",
-      status_operasional: item.status_operasional || "aktif",
-      nomor_kontak: item.nomor_kontak || "",
-      tautan_peta: item.tautan_peta || "",
-      keterangan: item.keterangan || "",
-      urutan: item.urutan?.toString() || "0",
-      is_active: Boolean(item.is_active),
-    })
-
-    setExistingFotoUrl(item.foto_url || "")
-    setExistingStoragePath(item.storage_path || "")
-    setFotoFile(null)
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
-
-    // Load 3 Tabel Rincian
-    try {
-      const { data: fasData } = await supabase
-        .from("fasilitas_sarana_kesehatan")
-        .select("*")
-        .eq("sarana_kesehatan_id", item.id)
-        .order("urutan", { ascending: true })
-
-      const listFas = (fasData || []).map((f) => ({
-        id: f.id,
-        tempId: f.id,
-        nama_fasilitas: f.nama_fasilitas || "",
-        jumlah: (f.jumlah ?? 1).toString(),
-        urutan: (f.urutan ?? 1).toString(),
-        is_active: Boolean(f.is_active ?? true),
-      }))
-      setFormFasilitasList(listFas)
-      setExistingFasilitasIds((fasData || []).map((f) => f.id))
-    } catch {
-      setFormFasilitasList([])
-      setExistingFasilitasIds([])
-    } finally {
-      setLoadingFasilitas(false)
-    }
-
-    try {
-      const { data: tngData } = await supabase
-        .from("tenaga_kesehatan_sarana")
-        .select("*")
-        .eq("sarana_kesehatan_id", item.id)
-        .order("urutan", { ascending: true })
-
-      const listTng = (tngData || []).map((t) => ({
-        id: t.id,
-        tempId: t.id,
-        jenis_tenaga: t.jenis_tenaga || "",
-        jumlah: (t.jumlah ?? 1).toString(),
-        urutan: (t.urutan ?? 1).toString(),
-        is_active: Boolean(t.is_active ?? true),
-      }))
-      setFormTenagaList(listTng)
-      setExistingTenagaIds((tngData || []).map((t) => t.id))
-    } catch {
-      setFormTenagaList([])
-      setExistingTenagaIds([])
-    } finally {
-      setLoadingTenaga(false)
-    }
-
-    try {
-      const { data: indData } = await supabase
-        .from("indikator_tambahan_kesehatan")
-        .select("*")
-        .eq("sarana_kesehatan_id", item.id)
-        .order("urutan", { ascending: true })
-
-      const listInd = (indData || []).map((i) => ({
-        id: i.id,
-        tempId: i.id,
-        nama_indikator: i.nama_indikator || "",
-        nilai_indikator: i.nilai_indikator || "",
-        satuan: i.satuan || "",
-        keterangan: i.keterangan || "",
-        urutan: (i.urutan ?? 1).toString(),
-        is_active: Boolean(i.is_active ?? true),
-      }))
-      setFormIndikatorList(listInd)
-      setExistingIndikatorIds((indData || []).map((i) => i.id))
-    } catch {
-      setFormIndikatorList([])
-      setExistingIndikatorIds([])
-    } finally {
-      setLoadingIndikator(false)
-    }
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    })
-  }
-
-  // Handler Hapus Sarana Sesuai Koreksi 5
   const hapusSarana = async (item: SaranaKesehatan) => {
     if (loading) return
-    if (item.pendataan_id !== pendataanId) {
-      alert("Sarana kesehatan ini tidak terikat pada periode pendataan ini.")
-      return
-    }
 
     const session = await periksaSesi()
     if (!session) return
 
-    const yakin = window.confirm(`Yakin ingin menghapus "${item.nama_sarana}"?`)
+    const yakin = window.confirm(
+      `Yakin ingin menghapus sarana kesehatan "${item.nama_sarana}"?\n\nSeluruh rincian fasilitas dan tenaga kesehatan terkait juga akan terhapus!`
+    )
     if (!yakin) return
 
+    setPesanSukses(null)
+    setPesanError(null)
     setLoading(true)
 
     try {
-      // 1. Simpan storage_path sebelum proses
+      // 1. Hapus rincian anak
+      await supabase.from("fasilitas_sarana_kesehatan").delete().eq("sarana_kesehatan_id", item.id)
+      await supabase.from("tenaga_kesehatan_sarana").delete().eq("sarana_kesehatan_id", item.id)
+      await supabase.from("indikator_tambahan_kesehatan").delete().eq("sarana_kesehatan_id", item.id)
+
+      // 2. Hapus file Storage jika ada
       const pathFoto = item.storage_path || ambilPathFotoDariUrl(item.foto_url)
-
-      // 2. Hapus Storage terlebih dahulu
       if (pathFoto) {
-        const { error: errDelStorage } = await supabase.storage
-          .from(BUCKET_FOTO_KESEHATAN)
-          .remove([pathFoto])
-
-        if (errDelStorage) {
-          console.error("Gagal menghapus file foto dari Storage:", errDelStorage)
-          alert(
-            `Gagal menghapus file foto dari Storage: ${errDelStorage.message}. Penghapusan sarana kesehatan dibatalkan.`
-          )
-          setLoading(false)
-          return
-        }
+        await supabase.storage.from(BUCKET_FOTO_KESEHATAN).remove([pathFoto])
       }
 
-      // 3. Setelah Storage berhasil, baru hapus record database
+      // 3. Hapus record database utama
       const { error: hapusError } = await supabase
         .from("sarana_kesehatan")
         .delete()
@@ -1063,39 +991,19 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
         .eq("pendataan_id", pendataanId)
 
       if (hapusError) {
-        console.error("Gagal menghapus record sarana dari database:", hapusError)
-
-        if (pathFoto) {
-          // Kosongkan foto_url dan storage_path pada record DB yang tersisa (Koreksi 5)
-          const { error: errNullify } = await supabase
-            .from("sarana_kesehatan")
-            .update({ foto_url: null, storage_path: null })
-            .eq("id", item.id)
-
-          if (errNullify) {
-            console.error("Gagal mengosongkan URL foto pada database:", errNullify)
-          }
-
-          alert(
-            `Record sarana kesehatan gagal dihapus dari database: ${hapusError.message}.\n\nNamun, file foto sarana kesehatan sudah terhapus dari Storage, dan tautan foto pada database telah dikosongkan agar tidak menunjuk file yang hilang.`
-          )
-        } else {
-          alert(`Gagal menghapus sarana kesehatan: ${hapusError.message}`)
-        }
-        setLoading(false)
-        return
+        setPesanError(`Gagal menghapus sarana kesehatan: ${hapusError.message}`)
+      } else {
+        setPesanSukses("Sarana kesehatan berhasil dihapus.")
       }
 
-      alert("Sarana kesehatan berhasil dihapus.")
-
       if (editingSaranaId === item.id) {
-        resetFormSarana()
+        handleBatalForm()
       }
 
       await fetchSarana(pendataanId)
     } catch (hapusError: any) {
       console.error("hapus sarana error:", hapusError)
-      alert(`Gagal menghapus sarana kesehatan: ${hapusError?.message || "Terjadi kesalahan."}`)
+      setPesanError(`Gagal menghapus sarana kesehatan: ${hapusError?.message || "Terjadi kesalahan."}`)
     } finally {
       setLoading(false)
     }
@@ -1107,73 +1015,98 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] py-6 sm:py-8">
-      {/* Header */}
-      <div className="w-full max-w-5xl mx-auto px-4 mb-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation (Samakan dengan Kelola Layanan Informasi) */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
             <Link
               href="/admin/kesehatan"
-              className="rounded-lg p-2 transition-colors hover:bg-white/60"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
               title="Kembali ke Riwayat Pendataan Kesehatan"
+              aria-label="Kembali ke Riwayat Pendataan Kesehatan"
             >
-              <svg
-                className="h-6 w-6 text-gray-700"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </Link>
-
             <div>
-              <h1 className="text-xl font-bold text-gray-900 sm:text-2xl md:text-3xl">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
                 Kelola Sarana Kesehatan
               </h1>
-
-              <p className="mt-1 text-xs text-gray-600 sm:text-sm">
-                Kelola sarana kesehatan, fasilitas internal, dan tenaga kesehatan untuk periode terpilih
+              <p className="text-xs sm:text-sm text-amber-200/80">
+                Kelola data sarana, fasilitas, dan tenaga kesehatan untuk periode pendataan terpilih.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            {!isFormOpen && (
+              <button
+                type="button"
+                onClick={handleOpenTambah}
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Tambah Sarana Kesehatan
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleLogout}
-              disabled={loading}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-red-700 disabled:opacity-60"
+              className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
             >
-              Logout
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              <span>Logout</span>
             </button>
           </div>
         </div>
-
-        <div className="mt-4 h-1 w-24 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587]" />
-
-        {error && (
-          <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
-        )}
       </div>
 
-      {/* Kondisi Jika Pendataan Tidak Ditemukan / Error */}
-      {loadingPendataan ? (
-        <div className="w-full max-w-5xl mx-auto px-4 mb-6">
-          <div className="rounded-xl border border-gray-100 bg-white p-10 text-center shadow-lg">
-            <p className="text-sm text-gray-500">Memuat detail periode pendataan kesehatan...</p>
-          </div>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Global Toast Notifications */}
+        <div aria-live="polite">
+          {pesanSukses && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{pesanSukses}</span>
+              </div>
+            </div>
+          )}
+
+          {pesanError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{pesanError}</span>
+              </div>
+            </div>
+          )}
         </div>
-      ) : pendataanError || !detailPendataan ? (
-        <div className="w-full max-w-5xl mx-auto px-4 mb-6">
-          <div className="rounded-xl border border-red-200 bg-white p-10 text-center shadow-lg">
+
+        {/* Kondisi Jika Pendataan Tidak Ditemukan / Error */}
+        {loadingPendataan ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent mb-3"></div>
+            <p className="text-sm font-medium text-gray-600">Memuat detail periode pendataan kesehatan...</p>
+          </div>
+        ) : pendataanError || !detailPendataan ? (
+          <div className="rounded-2xl border border-red-200 bg-white p-10 text-center shadow-sm">
             <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -1192,455 +1125,351 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
               <span>← Kembali ke Riwayat Pendataan</span>
             </Link>
           </div>
-        </div>
-      ) : (
-        <>
-          {/* SECTION 1: Ringkasan & Form Sarana Kesehatan (Full Width) */}
-          <div className="w-full max-w-5xl mx-auto px-4 mb-6 space-y-6">
-            {/* Banner Ringkasan Periode */}
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        ) : (
+          <>
+            {/* Card Ringkasan Periode (Hanya Nama Periode, Sumber Data, Jumlah Sarana Kesehatan) */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-gray-900">
-                      Pendataan Kesehatan Tahun {detailPendataan.tahun_pendataan}
-                    </h2>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        detailPendataan.status_publikasi === "dipublikasikan"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {detailPendataan.status_publikasi === "dipublikasikan"
-                        ? "Dipublikasikan"
-                        : "Draft"}
-                    </span>
-                    {detailPendataan.is_active && (
-                      <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-                        Aktif
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="mt-1 text-sm text-gray-600">
-                    Sumber: <strong>{detailPendataan.sumber_data}</strong>
-                    {detailPendataan.keterangan && (
-                      <span className="ml-2 text-gray-500">— {detailPendataan.keterangan}</span>
-                    )}
+                  <h2 className="text-lg font-bold text-[#2c1b01]">
+                    Pendataan Kesehatan Tahun {detailPendataan.tahun_pendataan}
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm text-gray-600">
+                    Sumber: <strong className="text-gray-900">{detailPendataan.sumber_data}</strong>
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full bg-[#f0e8db] px-3 py-1 text-xs font-semibold text-[#2c1b01]">
-                    {saranaList.length} sarana kesehatan
-                  </span>
-                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                    WC Septic: {formatAngka(detailPendataan.wc_septic_tanah)}
-                  </span>
-                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                    WC Tanpa Septic: {formatAngka(detailPendataan.wc_tanpa_septic)}
-                  </span>
-                  <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700">
-                    MCK Sungai: {formatAngka(detailPendataan.mck_sungai)}
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-[#f7f2e8] px-3.5 py-1.5 text-xs font-bold text-[#2c1b01] border border-[#2c1b01]/10 shadow-xs">
+                    Jumlah Sarana Kesehatan: {saranaList.length}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Form Sarana Kesehatan */}
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
-              <h2 className="text-lg font-bold text-gray-900">
-                {editingSaranaId ? "Edit Sarana Kesehatan" : "Tambah Sarana Kesehatan"}
-              </h2>
+            {/* SECTION 1: Form Tambah / Edit Sarana Kesehatan (Krem Header, Body Putih) */}
+            {isFormOpen && (
+              <div ref={formRef} id="form-sarana-section" className="mb-8 scroll-mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                {/* Header Krem Section */}
+                <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
+                  <h2 className="text-lg font-bold text-[#2c1b01]">
+                    {editingSaranaId ? "Edit Sarana Kesehatan" : "Tambah Sarana Kesehatan"}
+                  </h2>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {editingSaranaId
+                      ? "Ubah data sarana kesehatan Nagari."
+                      : "Isi formulir berikut untuk mendaftarkan sarana kesehatan baru."}
+                  </p>
+                </div>
 
-              <p className="mt-1 text-xs text-gray-500">
-                Setiap sarana kesehatan disimpan pada periode pendataan kesehatan ini.
-              </p>
+                {/* Body Form Putih */}
+                <form onSubmit={simpanSarana} className="p-6 space-y-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Nama Sarana Kesehatan <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="nama_sarana"
+                        value={formSarana.nama_sarana}
+                        onChange={ubahFormSarana}
+                        placeholder="Contoh: Pustu Padang Sarai / Posyandu Mawar 1"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
+                        required
+                      />
+                    </div>
 
-              <form onSubmit={simpanSarana} className="mt-5 space-y-5">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Jenis Sarana <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="jenis_slug"
+                        value={formSarana.jenis_slug}
+                        onChange={ubahFormSarana}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
+                      >
+                        {PILIHAN_JENIS_SARANA.map((item) => (
+                          <option key={item.slug} value={item.slug}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Nama Sarana Kesehatan
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Alamat Sarana <span className="text-red-500">*</span>
                     </label>
-
-                    <input
-                      type="text"
-                      name="nama_sarana"
-                      value={formSarana.nama_sarana}
+                    <textarea
+                      name="alamat"
+                      rows={2}
+                      value={formSarana.alamat}
                       onChange={ubahFormSarana}
-                      placeholder="Contoh: Pustu Padang Sarai / Posyandu Mawar 1"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                      placeholder="Contoh: Jorong Padang Sarai, Nagari Aia Manggih Barat..."
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Jenis Sarana
-                    </label>
-
-                    <select
-                      name="jenis_slug"
-                      value={formSarana.jenis_slug}
-                      onChange={ubahFormSarana}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                    >
-                      {PILIHAN_JENIS_SARANA.map((item) => (
-                        <option key={item.slug} value={item.slug}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Status Operasional
-                    </label>
-
-                    <select
-                      name="status_operasional"
-                      value={formSarana.status_operasional}
-                      onChange={ubahFormSarana}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                    >
-                      <option value="aktif">Aktif</option>
-                      <option value="tidak_aktif">Tidak Aktif</option>
-                      <option value="dalam_pembangunan">Dalam Pembangunan</option>
-                      <option value="lainnya">Lainnya</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Urutan Tampil
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      name="urutan"
-                      value={formSarana.urutan}
-                      onChange={ubahFormSarana}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Alamat Sarana
-                  </label>
-
-                  <textarea
-                    name="alamat"
-                    rows={3}
-                    value={formSarana.alamat}
-                    onChange={ubahFormSarana}
-                    placeholder="Contoh: Jorong Padang Sarai, Nagari Aia Manggih Barat..."
-                    className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Nomor Kontak
-                    </label>
-                    <input
-                      type="text"
-                      name="nomor_kontak"
-                      value={formSarana.nomor_kontak}
-                      onChange={ubahFormSarana}
-                      placeholder="Contoh: 08xx-xxxx-xxxx"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Tautan Google Maps (Wajib HTTPS)
-                    </label>
-                    <input
-                      type="url"
-                      name="tautan_peta"
-                      value={formSarana.tautan_peta}
-                      onChange={ubahFormSarana}
-                      placeholder="https://maps.google.com/..."
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                    />
-                  </div>
-                </div>
-
-                {/* --- HANYA TAMPILKAN TABEL RINCIAN JIKA EDITING SARANA ID VALID (KOREKSI 3) --- */}
-                {!editingSaranaId ? (
-                  <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/60 p-5 text-center">
-                    <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Nomor Kontak <span className="text-xs font-normal text-gray-500">(Opsional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="nomor_kontak"
+                        value={formSarana.nomor_kontak}
+                        onChange={ubahFormSarana}
+                        placeholder="Contoh: 0812-3456-7890"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
+                      />
                     </div>
-                    <p className="text-sm font-bold text-gray-900">
-                      Rincian Fasilitas, Tenaga Kesehatan, & Indikator Tambahan
-                    </p>
-                    <p className="mt-1 text-xs text-gray-600">
-                      Simpan data sarana kesehatan terlebih dahulu sebelum mengelola rincian Fasilitas, Tenaga Kesehatan, dan Indikator Tambahan.
-                    </p>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Tautan Google Maps <span className="text-xs font-normal text-gray-500">(Wajib HTTPS, Opsional)</span>
+                      </label>
+                      <input
+                        type="url"
+                        name="tautan_peta"
+                        value={formSarana.tautan_peta}
+                        onChange={ubahFormSarana}
+                        placeholder="https://maps.google.com/..."
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    {/* --- TABEL RINCIAN 1: FASILITAS SARANA --- */}
-                    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-gray-900">
-                            Fasilitas Internal Sarana Kesehatan
-                          </h3>
-                          <p className="text-xs text-gray-500">
-                            Ruang periksa, tempat tidur, peralatan imunisasi, laboratorium, dll.
-                          </p>
+
+                  {/* SUBSECTION: RINCIAN FASILITAS, TENAGA & INDIKATOR */}
+                  {!editingSaranaId ? (
+                    <div className="rounded-xl border border-dashed border-amber-300 bg-[#f7f2e8]/60 p-4 text-center">
+                      <p className="text-xs font-bold text-[#2c1b01]">
+                        Rincian Fasilitas, Tenaga Kesehatan, & Indikator Tambahan
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-600">
+                        Simpan data sarana kesehatan terlebih dahulu sebelum mengelola rincian Fasilitas, Tenaga Kesehatan, dan Indikator Tambahan.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6 pt-2">
+                      {/* 1. Fasilitas Internal */}
+                      <div className="rounded-xl border border-gray-200 bg-[#f7f2e8]/40 p-4 space-y-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <h3 className="text-sm font-bold text-[#2c1b01]">
+                              Fasilitas Internal Sarana Kesehatan
+                            </h3>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              Ruang periksa, tempat tidur, peralatan imunisasi, laboratorium, dll.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={tambahBarisFasilitas}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] text-white font-semibold text-xs transition-colors cursor-pointer"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>+ Tambah Fasilitas</span>
+                          </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={tambahBarisFasilitas}
-                          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#2c1b01] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3a2604] transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          <span>+ Tambah Fasilitas</span>
-                        </button>
-                      </div>
-
-                      <datalist id="saran-fasilitas-kes-list">
-                        {SARAN_FASILITAS.map((saran) => (
-                          <option key={saran} value={saran} />
-                        ))}
-                      </datalist>
-
-                      {loadingFasilitas ? (
-                        <p className="py-4 text-center text-xs text-gray-500">Memuat fasilitas...</p>
-                      ) : formFasilitasList.length === 0 ? (
-                        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center">
-                          <p className="text-xs text-gray-500">
-                            Belum ada fasilitas ditambahkan. Klik "+ Tambah Fasilitas" di atas.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {formFasilitasList.map((item, index) => (
-                            <div
-                              key={item.tempId || item.id || index}
-                              className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm"
-                            >
-                              <span className="text-xs font-bold text-gray-400 w-6 text-center">
-                                {index + 1}.
-                              </span>
-
-                              <div className="flex-1 min-w-[160px]">
-                                <input
-                                  type="text"
-                                  list="saran-fasilitas-kes-list"
-                                  placeholder="Nama fasilitas (mis. Ruang Periksa)"
-                                  value={item.nama_fasilitas}
-                                  onChange={(e) => ubahBarisFasilitas(index, "nama_fasilitas", e.target.value)}
-                                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
-                                />
-                              </div>
-
-                              <div className="w-28 flex items-center gap-1">
-                                <span className="text-xs text-gray-500">Jumlah:</span>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={item.jumlah}
-                                  onChange={(e) => ubahBarisFasilitas(index, "jumlah", e.target.value)}
-                                  className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
-                                />
-                              </div>
-
-                              <label className="flex items-center gap-1.5 text-xs text-gray-600 px-2">
-                                <input
-                                  type="checkbox"
-                                  checked={item.is_active ?? true}
-                                  onChange={(e) => ubahBarisFasilitas(index, "is_active", e.target.checked)}
-                                />
-                                <span>Aktif</span>
-                              </label>
-
-                              <button
-                                type="button"
-                                onClick={() => hapusBarisFasilitas(index)}
-                                className="rounded-md border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 transition-colors"
-                                title="Hapus baris"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
+                        <datalist id="saran-fasilitas-kes-list">
+                          {SARAN_FASILITAS.map((saran) => (
+                            <option key={saran} value={saran} />
                           ))}
-                        </div>
-                      )}
-                    </div>
+                        </datalist>
 
-                    {/* --- TABEL RINCIAN 2: TENAGA KESEHATAN --- */}
-                    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-gray-900">
-                            Tenaga Kesehatan / Kader
-                          </h3>
-                          <p className="text-xs text-gray-500">
-                            Rincian Dokter, Bidan, Perawat, maupun Kader Posyandu.
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={tambahBarisTenaga}
-                          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#2c1b01] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3a2604] transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          <span>+ Tambah Tenaga</span>
-                        </button>
-                      </div>
-
-                      <datalist id="saran-tenaga-kes-list">
-                        {SARAN_TENAGA.map((saran) => (
-                          <option key={saran} value={saran} />
-                        ))}
-                      </datalist>
-
-                      {loadingTenaga ? (
-                        <p className="py-4 text-center text-xs text-gray-500">Memuat tenaga kesehatan...</p>
-                      ) : formTenagaList.length === 0 ? (
-                        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center">
-                          <p className="text-xs text-gray-500">
-                            Belum ada tenaga kesehatan ditambahkan. Klik "+ Tambah Tenaga" di atas.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {formTenagaList.map((item, index) => (
-                            <div
-                              key={item.tempId || item.id || index}
-                              className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm"
-                            >
-                              <span className="text-xs font-bold text-gray-400 w-6 text-center">
-                                {index + 1}.
-                              </span>
-
-                              <div className="flex-1 min-w-[160px]">
-                                <input
-                                  type="text"
-                                  list="saran-tenaga-kes-list"
-                                  placeholder="Jenis tenaga (mis. Kader Posyandu)"
-                                  value={item.jenis_tenaga}
-                                  onChange={(e) => ubahBarisTenaga(index, "jenis_tenaga", e.target.value)}
-                                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
-                                />
-                              </div>
-
-                              <div className="w-28 flex items-center gap-1">
-                                <span className="text-xs text-gray-500">Jumlah:</span>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={item.jumlah}
-                                  onChange={(e) => ubahBarisTenaga(index, "jumlah", e.target.value)}
-                                  className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
-                                />
-                              </div>
-
-                              <label className="flex items-center gap-1.5 text-xs text-gray-600 px-2">
-                                <input
-                                  type="checkbox"
-                                  checked={item.is_active ?? true}
-                                  onChange={(e) => ubahBarisTenaga(index, "is_active", e.target.checked)}
-                                />
-                                <span>Aktif</span>
-                              </label>
-
-                              <button
-                                type="button"
-                                onClick={() => hapusBarisTenaga(index)}
-                                className="rounded-md border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 transition-colors"
-                                title="Hapus baris"
+                        {loadingFasilitas ? (
+                          <p className="py-3 text-center text-xs text-gray-500">Memuat fasilitas...</p>
+                        ) : formFasilitasList.length === 0 ? (
+                          <div className="rounded-lg border border-dashed border-gray-300 bg-white p-3 text-center">
+                            <p className="text-xs text-gray-500">
+                              Belum ada fasilitas. Klik &quot;+ Tambah Fasilitas&quot; di atas.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {formFasilitasList.map((item, index) => (
+                              <div
+                                key={item.tempId || item.id || index}
+                                className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 shadow-xs"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* --- TABEL RINCIAN 3: INDIKATOR TAMBAHAN (KOREKSI 2) --- */}
-                    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-gray-900">
-                            Indikator Tambahan
-                          </h3>
-                          <p className="text-xs text-gray-500">
-                            Spesifikasi khusus seperti "Jumlah Posyandu Binaan", "Jam Operasional", satuan, & keterangan.
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={tambahBarisIndikator}
-                          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#2c1b01] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3a2604] transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          <span>+ Tambah Indikator</span>
-                        </button>
-                      </div>
-
-                      <datalist id="saran-indikator-kes-list">
-                        {SARAN_INDIKATOR.map((saran) => (
-                          <option key={saran} value={saran} />
-                        ))}
-                      </datalist>
-
-                      {loadingIndikator ? (
-                        <p className="py-4 text-center text-xs text-gray-500">Memuat indikator tambahan...</p>
-                      ) : formIndikatorList.length === 0 ? (
-                        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center">
-                          <p className="text-xs text-gray-500">
-                            Belum ada indikator tambahan ditambahkan. Klik "+ Tambah Indikator" di atas.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {formIndikatorList.map((item, index) => (
-                            <div
-                              key={item.tempId || item.id || index}
-                              className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm space-y-2"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-gray-500">
-                                  Indikator #{index + 1}
+                                <span className="text-xs font-bold text-gray-400 w-6 text-center">
+                                  {index + 1}.
                                 </span>
-                                <div className="flex items-center gap-2">
-                                  <label className="flex items-center gap-1.5 text-xs text-gray-600">
-                                    <input
-                                      type="checkbox"
-                                      checked={item.is_active ?? true}
-                                      onChange={(e) => ubahBarisIndikator(index, "is_active", e.target.checked)}
-                                    />
-                                    <span>Aktif</span>
-                                  </label>
+                                <div className="flex-1 min-w-[160px]">
+                                  <input
+                                    type="text"
+                                    list="saran-fasilitas-kes-list"
+                                    placeholder="Nama fasilitas (mis. Ruang Periksa)"
+                                    value={item.nama_fasilitas}
+                                    onChange={(e) => ubahBarisFasilitas(index, "nama_fasilitas", e.target.value)}
+                                    className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                  />
+                                </div>
+                                <div className="w-28 flex items-center gap-1">
+                                  <span className="text-xs text-gray-500">Jumlah:</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={item.jumlah}
+                                    onChange={(e) => ubahBarisFasilitas(index, "jumlah", e.target.value)}
+                                    className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => hapusBarisFasilitas(index)}
+                                  className="rounded-md border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 transition-colors"
+                                  title="Hapus baris"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 2. Tenaga Kesehatan */}
+                      <div className="rounded-xl border border-gray-200 bg-[#f7f2e8]/40 p-4 space-y-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <h3 className="text-sm font-bold text-[#2c1b01]">
+                              Tenaga Kesehatan / Kader
+                            </h3>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              Rincian Dokter, Bidan, Perawat, maupun Kader Posyandu.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={tambahBarisTenaga}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] text-white font-semibold text-xs transition-colors cursor-pointer"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>+ Tambah Tenaga</span>
+                          </button>
+                        </div>
+
+                        <datalist id="saran-tenaga-kes-list">
+                          {SARAN_TENAGA.map((saran) => (
+                            <option key={saran} value={saran} />
+                          ))}
+                        </datalist>
+
+                        {loadingTenaga ? (
+                          <p className="py-3 text-center text-xs text-gray-500">Memuat tenaga kesehatan...</p>
+                        ) : formTenagaList.length === 0 ? (
+                          <div className="rounded-lg border border-dashed border-gray-300 bg-white p-3 text-center">
+                            <p className="text-xs text-gray-500">
+                              Belum ada tenaga kesehatan. Klik &quot;+ Tambah Tenaga&quot; di atas.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {formTenagaList.map((item, index) => (
+                              <div
+                                key={item.tempId || item.id || index}
+                                className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 shadow-xs"
+                              >
+                                <span className="text-xs font-bold text-gray-400 w-6 text-center">
+                                  {index + 1}.
+                                </span>
+                                <div className="flex-1 min-w-[160px]">
+                                  <input
+                                    type="text"
+                                    list="saran-tenaga-kes-list"
+                                    placeholder="Jenis tenaga (mis. Kader Posyandu)"
+                                    value={item.jenis_tenaga}
+                                    onChange={(e) => ubahBarisTenaga(index, "jenis_tenaga", e.target.value)}
+                                    className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                  />
+                                </div>
+                                <div className="w-28 flex items-center gap-1">
+                                  <span className="text-xs text-gray-500">Jumlah:</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={item.jumlah}
+                                    onChange={(e) => ubahBarisTenaga(index, "jumlah", e.target.value)}
+                                    className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => hapusBarisTenaga(index)}
+                                  className="rounded-md border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 transition-colors"
+                                  title="Hapus baris"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 3. Indikator Tambahan */}
+                      <div className="rounded-xl border border-gray-200 bg-[#f7f2e8]/40 p-4 space-y-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <h3 className="text-sm font-bold text-[#2c1b01]">
+                              Indikator Tambahan
+                            </h3>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              Spesifikasi khusus seperti &quot;Jumlah Posyandu Binaan&quot;, &quot;Jam Operasional&quot;, dll.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={tambahBarisIndikator}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] text-white font-semibold text-xs transition-colors cursor-pointer"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>+ Tambah Indikator</span>
+                          </button>
+                        </div>
+
+                        <datalist id="saran-indikator-kes-list">
+                          {SARAN_INDIKATOR.map((saran) => (
+                            <option key={saran} value={saran} />
+                          ))}
+                        </datalist>
+
+                        {loadingIndikator ? (
+                          <p className="py-3 text-center text-xs text-gray-500">Memuat indikator tambahan...</p>
+                        ) : formIndikatorList.length === 0 ? (
+                          <div className="rounded-lg border border-dashed border-gray-300 bg-white p-3 text-center">
+                            <p className="text-xs text-gray-500">
+                              Belum ada indikator tambahan. Klik &quot;+ Tambah Indikator&quot; di atas.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {formIndikatorList.map((item, index) => (
+                              <div
+                                key={item.tempId || item.id || index}
+                                className="rounded-lg border border-gray-200 bg-white p-3 shadow-xs space-y-2"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold text-gray-500">
+                                    Indikator #{index + 1}
+                                  </span>
                                   <button
                                     type="button"
                                     onClick={() => hapusBarisIndikator(index)}
@@ -1652,223 +1481,219 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                                     </svg>
                                   </button>
                                 </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                <div className="sm:col-span-1">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                   <input
                                     type="text"
                                     list="saran-indikator-kes-list"
-                                    placeholder="Nama (mis. Jumlah Posyandu Binaan)"
+                                    placeholder="Nama (mis. Posyandu Binaan)"
                                     value={item.nama_indikator}
                                     onChange={(e) => ubahBarisIndikator(index, "nama_indikator", e.target.value)}
-                                    className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
+                                    className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                   />
-                                </div>
-
-                                <div className="sm:col-span-1">
                                   <input
                                     type="text"
                                     placeholder="Nilai (mis. 4 atau 24 Jam)"
                                     value={item.nilai_indikator}
                                     onChange={(e) => ubahBarisIndikator(index, "nilai_indikator", e.target.value)}
-                                    className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
+                                    className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                   />
-                                </div>
-
-                                <div className="sm:col-span-1">
                                   <input
                                     type="text"
-                                    placeholder="Satuan, opsional (mis. Posyandu / Orang)"
+                                    placeholder="Satuan opsional (mis. Posyandu)"
                                     value={item.satuan || ""}
                                     onChange={(e) => ubahBarisIndikator(index, "satuan", e.target.value)}
-                                    className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
+                                    className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                   />
                                 </div>
                               </div>
-
-                              <div>
-                                <input
-                                  type="text"
-                                  placeholder="Keterangan opsional (mis. Posyandu Balita Jorong Aia Manggih)"
-                                  value={item.keterangan || ""}
-                                  onChange={(e) => ubahBarisIndikator(index, "keterangan", e.target.value)}
-                                  className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2c1b01]"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Foto Sarana Kesehatan
-                    <span className="ml-1 text-xs font-normal text-gray-400">
-                      (opsional, JPG/PNG/WEBP, maksimal 2 MB)
-                    </span>
-                  </label>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={pilihFoto}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#2c1b01] file:px-4 file:py-2 file:font-semibold file:text-white"
-                  />
-
-                  {previewFotoUrl && (
-                    <div className="mt-3">
-                      <img
-                        src={previewFotoUrl}
-                        alt="Pratinjau sarana kesehatan"
-                        className="h-52 w-full rounded-lg border border-gray-200 object-cover"
-                      />
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
-                </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Keterangan
-                  </label>
+                  {/* Foto Sarana */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Foto Sarana Kesehatan <span className="text-xs font-normal text-gray-500">(Opsional, JPG/PNG/WEBP, max 2 MB)</span>
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={pilihFoto}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white file:mr-3 file:rounded-md file:border-0 file:bg-[#2c1b01] file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white"
+                    />
+                    {previewFotoUrl && (
+                      <div className="mt-3">
+                        <img
+                          src={previewFotoUrl}
+                          alt="Pratinjau sarana kesehatan"
+                          className="h-48 w-full max-w-xs rounded-xl border border-gray-200 object-cover shadow-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
 
-                  <textarea
-                    name="keterangan"
-                    rows={3}
-                    value={formSarana.keterangan}
-                    onChange={ubahFormSarana}
-                    placeholder="Tambahkan informasi lain bila diperlukan..."
-                    className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                  />
-                </div>
+                  {/* Keterangan */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Keterangan <span className="text-xs font-normal text-gray-500">(Opsional)</span>
+                    </label>
+                    <textarea
+                      name="keterangan"
+                      rows={3}
+                      value={formSarana.keterangan}
+                      onChange={ubahFormSarana}
+                      placeholder="Tambahkan informasi lain bila diperlukan..."
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
+                    />
+                  </div>
 
-                <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-3 py-3">
-                  <input
-                    type="checkbox"
-                    name="is_active"
-                    checked={formSarana.is_active}
-                    onChange={ubahFormSarana}
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    Aktifkan sarana kesehatan ini untuk ditampilkan
-                  </span>
-                </label>
-
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="min-h-[44px] flex-1 rounded-lg bg-[#2c1b01] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#3a2604] disabled:opacity-60"
-                  >
-                    {loading
-                      ? "Menyimpan..."
-                      : editingSaranaId
-                      ? "Simpan Perubahan Sarana"
-                      : "Tambah Sarana Kesehatan"}
-                  </button>
-
-                  {editingSaranaId && (
+                  {/* Footer Buttons (Batal & Simpan) */}
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
                     <button
                       type="button"
-                      onClick={resetFormSarana}
-                      className="rounded-lg bg-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+                      onClick={handleBatalForm}
+                      disabled={loading}
+                      className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
                     >
                       Batal
                     </button>
-                  )}
-                </div>
-              </form>
-            </div>
-          </div>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
+                    >
+                      {loading ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
+                          <span>Menyimpan...</span>
+                        </>
+                      ) : editingSaranaId ? (
+                        <span>Simpan Perubahan Sarana</span>
+                      ) : (
+                        <span>Tambah Sarana Kesehatan</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
-          {/* SECTION 2: Tabel Daftar Sarana Kesehatan (Full Width Table) */}
-          <div className="w-full max-w-5xl mx-auto px-4 mb-6">
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-lg">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* SECTION 2: Tabel Daftar Sarana Kesehatan (Header Section Baru Konsisten dengan Sarana Pendidikan) */}
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-gray-200 bg-white flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="text-lg font-bold text-[#2c1b01]">
                     Daftar Sarana Kesehatan
                   </h2>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {saranaTersaring.length} dari {saranaList.length} data sarana kesehatan
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Menampilkan {saranaTersaring.length} dari {saranaList.length} data sarana kesehatan
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => fetchSarana(pendataanId)}
-                  disabled={loading || loadingSarana}
-                  className="rounded-lg bg-gray-100 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-                >
-                  Refresh
-                </button>
+                <div className="w-full sm:w-64">
+                  <select
+                    value={filterJenis}
+                    onChange={(e) => setFilterJenis(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white cursor-pointer"
+                  >
+                    <option value="semua">Semua Jenis Sarana</option>
+                    {PILIHAN_JENIS_SARANA.map((item) => (
+                      <option key={item.slug} value={item.slug}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Cari nama, jenis, alamat, atau status..."
-                className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-              />
-
               {loadingSarana ? (
-                <p className="py-10 text-center text-sm text-gray-500">
-                  Memuat sarana kesehatan...
-                </p>
+                <div className="p-12 text-center text-gray-500">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent mb-3"></div>
+                  <p className="text-sm font-medium">Memuat sarana kesehatan...</p>
+                </div>
               ) : saranaTersaring.length === 0 ? (
-                <p className="py-10 text-center text-sm text-gray-500">
-                  Belum ada sarana kesehatan yang tersimpan.
-                </p>
+                <div className="p-12 text-center text-gray-500">
+                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <p className="text-base font-semibold text-gray-700">Belum Ada Sarana Kesehatan</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {filterJenis !== "semua"
+                      ? "Tidak ada data sarana kesehatan yang cocok dengan filter jenis pilihan."
+                      : 'Gunakan tombol "Tambah Sarana Kesehatan" untuk mendaftarkan data sarana baru.'}
+                  </p>
+                </div>
               ) : (
-                <div className="mt-5 overflow-x-auto">
-                  <table className="w-full text-left text-sm border-collapse">
-                    <thead>
-                      <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
-                        <th className="py-3 px-4 font-bold w-16 text-center">No.</th>
-                        <th className="py-3 px-4 font-bold">Nama Sarana</th>
-                        <th className="py-3 px-4 font-bold">Jenis</th>
-                        <th className="py-3 px-4 font-bold text-center w-44">Aksi</th>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
+                      <tr>
+                        <th scope="col" className="px-6 py-4 font-bold w-[45%]">Nama Sarana</th>
+                        <th scope="col" className="px-6 py-4 font-bold w-[30%]">Jenis Sarana</th>
+                        <th scope="col" className="px-6 py-4 font-bold text-right w-[25%]">Aksi</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {saranaTersaring.map((item, index) => (
+                    <tbody className="divide-y divide-gray-100 bg-white text-sm">
+                      {saranaTersaring.map((item) => (
                         <tr
                           key={item.id}
-                          className={`transition-colors hover:bg-gray-50/80 ${
-                            editingSaranaId === item.id ? "bg-yellow-50/50" : ""
+                          className={`hover:bg-gray-50/80 transition-colors ${
+                            editingSaranaId === item.id ? "bg-[#f0e8db]/30" : ""
                           }`}
                         >
-                          <td className="py-3 px-4 text-center font-medium text-gray-500">
-                            {index + 1}
-                          </td>
-                          <td className="py-3 px-4 font-semibold text-gray-900">
+                          <td className="py-4 px-6 font-bold text-gray-900">
                             {item.nama_sarana}
                           </td>
-                          <td className="py-3 px-4 text-gray-600 text-xs">
-                            <span className="rounded-full bg-gray-100 px-2.5 py-1 font-semibold text-gray-700">
+                          <td className="py-4 px-6">
+                            <span className="inline-flex items-center rounded-full bg-[#f7f2e8] px-2.5 py-1 text-xs font-semibold text-[#2c1b01] border border-[#2c1b01]/10">
                               {getLabelJenisSarana(item.jenis_slug)}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
+                          <td className="py-4 px-6 text-right">
+                            <div className="flex items-center justify-end gap-2 flex-wrap">
+                              {/* Tombol 1: Edit */}
                               <button
                                 type="button"
                                 onClick={() => mulaiEditSarana(item)}
-                                className="rounded-lg bg-yellow-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-yellow-600 transition-colors"
+                                disabled={loading}
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
                               >
                                 Edit
                               </button>
 
+                              {/* Tombol 2: Toggle Aktifkan / Nonaktifkan */}
+                              {item.is_active ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleActiveSarana(item)}
+                                  disabled={loading}
+                                  className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer"
+                                  title="Nonaktifkan sarana kesehatan dari website publik"
+                                >
+                                  Nonaktifkan
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleActiveSarana(item)}
+                                  disabled={loading}
+                                  className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100 disabled:opacity-50 cursor-pointer"
+                                  title="Aktifkan sarana kesehatan untuk website publik"
+                                >
+                                  Aktifkan
+                                </button>
+                              )}
+
+                              {/* Tombol 3: Hapus */}
                               <button
                                 type="button"
                                 onClick={() => hapusSarana(item)}
                                 disabled={loading}
-                                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
+                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                               >
                                 Hapus
                               </button>
@@ -1881,9 +1706,9 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                 </div>
               )}
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

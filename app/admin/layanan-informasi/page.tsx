@@ -1581,25 +1581,15 @@ export default function AdminLayananInformasiPage() {
         {showLayananForm && (
           <div id="form-layanan-section" className="mb-8 scroll-mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             {/* Header Krem Section */}
-            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-[#2c1b01]">
-                  {editingId !== null ? "Edit Layanan Surat" : "Tambah Layanan Surat Baru"}
-                </h2>
-                <p className="text-xs text-gray-600 mt-0.5">
-                  {editingId !== null
-                    ? "Ubah data layanan surat dan persyaratannya."
-                    : "Tambahkan jenis layanan surat dan persyaratannya."}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCancelLayananForm}
-                className="text-xs font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-1.5 shadow-sm cursor-pointer"
-              >
-                ✕ Batal
-              </button>
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                {editingId !== null ? "Edit Layanan Surat" : "Tambah Layanan Surat Baru"}
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                {editingId !== null
+                  ? "Ubah data layanan surat dan persyaratannya."
+                  : "Tambahkan jenis layanan surat dan persyaratannya."}
+              </p>
             </div>
 
             {/* Body Form Putih */}

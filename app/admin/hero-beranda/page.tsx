@@ -220,10 +220,7 @@ export default function AdminHeroBerandaPage() {
 
   // State Fields
   const [namaInternal, setNamaInternal] = useState<string>("")
-  const [teksAlt, setTeksAlt] = useState<string>("")
   const [posisiGambar, setPosisiGambar] = useState<PosisiGambarHero>("center")
-  const [urutan, setUrutan] = useState<string>("0")
-  const [isActive, setIsActive] = useState<boolean>(false)
 
   // State File & Preview Lokal
   const [fileGambar, setFileGambar] = useState<File | null>(null)
@@ -239,8 +236,9 @@ export default function AdminHeroBerandaPage() {
   const [cleanupTertunda, setCleanupTertunda] = useState<CleanupHeroTertunda[]>([])
   const [previewGambarErrorIds, setPreviewGambarErrorIds] = useState<string[]>([])
 
-  // Ref Race Condition Guard untuk Preview
+  // Ref Race Condition Guard & Custom File Input Ref
   const activeObjectUrlRef = useRef<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // State Feedback Form
   const [loadingForm, setLoadingForm] = useState<boolean>(false)
@@ -301,16 +299,22 @@ export default function AdminHeroBerandaPage() {
     muatDaftarHero()
   }, [muatDaftarHero])
 
+  // Auto dismiss success toast message after 4000ms
+  useEffect(() => {
+    if (!pesanSuksesForm) return
+    const timerId = window.setTimeout(() => {
+      setPesanSuksesForm(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSuksesForm])
+
   // Reset & Buka Form Tambah
   const bukaFormTambah = () => {
     bersihkanPreviewLokal()
     setModeForm("tambah")
     setHeroSedangDiedit(null)
     setNamaInternal("")
-    setTeksAlt("")
     setPosisiGambar("center")
-    setUrutan("0")
-    setIsActive(false)
     setFileGambar(null)
     setDimensiGambar(null)
     setWarningGambar([])
@@ -325,10 +329,7 @@ export default function AdminHeroBerandaPage() {
     setModeForm("edit")
     setHeroSedangDiedit(item)
     setNamaInternal(item.nama_internal)
-    setTeksAlt(item.teks_alt)
     setPosisiGambar(item.posisi_gambar)
-    setUrutan(item.urutan.toString())
-    setIsActive(item.is_active)
     setFileGambar(null)
     setDimensiGambar(null)
     setWarningGambar([])
@@ -445,27 +446,16 @@ export default function AdminHeroBerandaPage() {
 
     // Validasi Metadata Runtime
     const namaTrim = namaInternal.trim()
-    const altTrim = teksAlt.trim()
-    const urutanParsed = parseInt(urutan, 10)
+    const altTrim = namaTrim
 
     if (!namaTrim) {
       setErrorForm("Nama internal wajib diisi.")
-      return
-    }
-    if (!altTrim) {
-      setErrorForm("Teks alternatif wajib diisi.")
       return
     }
     if (!isPosisiGambarHero(posisiGambar)) {
       setErrorForm("Nilai posisi fokus gambar tidak valid.")
       return
     }
-    if (isNaN(urutanParsed) || !Number.isInteger(urutanParsed) || urutanParsed < 0) {
-      setErrorForm("Urutan harus berupa angka bulat minimal 0.")
-      return
-    }
-
-    const urutanFinal = urutanParsed
 
     // MODE TAMBAH (Safe Create)
     if (modeForm === "tambah") {
@@ -531,7 +521,7 @@ export default function AdminHeroBerandaPage() {
           return
         }
 
-        // 3. Insert Record Database
+        // 3. Insert Record Database (is_active default true)
         const { error: dbError } = await supabase.from("hero_beranda").insert({
           id: heroId,
           nama_internal: namaTrim,
@@ -539,8 +529,8 @@ export default function AdminHeroBerandaPage() {
           gambar_storage_path: storagePath,
           teks_alt: altTrim,
           posisi_gambar: posisiGambar,
-          is_active: isActive,
-          urutan: urutanFinal,
+          is_active: true,
+          urutan: 0,
         })
 
         // 4. Rollback jika DB Insert Gagal
@@ -603,8 +593,6 @@ export default function AdminHeroBerandaPage() {
               nama_internal: namaTrim,
               teks_alt: altTrim,
               posisi_gambar: posisiGambar,
-              urutan: urutanFinal,
-              is_active: isActive,
             })
             .eq("id", heroSedangDiedit.id)
 
@@ -614,7 +602,7 @@ export default function AdminHeroBerandaPage() {
             return
           }
 
-          setPesanSuksesForm("Metadata hero berhasil diperbarui.")
+          setPesanSuksesForm("Data hero berhasil diperbarui.")
           setFormTerbuka(false)
           await muatDaftarHero()
         } catch (err: unknown) {
@@ -692,11 +680,10 @@ export default function AdminHeroBerandaPage() {
               nama_internal: namaTrim,
               teks_alt: altTrim,
               posisi_gambar: posisiGambar,
-              urutan: urutanFinal,
-              is_active: isActive,
               gambar_url: publicUrlBaru,
               gambar_storage_path: storagePathBaru,
             })
+            .eq("id", heroId)
             .eq("id", heroId)
 
           // 4. Rollback Gambar Baru jika DB Update Gagal
@@ -945,7 +932,7 @@ export default function AdminHeroBerandaPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                + Tambah Gambar
+                Tambah Gambar
               </button>
             )}
 
@@ -1041,19 +1028,17 @@ export default function AdminHeroBerandaPage() {
 
         {/* Form Modal / Collapsible */}
         {formTerbuka && (
-          <div className="mb-8 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
-            <div className="bg-[#2c1b01]/5 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="mb-8 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden transition-all duration-300">
+            {/* Header Krem Section */}
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
               <h2 className="text-lg font-bold text-[#2c1b01]">
-                {modeForm === "tambah" ? "Tambah Gambar Hero Beranda Baru" : "Edit Metadata & Gambar Hero Beranda"}
+                {modeForm === "tambah" ? "Tambah Gambar Hero Beranda Baru" : "Edit Gambar Hero Beranda"}
               </h2>
-              <button
-                type="button"
-                onClick={tutupForm}
-                disabled={loadingForm}
-                className="text-gray-500 hover:text-gray-700 text-xl font-bold leading-none disabled:opacity-50"
-              >
-                &times;
-              </button>
+              <p className="text-xs text-gray-600 mt-0.5">
+                {modeForm === "tambah"
+                  ? "Lengkapi nama internal, posisi fokus, dan foto gambar hero."
+                  : "Ubah nama internal, posisi fokus, atau foto gambar hero."}
+              </p>
             </div>
 
             <form onSubmit={handleSubmitForm} className="p-6 space-y-6">
@@ -1066,7 +1051,7 @@ export default function AdminHeroBerandaPage() {
               )}
 
               <div className="grid md:grid-cols-2 gap-6">
-                {/* Kolom Kiri: Metadata Input */}
+                {/* Kolom Kiri: Input Fields */}
                 <div className="space-y-4">
                   {/* Nama Internal */}
                   <div>
@@ -1080,140 +1065,81 @@ export default function AdminHeroBerandaPage() {
                       value={namaInternal}
                       onChange={(e) => setNamaInternal(e.target.value)}
                       placeholder="Contoh: Foto Bersama Perangkat Nagari 2026"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-600 focus:border-amber-600 text-sm"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Pengenal khusus untuk admin. Tidak ditampilkan pada tampilan publik beranda.
-                    </p>
                   </div>
 
-                  {/* Teks Alternatif */}
+                  {/* Posisi Fokus Gambar */}
                   <div>
-                    <label htmlFor="teks_alt" className="block text-sm font-semibold text-gray-700 mb-1">
-                      Teks Alternatif (Alt Text) <span className="text-red-500">*</span>
+                    <label htmlFor="posisi_gambar" className="block text-sm font-semibold text-gray-700 mb-1">
+                      Posisi Fokus Gambar
                     </label>
-                    <textarea
-                      id="teks_alt"
-                      required
-                      rows={3}
-                      value={teksAlt}
-                      onChange={(e) => setTeksAlt(e.target.value)}
-                      placeholder="Jelaskan isi gambar untuk pembaca layar (contoh: Foto bersama seluruh jajaran perangkat Nagari Aia Manggih Barat)"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-600 focus:border-amber-600 text-sm"
-                    />
+                    <select
+                      id="posisi_gambar"
+                      value={posisiGambar}
+                      onChange={(e) => setPosisiGambar(e.target.value as PosisiGambarHero)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white cursor-pointer"
+                    >
+                      {PILIHAN_POSISI_GAMBAR_HERO.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
                     <p className="text-xs text-gray-500 mt-1">
-                      Wajib diisi untuk aksesibilitas pembaca layar (screen reader).
+                      Mengatur titik fokus penyesuaian <code className="text-xs bg-gray-100 px-1 rounded">object-position</code>.
                     </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Posisi Fokus Gambar */}
-                    <div>
-                      <label htmlFor="posisi_gambar" className="block text-sm font-semibold text-gray-700 mb-1">
-                        Posisi Fokus Gambar
-                      </label>
-                      <select
-                        id="posisi_gambar"
-                        value={posisiGambar}
-                        onChange={(e) => setPosisiGambar(e.target.value as PosisiGambarHero)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-600 focus:border-amber-600 text-sm bg-white"
-                      >
-                        {PILIHAN_POSISI_GAMBAR_HERO.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Mengatur titik fokus penyesuaian <code className="text-xs bg-gray-100 px-1 rounded">object-position</code>.
-                      </p>
-                    </div>
-
-                    {/* Urutan Tampil */}
-                    <div>
-                      <label htmlFor="urutan" className="block text-sm font-semibold text-gray-700 mb-1">
-                        Urutan Tampil
-                      </label>
-                      <input
-                        id="urutan"
-                        type="number"
-                        min="0"
-                        step="1"
-                        required
-                        value={urutan}
-                        onChange={(e) => setUrutan(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-600 focus:border-amber-600 text-sm"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Urutan terkecil tampil lebih awal (default 0).</p>
-                    </div>
-                  </div>
-
-                  {/* Status Aktif */}
-                  <div className="pt-2">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isActive}
-                        onChange={(e) => setIsActive(e.target.checked)}
-                        className="w-5 h-5 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
-                      />
-                      <div>
-                        <span className="text-sm font-semibold text-gray-900">Aktifkan untuk Tampilan Publik</span>
-                        <p className="text-xs text-gray-500">
-                          Beberapa gambar aktif dapat tampil bergantian sebagai slider di beranda.
-                        </p>
-                      </div>
-                    </label>
                   </div>
                 </div>
 
-                {/* Kolom Kanan: Input File & Preview */}
+                {/* Kolom Kanan: Custom File Input & Preview */}
                 <div className="space-y-4">
-                  {modeForm === "tambah" ? (
-                    <div>
-                      <label htmlFor="input_file_gambar_tambah" className="block text-sm font-semibold text-gray-700 mb-1">
-                        File Gambar Hero <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="input_file_gambar_tambah"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handlePilihFile}
-                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer border border-gray-300 rounded-xl p-1"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Format: JPEG, PNG, WebP. Maksimal 10 MB (disarankan lanskap 16:9, ~2 MB).
-                      </p>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {modeForm === "tambah" ? (
+                        <>File Gambar Hero <span className="text-red-500">*</span></>
+                      ) : (
+                        <>Ganti Gambar Hero <span className="text-xs font-normal text-gray-500">(Opsional)</span></>
+                      )}
+                    </label>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handlePilihFile}
+                      className="hidden"
+                    />
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-4 py-2 text-xs font-semibold text-white shadow-md transition-colors cursor-pointer"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>Tambahkan Foto</span>
+                      </button>
+
+                      {fileGambar && (
+                        <span className="text-xs font-semibold text-green-700 truncate max-w-xs">
+                          {fileGambar.name}
+                        </span>
+                      )}
+
+                      {modeForm === "edit" && fileGambar && (
+                        <button
+                          type="button"
+                          onClick={handleBatalkanFilePengganti}
+                          className="text-xs text-red-600 hover:text-red-800 font-semibold cursor-pointer"
+                        >
+                          Batalkan
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label htmlFor="input_file_gambar_edit" className="block text-sm font-semibold text-gray-700">
-                          Ganti Gambar Hero (Opsional)
-                        </label>
-                        {fileGambar && (
-                          <button
-                            type="button"
-                            onClick={handleBatalkanFilePengganti}
-                            className="text-xs text-red-600 hover:text-red-800 font-semibold"
-                          >
-                            Batalkan File Pengganti
-                          </button>
-                        )}
-                      </div>
-                      <input
-                        id="input_file_gambar_edit"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handlePilihFile}
-                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer border border-gray-300 rounded-xl p-1"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Kosongkan jika hanya ingin memperbarui metadata. Gambar lama baru akan dihapus setelah file baru
-                        berhasil diunggah dan database diperbarui.
-                      </p>
-                    </div>
-                  )}
+                  </div>
 
                   {/* Warning Performa / Orientasi Gambar */}
                   {warningGambar.length > 0 && (
@@ -1243,7 +1169,7 @@ export default function AdminHeroBerandaPage() {
                       {previewUrl ? (
                         <img
                           src={previewUrl}
-                          alt={teksAlt || "Preview Gambar Hero"}
+                          alt={namaInternal || "Preview Gambar Hero"}
                           style={{
                             objectPosition: getObjectPositionHero(posisiGambar),
                           }}
@@ -1252,7 +1178,7 @@ export default function AdminHeroBerandaPage() {
                       ) : modeForm === "edit" && heroSedangDiedit ? (
                         <img
                           src={heroSedangDiedit.gambar_url}
-                          alt={teksAlt || heroSedangDiedit.teks_alt}
+                          alt={heroSedangDiedit.nama_internal}
                           style={{
                             objectPosition: getObjectPositionHero(posisiGambar),
                           }}
@@ -1283,41 +1209,28 @@ export default function AdminHeroBerandaPage() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-gray-200 flex items-center justify-end space-x-3">
+              {/* Action Buttons (Batal & Simpan Perubahan Cokelat Tua) */}
+              <div className="pt-4 border-t border-gray-200 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
                 <button
                   type="button"
                   onClick={tutupForm}
                   disabled={loadingForm}
-                  className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={loadingForm}
-                  className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-semibold shadow-sm transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   {loadingForm ? (
                     <>
-                      <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
                       <span>Menyimpan...</span>
                     </>
                   ) : (
-                    <span>
-                      {modeForm === "tambah"
-                        ? "Simpan Gambar Hero"
-                        : fileGambar
-                        ? "Ganti Gambar & Perbarui Metadata"
-                        : "Perbarui Metadata"}
-                    </span>
+                    <span>Simpan Perubahan</span>
                   )}
                 </button>
               </div>
@@ -1326,20 +1239,14 @@ export default function AdminHeroBerandaPage() {
         )}
 
         {/* Tabel / Lista Record Admin */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-            <h2 className="text-base font-bold text-gray-900">Daftar Gambar Hero Beranda ({daftarHero.length})</h2>
-            <button
-              type="button"
-              onClick={muatDaftarHero}
-              disabled={loadingData}
-              className="text-xs text-amber-700 hover:text-amber-800 font-semibold flex items-center gap-1"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>Refresh</span>
-            </button>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-gray-200 bg-white">
+            <h2 className="text-lg font-bold text-[#2c1b01]">
+              Daftar Gambar Hero Beranda
+            </h2>
+            <p className="text-xs text-gray-600 mt-0.5">
+              Menampilkan seluruh gambar hero beranda Nagari.
+            </p>
           </div>
 
           {/* Loading State */}
@@ -1373,35 +1280,35 @@ export default function AdminHeroBerandaPage() {
               <svg className="w-12 h-12 text-gray-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <p className="text-sm">Belum ada gambar hero beranda yang ditambahkan.</p>
+              <p className="text-sm font-semibold text-gray-700">Belum ada gambar hero beranda yang ditambahkan.</p>
             </div>
           ) : (
             /* Table Data */
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-600">
-                <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider border-b border-gray-200">
+              <table className="w-full text-left border-collapse min-w-[640px] table-fixed">
+                <colgroup>
+                  <col className="w-[20%]" />
+                  <col className="w-[35%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[25%]" />
+                </colgroup>
+                <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01] border-b border-gray-200">
                   <tr>
-                    <th scope="col" className="px-6 py-3.5 font-semibold">
-                      Preview Gambar
+                    <th scope="col" className="px-6 py-4 font-bold text-left">
+                      PREVIEW GAMBAR
                     </th>
-                    <th scope="col" className="px-6 py-3.5 font-semibold">
-                      Nama Internal &amp; Alt Text
+                    <th scope="col" className="px-6 py-4 font-bold text-left">
+                      NAMA INTERNAL
                     </th>
-                    <th scope="col" className="px-6 py-3.5 font-semibold">
-                      Posisi Fokus
+                    <th scope="col" className="px-6 py-4 font-bold text-left">
+                      POSISI FOKUS
                     </th>
-                    <th scope="col" className="px-6 py-3.5 font-semibold">
-                      Urutan
-                    </th>
-                    <th scope="col" className="px-6 py-3.5 font-semibold">
-                      Status
-                    </th>
-                    <th scope="col" className="px-6 py-3.5 font-semibold text-right">
-                      Aksi
+                    <th scope="col" className="px-6 py-4 font-bold text-right">
+                      AKSI
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className="divide-y divide-gray-100 bg-white text-sm">
                   {daftarHero.map((item) => {
                     const isPreviewError = previewGambarErrorIds.includes(item.id)
                     const isToggleLoading = processingToggleId === item.id
@@ -1412,7 +1319,7 @@ export default function AdminHeroBerandaPage() {
                       <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
                         {/* Preview Gambar */}
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="w-32 aspect-video bg-gray-900 rounded-lg overflow-hidden border border-gray-200 shadow-sm relative">
+                          <div className="w-32 aspect-video bg-gray-900 rounded-xl overflow-hidden border border-gray-200 shadow-xs relative">
                             {isPreviewError ? (
                               <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-400 text-[10px] p-2 text-center">
                                 Preview gagal dimuat
@@ -1420,7 +1327,7 @@ export default function AdminHeroBerandaPage() {
                             ) : (
                               <img
                                 src={item.gambar_url}
-                                alt={item.teks_alt}
+                                alt={item.teks_alt || item.nama_internal}
                                 loading="lazy"
                                 decoding="async"
                                 onError={() => setPreviewGambarErrorIds((prev) => [...prev, item.id])}
@@ -1433,65 +1340,44 @@ export default function AdminHeroBerandaPage() {
                           </div>
                         </td>
 
-                        {/* Nama Internal & Alt Text */}
-                        <td className="px-6 py-4">
-                          <div className="max-w-xs space-y-1">
-                            <p className="font-bold text-gray-900 text-sm truncate">{item.nama_internal}</p>
-                            <p className="text-xs text-gray-500 line-clamp-2" title={item.teks_alt}>
-                              <span className="font-semibold text-gray-600">Alt:</span> {item.teks_alt}
-                            </p>
-                          </div>
+                        {/* Nama Internal */}
+                        <td className="px-6 py-4 text-gray-900 align-middle">
+                          <p className="font-bold text-gray-900 text-sm truncate">
+                            {item.nama_internal}
+                          </p>
                         </td>
 
                         {/* Posisi Fokus */}
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap align-middle">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
                             {getLabelPosisiGambarHero(item.posisi_gambar)}
                           </span>
                         </td>
 
-                        {/* Urutan */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                          {item.urutan}
-                        </td>
-
-                        {/* Status Badge */}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {item.is_active ? (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              Aktif
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
-                              Nonaktif
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Tombol Aksi */}
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <div className="flex items-center justify-end space-x-2">
+                        {/* Tombol Aksi (Sejajar Horizontal) */}
+                        <td className="px-6 py-4 whitespace-nowrap text-right align-middle">
+                          <div className="flex items-center justify-end gap-2 flex-nowrap">
                             {/* Tombol Edit */}
                             <button
                               type="button"
                               onClick={() => bukaFormEdit(item)}
                               disabled={loadingForm || isToggleLoading || isDeleteLoading}
                               aria-label={`Edit metadata ${item.nama_internal}`}
-                              className="px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-semibold transition-colors border border-amber-200 disabled:opacity-50"
+                              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap"
                             >
                               Edit
                             </button>
 
-                            {/* Tombol Quick Toggle Status */}
+                            {/* Tombol Quick Toggle Status (Aktifkan / Nonaktifkan) */}
                             <button
                               type="button"
                               onClick={() => handleQuickToggle(item)}
                               disabled={loadingForm || isToggleLoading || isDeleteLoading}
                               aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.nama_internal}`}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border disabled:opacity-50 ${
+                              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap ${
                                 item.is_active
-                                  ? "bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200"
-                                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200"
+                                  ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                                  : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                               }`}
                             >
                               {isToggleLoading ? (
@@ -1509,10 +1395,10 @@ export default function AdminHeroBerandaPage() {
                               onClick={() => handleSafeDelete(item)}
                               disabled={loadingForm || isToggleLoading || isDeleteLoading}
                               aria-label={`${isRetry ? "Retry hapus" : "Hapus"} ${item.nama_internal}`}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border disabled:opacity-50 ${
+                              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap ${
                                 isRetry
-                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-300"
-                                  : "bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+                                  ? "border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                  : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
                               }`}
                             >
                               {isDeleteLoading ? "Menghapus..." : isRetry ? "Retry Hapus" : "Hapus"}

@@ -169,9 +169,8 @@ export async function fetchHeroBerandaAktif(): Promise<HeroBeranda[]> {
       .from("hero_beranda")
       .select(KOLOM_HERO_BERANDA)
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (error) {
       throw new Error(`Gagal memuat gambar hero beranda aktif: ${error.message}`)
@@ -198,9 +197,8 @@ export async function fetchSemuaHeroBerandaAdmin(): Promise<HeroBeranda[]> {
     const { data, error } = await supabase
       .from("hero_beranda")
       .select(KOLOM_HERO_BERANDA)
-      .order("urutan", { ascending: true })
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (error) {
       throw new Error(`Gagal memuat seluruh data hero beranda: ${error.message}`)

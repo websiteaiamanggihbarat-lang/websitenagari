@@ -75,7 +75,9 @@ export default function SaranaPendidikanAdminIndex() {
 
   const [loading, setLoading] = useState(false)
   const [loadingPendataan, setLoadingPendataan] = useState(true)
-  const [error, setError] = useState("")
+
+  const [pesanSukses, setPesanSukses] = useState(null)
+  const [pesanError, setPesanError] = useState(null)
 
   const periksaSesi = async () => {
     const {
@@ -84,7 +86,6 @@ export default function SaranaPendidikanAdminIndex() {
     } = await supabase.auth.getSession()
 
     if (sessionError || !session) {
-      alert("Sesi admin tidak terbaca. Silakan login ulang.")
       window.location.href = "/login"
       return null
     }
@@ -94,7 +95,7 @@ export default function SaranaPendidikanAdminIndex() {
 
   const fetchPendataan = async () => {
     setLoadingPendataan(true)
-    setError("")
+    setPesanError(null)
 
     const session = await periksaSesi()
 
@@ -111,18 +112,26 @@ export default function SaranaPendidikanAdminIndex() {
 
     if (fetchError) {
       console.error("fetch pendataan sarana pendidikan error:", fetchError)
-      setError(fetchError.message || "Gagal memuat periode pendataan.")
-      setLoadingPendataan(false)
-      return
+      setPesanError(fetchError.message || "Gagal memuat periode pendataan.")
+      setPendataanList([])
+    } else {
+      setPendataanList(data || [])
     }
-
-    setPendataanList(data || [])
     setLoadingPendataan(false)
   }
 
   useEffect(() => {
     fetchPendataan()
   }, [])
+
+  // Auto dismiss notification toast message after 4000ms
+  useEffect(() => {
+    if (!pesanSukses) return
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSukses])
 
   // Logout otomatis apabila admin tidak aktif selama 5 menit.
   useEffect(() => {
@@ -156,20 +165,11 @@ export default function SaranaPendidikanAdminIndex() {
   }, [])
 
   const ubahFormPendataan = (event) => {
-    const { name, value, type, checked } = event.target
-
-    setFormPendataan((formSebelumnya) => {
-      const formBaru = {
-        ...formSebelumnya,
-        [name]: type === "checkbox" ? checked : value,
-      }
-
-      if (name === "status_publikasi" && value === "draft") {
-        formBaru.is_active = false
-      }
-
-      return formBaru
-    })
+    const { name, value } = event.target
+    setFormPendataan((formSebelumnya) => ({
+      ...formSebelumnya,
+      [name]: value,
+    }))
   }
 
   const resetFormPendataan = () => {
@@ -182,6 +182,8 @@ export default function SaranaPendidikanAdminIndex() {
 
   const handleOpenTambah = () => {
     resetFormPendataan()
+    setPesanSukses(null)
+    setPesanError(null)
     setIsFormOpen(true)
   }
 
@@ -197,25 +199,22 @@ export default function SaranaPendidikanAdminIndex() {
       return
     }
 
+    setPesanSukses(null)
+    setPesanError(null)
+
     const tahun = keAngka(formPendataan.tahun_pendataan)
 
     if (tahun < 1900 || tahun > 2100) {
-      alert("Tahun pendataan harus berada antara 1900 dan 2100.")
+      setPesanError("Tahun pendataan harus berada antara 1900 dan 2100.")
       return
     }
 
     if (!formPendataan.sumber_data.trim()) {
-      alert("Sumber data wajib diisi.")
-      return
-    }
-
-    if (formPendataan.is_active && formPendataan.status_publikasi !== "dipublikasikan") {
-      alert("Pendataan aktif harus berstatus Dipublikasikan.")
+      setPesanError("Sumber data wajib diisi.")
       return
     }
 
     setLoading(true)
-    setError("")
 
     const session = await periksaSesi()
 
@@ -229,7 +228,12 @@ export default function SaranaPendidikanAdminIndex() {
       sumber_data: formPendataan.sumber_data.trim(),
       keterangan: formPendataan.keterangan.trim() || null,
       status_publikasi: formPendataan.status_publikasi,
-      is_active: Boolean(formPendataan.is_active),
+    }
+
+    if (editingPendataanId) {
+      dataPendataan.is_active = Boolean(formPendataan.is_active)
+    } else {
+      dataPendataan.is_active = false
     }
 
     try {
@@ -242,6 +246,7 @@ export default function SaranaPendidikanAdminIndex() {
         if (updateError) {
           throw updateError
         }
+        setPesanSukses("Periode pendataan sarana pendidikan berhasil diperbarui.")
       } else {
         const { error: insertError } = await supabase
           .from("pendataan_sarana_pendidikan")
@@ -250,13 +255,8 @@ export default function SaranaPendidikanAdminIndex() {
         if (insertError) {
           throw insertError
         }
+        setPesanSukses("Periode pendataan sarana pendidikan berhasil ditambahkan.")
       }
-
-      alert(
-        editingPendataanId
-          ? "Pendataan sarana pendidikan berhasil diperbarui!"
-          : "Pendataan sarana pendidikan berhasil ditambahkan!"
-      )
 
       resetFormPendataan()
       setIsFormOpen(false)
@@ -265,11 +265,11 @@ export default function SaranaPendidikanAdminIndex() {
       console.error("simpan pendataan error:", simpanError)
 
       if (simpanError?.code === "23505") {
-        alert(
+        setPesanError(
           "Data pendataan untuk tahun tersebut sudah tersedia. Gunakan tombol Edit pada data yang sudah ada."
         )
       } else {
-        alert(
+        setPesanError(
           `Gagal menyimpan pendataan: ${
             simpanError?.message || "Terjadi kesalahan."
           }`
@@ -281,8 +281,10 @@ export default function SaranaPendidikanAdminIndex() {
   }
 
   const mulaiEditPendataan = (item) => {
-    setEditingPendataanId(item.id)
+    setPesanSukses(null)
+    setPesanError(null)
 
+    setEditingPendataanId(item.id)
     setFormPendataan({
       tahun_pendataan: item.tahun_pendataan?.toString() || "",
       sumber_data: item.sumber_data || "",
@@ -298,6 +300,42 @@ export default function SaranaPendidikanAdminIndex() {
         top: 0,
         behavior: "smooth",
       })
+    }
+  }
+
+  const handleToggleActivePendataan = async (item) => {
+    if (loading) return
+
+    const session = await periksaSesi()
+    if (!session) return
+
+    setPesanSukses(null)
+    setPesanError(null)
+    setLoading(true)
+
+    try {
+      const statusBaru = !item.is_active
+      const { error: errToggle } = await supabase
+        .from("pendataan_sarana_pendidikan")
+        .update({ is_active: statusBaru })
+        .eq("id", item.id)
+
+      if (errToggle) {
+        setPesanError(`Gagal mengubah status aktif periode: ${errToggle.message}`)
+      } else {
+        setPesanSukses(
+          statusBaru
+            ? `Periode pendataan pendidikan tahun ${item.tahun_pendataan} berhasil diaktifkan.`
+            : `Periode pendataan pendidikan tahun ${item.tahun_pendataan} berhasil dinonaktifkan.`
+        )
+      }
+
+      await fetchPendataan()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan saat mengubah status periode: ${msg}`)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -320,6 +358,8 @@ export default function SaranaPendidikanAdminIndex() {
       return
     }
 
+    setPesanSukses(null)
+    setPesanError(null)
     setLoading(true)
 
     try {
@@ -355,7 +395,7 @@ export default function SaranaPendidikanAdminIndex() {
         }
       }
 
-      alert("Pendataan sarana pendidikan berhasil dihapus.")
+      setPesanSukses("Periode pendataan sarana pendidikan berhasil dihapus.")
 
       if (editingPendataanId === item.id) {
         handleBatalForm()
@@ -365,7 +405,7 @@ export default function SaranaPendidikanAdminIndex() {
     } catch (hapusError) {
       console.error("hapus pendataan error:", hapusError)
 
-      alert(
+      setPesanError(
         `Gagal menghapus pendataan: ${
           hapusError?.message || "Terjadi kesalahan."
         }`
@@ -383,8 +423,8 @@ export default function SaranaPendidikanAdminIndex() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
       {/* Top Header Navigation */}
-      <div className="bg-[#2c1b01] text-white shadow-md mb-6">
-        <div className="max-w-5xl mx-auto px-4 py-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-[#2c1b01] text-white shadow-md mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
             <Link
               href="/admin"
@@ -413,7 +453,7 @@ export default function SaranaPendidikanAdminIndex() {
               </h1>
 
               <p className="text-xs sm:text-sm text-amber-200/80">
-                Kelola periode tahun pendataan dan pilih tahun untuk mengelola sekolah
+                Kelola periode tahun pendataan dan pilih tahun untuk mengelola sekolah.
               </p>
             </div>
           </div>
@@ -446,7 +486,7 @@ export default function SaranaPendidikanAdminIndex() {
               type="button"
               onClick={handleLogout}
               disabled={loading}
-              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
             >
               <svg
                 className="w-4 h-4 flex-shrink-0"
@@ -468,270 +508,267 @@ export default function SaranaPendidikanAdminIndex() {
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-5xl mx-auto px-4 space-y-6">
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Global Toast Notifications */}
+        <div aria-live="polite">
+          {pesanSukses && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{pesanSukses}</span>
+              </div>
+            </div>
+          )}
+
+          {pesanError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{pesanError}</span>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* SECTION 1: Form Tambah / Edit Pendataan (Tampil Hanya Saat isFormOpen = true) */}
         {isFormOpen && (
-          <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-md space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  {editingPendataanId
-                    ? "Edit Periode Pendataan"
-                    : "Tambah Periode Pendataan"}
-                </h2>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  {editingPendataanId
-                    ? "Perbarui data periode pendataan sarana pendidikan."
-                    : "Buat periode tahun pendataan sarana pendidikan Nagari."}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleBatalForm}
-                aria-label="Tutup form periode pendataan"
-                className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+          <div className="mb-8 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {/* Header Krem Section */}
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                {editingPendataanId
+                  ? "Edit Periode Pendataan"
+                  : "Tambah Periode Pendataan"}
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                {editingPendataanId
+                  ? "Ubah data periode pendataan sarana pendidikan Nagari."
+                  : "Buat periode tahun pendataan sarana pendidikan Nagari."}
+              </p>
             </div>
 
-            <form onSubmit={simpanPendataan} className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Tahun Pendataan
-                </label>
+            {/* Body Form Putih */}
+            <form onSubmit={simpanPendataan} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Tahun Pendataan <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    name="tahun_pendataan"
+                    value={formPendataan.tahun_pendataan}
+                    onChange={ubahFormPendataan}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
+                    required
+                  />
+                </div>
 
-                <input
-                  type="number"
-                  min="1900"
-                  max="2100"
-                  name="tahun_pendataan"
-                  value={formPendataan.tahun_pendataan}
-                  onChange={ubahFormPendataan}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Sumber Data <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="sumber_data"
+                    value={formPendataan.sumber_data}
+                    onChange={ubahFormPendataan}
+                    placeholder="Contoh: Survei Lapangan Pemnag 2026"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
+                    required
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Sumber Data
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Status Publikasi <span className="text-red-500">*</span>
                 </label>
-
-                <input
-                  type="text"
-                  name="sumber_data"
-                  value={formPendataan.sumber_data}
-                  onChange={ubahFormPendataan}
-                  placeholder="Contoh: Survei Lapangan Pemnag 2026"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Keterangan
-                </label>
-
-                <textarea
-                  name="keterangan"
-                  rows={3}
-                  value={formPendataan.keterangan}
-                  onChange={ubahFormPendataan}
-                  placeholder="Catatan tambahan mengenai periode pendataan ini..."
-                  className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Status Publikasi
-                </label>
-
                 <select
                   name="status_publikasi"
                   value={formPendataan.status_publikasi}
                   onChange={ubahFormPendataan}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c1b01]"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                 >
                   <option value="draft">Draft (Belum Dipublikasikan)</option>
                   <option value="dipublikasikan">Dipublikasikan</option>
                 </select>
               </div>
 
-              <label className="flex items-center gap-3 rounded-lg border border-gray-300 p-3 bg-gray-50/50">
-                <input
-                  type="checkbox"
-                  name="is_active"
-                  checked={formPendataan.is_active}
-                  disabled={formPendataan.status_publikasi === "draft"}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Keterangan <span className="text-xs font-normal text-gray-500">(Opsional)</span>
+                </label>
+                <textarea
+                  name="keterangan"
+                  rows={3}
+                  value={formPendataan.keterangan}
                   onChange={ubahFormPendataan}
-                  className="h-4 w-4 text-[#2c1b01] rounded"
+                  placeholder="Catatan tambahan mengenai periode pendataan ini..."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                 />
-                <div>
-                  <span className="text-sm font-semibold text-gray-700 block">
-                    Tampilkan sebagai data aktif di website publik
-                  </span>
-                  {formPendataan.status_publikasi === "draft" && (
-                    <span className="text-xs text-amber-600 block">
-                      Pendataan berstatus draft tidak dapat dijadikan pendataan aktif.
-                    </span>
-                  )}
-                </div>
-              </label>
+              </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+              {/* Footer Buttons (Batal & Simpan) */}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
                 <button
                   type="button"
                   onClick={handleBatalForm}
                   disabled={loading}
-                  className="px-5 py-2.5 rounded-xl border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   Batal
                 </button>
-
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#2c1b01] hover:bg-[#3a2604] text-white text-sm font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
-                  {loading
-                    ? "Menyimpan..."
-                    : editingPendataanId
-                    ? "Simpan Perubahan"
-                    : "Tambah Pendataan"}
+                  {loading ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : editingPendataanId ? (
+                    <span>Simpan Perubahan</span>
+                  ) : (
+                    <span>Tambah Pendataan</span>
+                  )}
                 </button>
               </div>
             </form>
           </div>
         )}
 
-        {/* SECTION 2: Riwayat Pendataan */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-md space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+        {/* SECTION 2: Tabel Riwayat Periode Pendataan */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-gray-200 bg-white flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
                 Riwayat Periode Pendataan
               </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Pilih periode untuk mengelola daftar sekolah, fasilitas, dan kegiatan
+              <p className="text-xs text-gray-600 mt-0.5">
+                Menampilkan {pendataanList.length} periode pendataan sarana pendidikan Nagari
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={fetchPendataan}
-              disabled={loadingPendataan}
-              className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60 cursor-pointer transition-colors"
-            >
-              Refresh
-            </button>
           </div>
 
           {loadingPendataan ? (
-            <p className="py-6 text-center text-sm text-gray-500">
-              Memuat riwayat pendataan...
-            </p>
+            <div className="p-12 text-center text-gray-500">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent mb-3"></div>
+              <p className="text-sm font-medium">Memuat riwayat pendataan...</p>
+            </div>
           ) : pendataanList.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-500">
-              Belum ada periode pendataan. Silakan klik tombol &quot;+ Tambah Periode Pendataan&quot; di atas.
-            </p>
+            <div className="p-12 text-center text-gray-500">
+              <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <p className="text-base font-semibold text-gray-700">Belum Ada Periode Pendataan</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Gunakan tombol &quot;+ Tambah Periode Pendataan&quot; untuk membuat periode pendataan baru.
+              </p>
+            </div>
           ) : (
-            <div className="space-y-3">
-              {pendataanList.map((item) => (
-                <div
-                  key={item.id}
-                  className={`rounded-xl border p-4 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${
-                    editingPendataanId === item.id
-                      ? "border-[#2c1b01] bg-[#f0e8db]/30 shadow-md"
-                      : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-bold text-gray-900">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
+                  <tr>
+                    <th scope="col" className="px-6 py-4 font-bold">PERIODE</th>
+                    <th scope="col" className="px-6 py-4 font-bold">STATUS PUBLIKASI</th>
+                    <th scope="col" className="px-6 py-4 font-bold text-right">AKSI</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white text-sm">
+                  {pendataanList.map((item) => (
+                    <tr
+                      key={item.id}
+                      className={`hover:bg-gray-50/80 transition-colors ${
+                        editingPendataanId === item.id ? "bg-[#f0e8db]/30" : ""
+                      }`}
+                    >
+                      <td className="py-4 px-6 font-bold text-gray-900">
                         Tahun {item.tahun_pendataan}
-                      </span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          item.status_publikasi === "dipublikasikan"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {item.status_publikasi === "dipublikasikan"
-                          ? "Dipublikasikan"
-                          : "Draft"}
-                      </span>
-                      {item.is_active && (
-                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-                          Aktif
+                      </td>
+                      <td className="py-4 px-6">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            item.status_publikasi === "dipublikasikan"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200"
+                              : "bg-gray-100 text-gray-600 border border-gray-200"
+                          }`}
+                        >
+                          {item.status_publikasi === "dipublikasikan"
+                            ? "Dipublikasikan"
+                            : "Draft"}
                         </span>
-                      )}
-                    </div>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {/* Tombol 1: Kelola Sarana Sekolah */}
+                          <Link
+                            href={`/admin/sarana-pendidikan/${item.id}`}
+                            className="inline-flex min-h-[34px] items-center justify-center gap-1.5 rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4] transition-colors cursor-pointer"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            <span>Kelola Sarana Sekolah</span>
+                          </Link>
 
-                    <p className="text-xs text-gray-600">
-                      Sumber: <strong>{item.sumber_data}</strong>
-                    </p>
+                          {/* Tombol 2: Edit */}
+                          <button
+                            type="button"
+                            onClick={() => mulaiEditPendataan(item)}
+                            disabled={loading}
+                            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+                          >
+                            Edit
+                          </button>
 
-                    {item.keterangan && (
-                      <p className="text-xs text-gray-500">
-                        {item.keterangan}
-                      </p>
-                    )}
-                  </div>
+                          {/* Tombol 3: Toggle Aktifkan / Nonaktifkan */}
+                          {item.is_active ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleActivePendataan(item)}
+                              disabled={loading}
+                              className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer"
+                              title="Nonaktifkan periode dari website publik"
+                            >
+                              Nonaktifkan
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleActivePendataan(item)}
+                              disabled={loading}
+                              className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100 disabled:opacity-50 cursor-pointer"
+                              title="Aktifkan periode untuk website publik"
+                            >
+                              Aktifkan
+                            </button>
+                          )}
 
-                  <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                    <Link
-                      href={`/admin/sarana-pendidikan/${item.id}`}
-                      className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-[#2c1b01] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#3a2604] transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
-                      <span>Kelola Sarana Sekolah</span>
-                    </Link>
-
-                    <button
-                      type="button"
-                      onClick={() => mulaiEditPendataan(item)}
-                      className="rounded-lg bg-yellow-500 px-3 py-2 text-xs font-semibold text-white hover:bg-yellow-600 transition-colors cursor-pointer"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => hapusPendataan(item)}
-                      disabled={loading}
-                      className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors cursor-pointer"
-                    >
-                      Hapus
-                    </button>
-                  </div>
-                </div>
-              ))}
+                          {/* Tombol 4: Hapus */}
+                          <button
+                            type="button"
+                            onClick={() => hapusPendataan(item)}
+                            disabled={loading}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

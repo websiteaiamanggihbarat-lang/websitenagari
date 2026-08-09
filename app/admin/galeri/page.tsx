@@ -62,6 +62,15 @@ export default function AdminGaleriPage() {
     loadData()
   }, [])
 
+  // Auto dismiss success toast message after 4000ms
+  useEffect(() => {
+    if (!pesanSukses) return
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSukses])
+
   // Cleanup object URL preview saat unmount atau previewUrl berubah
   useEffect(() => {
     return () => {
@@ -201,78 +210,72 @@ export default function AdminGaleriPage() {
       return
     }
 
-    // Normalisasi Teks Alt (Opsional)
-    const cleanAlt = teksAlt.trim()
-    const finalAlt = cleanAlt === "" ? null : cleanAlt
-
-    if (finalAlt && finalAlt.length > 300) {
-      setErrorForm("Teks alternatif maksimal 300 karakter.")
+    // Validasi Teks Alt (Opsional, max 300 char)
+    const altClean = teksAlt.trim()
+    if (altClean.length > 300) {
+      setErrorForm("Teks alternatif/deskripsi maksimal 300 karakter.")
       return
     }
 
     try {
       setIsSaving(true)
 
-      // 1. Generate Record UUID
-      const fotoId = crypto.randomUUID()
-
-      // 2. Format Storage Path
+      // Step 1: Generate Record ID & Safe Storage Path
+      const recordId = crypto.randomUUID()
       const safeFileName = getSafeFileName(selectedFile.name)
-      const storagePath = `${GALERI_FOTO_STORAGE_ROOT}/${fotoId}/foto/${safeFileName}`
+      const storagePath = `${GALERI_FOTO_STORAGE_ROOT}/${recordId}/foto/${safeFileName}`
 
-      // 3. Upload File ke Storage
+      // Step 2: Upload file ke Supabase Storage (public bucket)
       const { error: errUpload } = await supabase.storage
         .from(GALERI_FOTO_BUCKET)
         .upload(storagePath, selectedFile, {
           cacheControl: "3600",
           upsert: false,
+          contentType: selectedFile.type,
         })
 
       if (errUpload) {
-        throw new Error(`Gagal mengunggah foto ke Storage: ${errUpload.message}`)
+        throw new Error(`Gagal mengunggah file ke Storage: ${errUpload.message}`)
       }
 
-      // 4. Ambil dan Validasi Public URL
-      const { data: urlData } = supabase.storage
+      // Tandai path untuk cleanup jika insert DB selanjutnya gagal
+      setCleanupPath(storagePath)
+
+      // Step 3: Dapatkan URL publik file
+      const { data: publicUrlData } = supabase.storage
         .from(GALERI_FOTO_BUCKET)
         .getPublicUrl(storagePath)
 
-      const publicUrl = urlData?.publicUrl || ""
-      if (!publicUrl || !publicUrl.startsWith("https://")) {
-        // Rollback Upload jika URL tidak valid
-        await supabase.storage.from(GALERI_FOTO_BUCKET).remove([storagePath])
-        throw new Error("Gagal mendapatkan URL HTTPS publik dari Supabase Storage.")
+      const publicUrl = publicUrlData?.publicUrl
+      if (!publicUrl) {
+        throw new Error("Gagal mendapatkan URL publik file foto yang diunggah.")
       }
 
-      // 5. Insert Record ke Database
-      const { error: errInsert } = await supabase
-        .from(GALERI_FOTO_TABLE)
-        .insert({
-          id: fotoId,
+      // Step 4: Insert Record Baru ke Database SQL
+      const { error: errInsert } = await supabase.from(GALERI_FOTO_TABLE).insert([
+        {
+          id: recordId,
           foto_url: publicUrl,
           foto_storage_path: storagePath,
-          teks_alt: finalAlt,
+          teks_alt: altClean || null,
+          urutan: 0,
           is_active: true,
-        })
+        },
+      ])
 
       if (errInsert) {
-        // Rollback Upload jika DB Insert gagal
-        const { error: errRemove } = await supabase.storage
-          .from(GALERI_FOTO_BUCKET)
-          .remove([storagePath])
-
-        if (errRemove) {
-          setCleanupPath(storagePath)
-          throw new Error(
-            `Gagal menyimpan data database: ${errInsert.message}. File Storage juga gagal dibersihkan secara otomatis.`
-          )
-        }
-
-        throw new Error(`Gagal menyimpan data database: ${errInsert.message}. File Storage telah dibersihkan.`)
+        // PERHATIAN: Upload Storage berhasil tetapi insert DB gagal.
+        // Coba bersihkan file dari Storage agar tidak menjadi orphan file.
+        await supabase.storage.from(GALERI_FOTO_BUCKET).remove([storagePath])
+        setCleanupPath(null)
+        throw new Error(`Upload berhasil tetapi gagal menyimpan data ke database: ${errInsert.message}`)
       }
 
-      // Sukses
+      // Hapus status cleanup path karena insert DB sukses total
+      setCleanupPath(null)
       setPesanSukses("Foto galeri berhasil ditambahkan.")
+
+      // Reset form dan reload data
       handleBatal()
       await loadData()
     } catch (err) {
@@ -283,54 +286,36 @@ export default function AdminGaleriPage() {
     }
   }
 
-  // Cleanup Upload Tertunda
+  // Cleanup manual jika file tertunda di Storage
   const handleCleanupUpload = async () => {
     if (!cleanupPath || isCleaningUp) return
-
     try {
       setIsCleaningUp(true)
-      const { error } = await supabase.storage
-        .from(GALERI_FOTO_BUCKET)
-        .remove([cleanupPath])
-
-      if (error) {
-        throw new Error(`Gagal membersihkan file: ${error.message}`)
-      }
-
+      await supabase.storage.from(GALERI_FOTO_BUCKET).remove([cleanupPath])
       setCleanupPath(null)
       setPesanSukses("File gagal unggah berhasil dibersihkan dari Storage.")
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal membersihkan file."
-      setPesanError(msg)
+      console.error("Cleanup error:", err)
     } finally {
       setIsCleaningUp(false)
     }
   }
 
-  // Validasi Path Sebelum Delete
-  const isValidDeletePath = (path: string, recordId: string): boolean => {
-    if (!path || typeof path !== "string") return false
-    const expectedPrefix = `${GALERI_FOTO_STORAGE_ROOT}/${recordId}/foto/`
-    if (!path.startsWith(expectedPrefix)) return false
-    const fileName = path.slice(expectedPrefix.length)
-    if (!fileName || fileName.includes("/") || fileName.includes("..") || fileName === "." || fileName === "..") {
-      return false
-    }
-    return /^[A-Za-z0-9._-]+$/.test(fileName)
+  // Validasi Safe Delete Path
+  const isValidDeletePath = (path: string | null, targetId: string): boolean => {
+    if (!path) return false
+    const expectedPrefix = `${GALERI_FOTO_STORAGE_ROOT}/${targetId}/foto/`
+    return path.startsWith(expectedPrefix)
   }
 
-  // Safe Delete Handler
+  // Safe Delete Handler (Hapus Permanen File Storage & Database Record)
   const handleHapus = async (item: GaleriFoto) => {
     if (deletingId) return
 
-    const teksKonfirmasi = item.teks_alt
-      ? `dengan teks alternatif "${item.teks_alt}"`
-      : "ini"
-
-    const konfirmasi = confirm(
-      `Apakah Anda yakin ingin menghapus foto ${teksKonfirmasi} secara permanen?`
+    const confirmHapus = window.confirm(
+      `Yakin ingin menghapus foto galeri ini secara permanen?\n\nFile di Storage dan data pada database akan dihapus.`
     )
-    if (!konfirmasi) return
+    if (!confirmHapus) return
 
     setPesanSukses(null)
     setPesanError(null)
@@ -338,68 +323,40 @@ export default function AdminGaleriPage() {
     try {
       setDeletingId(item.id)
 
-      // Step 1: Set is_active = false secara internal
-      const { error: errDeactivate } = await supabase
-        .from(GALERI_FOTO_TABLE)
-        .update({ is_active: false })
-        .eq("id", item.id)
-
-      if (errDeactivate) {
-        throw new Error(`Gagal menonaktifkan status foto: ${errDeactivate.message}`)
-      }
-
-      // Step 2: Validasi Storage Path
+      // Step 1: Validasi Path Storage
       if (!isValidDeletePath(item.foto_storage_path, item.id)) {
-        throw new Error("Path file Storage tidak sesuai format yang valid. Data aman dan siap di-retry.")
+        throw new Error("Path file Storage tidak sesuai format yang valid.")
       }
 
-      // Step 3: Check & List Storage Object
-      const folderPath = `${GALERI_FOTO_STORAGE_ROOT}/${item.id}/foto`
-      const fileName = item.foto_storage_path.slice(folderPath.length + 1)
-
-      const { data: fileList, error: errList } = await supabase.storage
+      // Step 2: Hapus File dari Supabase Storage
+      const { error: errStorage } = await supabase.storage
         .from(GALERI_FOTO_BUCKET)
-        .list(folderPath)
+        .remove([item.foto_storage_path])
 
-      if (errList) {
-        throw new Error(`Gagal memeriksa keberadaan file di Storage: ${errList.message}. Silakan lakukan Retry Hapus.`)
+      if (errStorage) {
+        throw new Error(`Gagal menghapus file foto dari Storage: ${errStorage.message}`)
       }
 
-      const fileExists = (fileList || []).some((f) => f.name === fileName)
-
-      // Step 4: Remove File jika masih ada
-      if (fileExists) {
-        const { error: errRemove } = await supabase.storage
-          .from(GALERI_FOTO_BUCKET)
-          .remove([item.foto_storage_path])
-
-        if (errRemove) {
-          throw new Error(`Gagal menghapus file dari Storage: ${errRemove.message}. Silakan lakukan Retry Hapus.`)
-        }
-
-        // Verifikasi Ulang
-        const { data: reCheckList } = await supabase.storage
-          .from(GALERI_FOTO_BUCKET)
-          .list(folderPath)
-
-        const stillExists = (reCheckList || []).some((f) => f.name === fileName)
-        if (stillExists) {
-          throw new Error("File Storage masih terdeteksi setelah penghapusan. Silakan lakukan Retry Hapus.")
-        }
-      }
-
-      // Step 5: Hapus Record Database
-      const { error: errDeleteDb } = await supabase
+      // Step 3: Hapus Record Database SQL
+      const { error: errDb } = await supabase
         .from(GALERI_FOTO_TABLE)
         .delete()
         .eq("id", item.id)
 
-      if (errDeleteDb) {
-        throw new Error(`File Storage telah bersih, namun gagal menghapus record database: ${errDeleteDb.message}. Silakan Retry Hapus.`)
+      if (errDb) {
+        // Catat di database bahwa storage telah terhapus tapi DB belum
+        await supabase
+          .from(GALERI_FOTO_TABLE)
+          .update({ is_active: false })
+          .eq("id", item.id)
+
+        throw new Error(
+          `File foto di Storage berhasil dihapus, namun gagal menghapus data dari database: ${errDb.message}. Status diset nonaktif.`
+        )
       }
 
       // Sukses Hapus
-      setPesanSukses("Foto galeri beserta file Storage berhasil dihapus permanen.")
+      setPesanSukses("Foto galeri berhasil dihapus.")
       await loadData()
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus foto."
@@ -453,7 +410,7 @@ export default function AdminGaleriPage() {
         .eq("id", item.id)
 
       if (errDeleteDb) {
-        throw new Error(`File Storage bersih, gagal menghapus record database: ${errDeleteDb.message}`)
+        throw new Error(`Gagal menghapus record database: ${errDeleteDb.message}`)
       }
 
       setPesanSukses("Penghapusan foto galeri berhasil diselesaikan.")
@@ -485,10 +442,10 @@ export default function AdminGaleriPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
       {/* Header Admin */}
-      <header className="bg-[#2c1b01] text-white shadow-md">
-        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
+      <header className="bg-[#2c1b01] text-white shadow-md mb-8">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center space-x-3">
               <Link
@@ -541,7 +498,7 @@ export default function AdminGaleriPage() {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  + Tambah Foto
+                  <span>Tambah Foto</span>
                 </button>
               )}
 
@@ -572,64 +529,31 @@ export default function AdminGaleriPage() {
       </header>
 
       {/* Main Container */}
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Alert Pesan Sukses */}
-        {pesanSukses && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-sm">
-            <div className="flex items-center gap-2">
-              <svg
-                className="h-5 w-5 flex-shrink-0 text-emerald-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span className="text-sm font-medium">{pesanSukses}</span>
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Global Toast Notifications */}
+        <div aria-live="polite">
+          {pesanSukses && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{pesanSukses}</span>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setPesanSukses(null)}
-              className="text-emerald-600 hover:text-emerald-900"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* Alert Pesan Error */}
-        {pesanError && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm">
-            <div className="flex items-center gap-2">
-              <svg
-                className="h-5 w-5 flex-shrink-0 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span className="text-sm font-medium">{pesanError}</span>
+          {pesanError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{pesanError}</span>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setPesanError(null)}
-              className="text-red-600 hover:text-red-900"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Alert Cleanup Path Tertunda */}
         {cleanupPath && (
@@ -656,7 +580,7 @@ export default function AdminGaleriPage() {
               type="button"
               onClick={handleCleanupUpload}
               disabled={isCleaningUp}
-              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-amber-700 disabled:opacity-50"
+              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-700 disabled:opacity-50 cursor-pointer"
             >
               {isCleaningUp ? "Membersihkan..." : "Bersihkan File Gagal"}
             </button>
@@ -665,28 +589,30 @@ export default function AdminGaleriPage() {
 
         {/* Form Tambah Foto */}
         {isFormOpen && (
-          <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-md transition-all">
-            <div className="mb-6 border-b border-gray-100 pb-4">
-              <h2 className="text-lg font-bold text-gray-900">
+          <div className="mb-8 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {/* Header Krem Section */}
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
                 Tambah Foto Galeri
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-600 mt-0.5">
                 Pilih foto dan berikan teks alternatif/deskripsi (opsional) sebelum mengunggah.
               </p>
             </div>
 
-            {errorForm && (
-              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                {errorForm}
-              </div>
-            )}
+            {/* Body Form Putih */}
+            <form onSubmit={handleSimpan} className="p-6 space-y-6">
+              {errorForm && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                  {errorForm}
+                </div>
+              )}
 
-            <form onSubmit={handleSimpan} className="space-y-6">
               {/* Field File */}
               <div>
                 <label
                   htmlFor="input-foto-galeri"
-                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                  className="mb-1.5 block text-sm font-semibold text-gray-700"
                 >
                   Foto Galeri <span className="text-red-500">*</span>
                 </label>
@@ -698,7 +624,7 @@ export default function AdminGaleriPage() {
                   accept="image/jpeg,image/png,image/webp"
                   onChange={handleFileChange}
                   disabled={isSaving}
-                  className="block w-full cursor-pointer rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-sm text-gray-700 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="block w-full cursor-pointer rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-sm text-gray-700 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:cursor-not-allowed disabled:opacity-60 file:mr-3 file:rounded-md file:border-0 file:bg-[#2c1b01] file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white"
                 />
 
                 <p className="mt-1 text-xs text-gray-500">
@@ -733,9 +659,9 @@ export default function AdminGaleriPage() {
                 <div className="mb-1.5 flex items-center justify-between">
                   <label
                     htmlFor="input-teks-alt"
-                    className="block text-sm font-medium text-gray-700"
+                    className="block text-sm font-semibold text-gray-700"
                   >
-                    Teks Alternatif / Deskripsi Foto (Opsional)
+                    Teks Alternatif / Deskripsi Foto <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <span className="text-xs text-gray-400">
                     {teksAlt.trim().length}/300
@@ -750,7 +676,7 @@ export default function AdminGaleriPage() {
                   onChange={(e) => setTeksAlt(e.target.value)}
                   disabled={isSaving}
                   placeholder="Contoh: Dokumentasi kegiatan masyarakat Nagari Aia Manggih Barat."
-                  className="block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 disabled:bg-gray-100 disabled:opacity-60"
+                  className="block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y disabled:bg-gray-100 disabled:opacity-60"
                 />
 
                 <p className="mt-1 text-xs text-gray-500">
@@ -758,13 +684,13 @@ export default function AdminGaleriPage() {
                 </p>
               </div>
 
-              {/* Tombol Form */}
-              <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+              {/* Footer Buttons (Batal & Simpan) */}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
                 <button
                   type="button"
                   onClick={handleBatal}
                   disabled={isSaving}
-                  className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   Batal
                 </button>
@@ -772,7 +698,7 @@ export default function AdminGaleriPage() {
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="inline-flex cursor-pointer items-center rounded-xl bg-amber-500 px-5 py-2 text-sm font-semibold text-gray-950 shadow-md hover:bg-amber-400 disabled:opacity-60"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   {isSaving ? "Menyimpan..." : "Simpan Foto"}
                 </button>
@@ -781,12 +707,23 @@ export default function AdminGaleriPage() {
           </div>
         )}
 
-        {/* Tabel Daftar Foto Admin (4 Kolom) */}
+        {/* Tabel Daftar Foto Admin (Outer Card Konsisten) */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">
-              Daftar Foto Galeri ({items.length})
-            </h2>
+          {/* Header Section Krem/White */}
+          <div className="p-5 border-b border-gray-200 bg-white flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                Daftar Foto Galeri
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Menampilkan seluruh foto galeri Nagari.
+              </p>
+            </div>
+            {items.length > 0 && (
+              <span className="inline-flex items-center rounded-full bg-[#f7f2e8] px-3 py-1 text-xs font-semibold text-[#2c1b01] border border-[#2c1b01]/10">
+                Total: {items.length} Foto
+              </span>
+            )}
           </div>
 
           {/* Error Daftar */}
@@ -797,44 +734,29 @@ export default function AdminGaleriPage() {
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50/80 text-xs font-bold tracking-wider text-gray-600 uppercase">
-                  <th className="px-4 py-3.5">PREVIEW</th>
-                  <th className="px-4 py-3.5">TEKS ALTERNATIF / DESKRIPSI</th>
-                  <th className="px-4 py-3.5">DITAMBAHKAN</th>
-                  <th className="px-4 py-3.5 text-right">AKSI</th>
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
+                <tr>
+                  <th scope="col" className="px-6 py-4 font-bold w-[20%]">PREVIEW</th>
+                  <th scope="col" className="px-6 py-4 font-bold w-[45%]">TEKS ALTERNATIF / DESKRIPSI</th>
+                  <th scope="col" className="px-6 py-4 font-bold w-[20%]">DITAMBAHKAN</th>
+                  <th scope="col" className="px-6 py-4 font-bold text-right w-[15%]">AKSI</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
+              <tbody className="divide-y divide-gray-100 bg-white text-sm">
                 {isLoading ? (
                   <tr>
                     <td colSpan={4} className="py-16 text-center text-gray-500">
-                      <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"></div>
+                      <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-[#6b4b1d] border-t-transparent"></div>
                       <p className="text-sm font-medium">Memuat foto galeri...</p>
                     </td>
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center">
-                      <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <h3 className="mt-3 text-base font-semibold text-gray-900">
-                        Belum ada foto galeri yang ditambahkan.
-                      </h3>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Gunakan tombol "+ Tambah Foto" di bagian atas untuk menambahkan foto pertama.
+                    <td colSpan={4} className="py-12 text-center text-gray-500">
+                      <p className="text-base font-semibold text-gray-700">Belum ada foto galeri.</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Gunakan tombol &quot;Tambah Foto&quot; di bagian atas untuk mendaftarkan foto pertama.
                       </p>
                     </td>
                   </tr>
@@ -848,8 +770,8 @@ export default function AdminGaleriPage() {
                         className="hover:bg-gray-50/80 transition-colors"
                       >
                         {/* Preview */}
-                        <td className="px-4 py-3">
-                          <div className="relative aspect-[4/3] w-24 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 shadow-sm">
+                        <td className="py-4 px-6">
+                          <div className="relative h-14 w-20 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 shadow-xs">
                             <img
                               src={item.foto_url}
                               alt={item.teks_alt || "Foto Galeri Nagari"}
@@ -859,7 +781,7 @@ export default function AdminGaleriPage() {
                         </td>
 
                         {/* Teks Alternatif / Deskripsi */}
-                        <td className="px-4 py-3">
+                        <td className="py-4 px-6 text-gray-900">
                           {item.teks_alt ? (
                             <p className="text-sm font-medium text-gray-900 line-clamp-2">
                               {item.teks_alt}
@@ -872,58 +794,32 @@ export default function AdminGaleriPage() {
                         </td>
 
                         {/* Ditambahkan */}
-                        <td className="px-4 py-3">
-                          <span className="text-xs text-gray-600">
+                        <td className="py-4 px-6 text-gray-600">
+                          <span className="text-xs">
                             {formatTanggal(item.created_at)}
                           </span>
                         </td>
 
-                        {/* Aksi (Hapus / Retry Hapus berdasarkan is_active) */}
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end">
+                        {/* Aksi (Hapus / Retry Hapus) */}
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex items-center justify-end gap-2">
                             {item.is_active ? (
                               <button
                                 type="button"
                                 onClick={() => handleHapus(item)}
                                 disabled={isDeleting}
-                                className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+                                className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                               >
-                                <svg
-                                  className="h-3.5 w-3.5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                                <span>{isDeleting ? "Menghapus..." : "Hapus"}</span>
+                                {isDeleting ? "Menghapus..." : "Hapus"}
                               </button>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => handleRetryHapus(item)}
                                 disabled={isDeleting}
-                                className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-50"
+                                className="rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-800 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer"
                               >
-                                <svg
-                                  className="h-3.5 w-3.5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                  />
-                                </svg>
-                                <span>{isDeleting ? "Memproses..." : "Retry Hapus"}</span>
+                                {isDeleting ? "Memproses..." : "Retry Hapus"}
                               </button>
                             )}
                           </div>

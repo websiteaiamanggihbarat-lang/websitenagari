@@ -190,6 +190,15 @@ export default function AdminStrukturOrganisasiPage() {
     loadData()
   }, [])
 
+  // Auto dismiss success toast message after 4000ms
+  useEffect(() => {
+    if (!pesanSukses) return
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSukses])
+
   // Cleanup object URL preview saat unmount atau previewUrl berubah
   useEffect(() => {
     return () => {
@@ -198,19 +207,6 @@ export default function AdminStrukturOrganisasiPage() {
       }
     }
   }, [previewUrl])
-
-  // Auto dismiss success toast message after 4 seconds
-  useEffect(() => {
-    if (!pesanSukses) return
-
-    const timerId = window.setTimeout(() => {
-      setPesanSukses(null)
-    }, 4000)
-
-    return () => {
-      window.clearTimeout(timerId)
-    }
-  }, [pesanSukses])
 
   // Logout handler
   const handleLogout = async () => {
@@ -225,25 +221,25 @@ export default function AdminStrukturOrganisasiPage() {
     }
   }
 
-  // Buka Form Edit Slot (Inline Edit)
-  const handleEdit = (item: StrukturOrganisasi) => {
+  // Buka Mode Edit untuk 1 slot
+  const handleEdit = (record: StrukturOrganisasi) => {
     setPesanSukses(null)
     setPesanError(null)
     setErrorForm(null)
     setWarningFile(null)
-    setSelectedFile(null)
+
+    // Reset file preview jika sebelumnya ada
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl)
       setPreviewUrl(null)
     }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
-    setNamaPejabat(item.nama_pejabat || "")
-    setEditingSlot(item.slot_key)
+    setSelectedFile(null)
+
+    setEditingSlot(record.slot_key)
+    setNamaPejabat(record.nama_pejabat || "")
   }
 
-  // Tutup/Batal Form
+  // Batal Inline Edit
   const handleBatal = () => {
     setEditingSlot(null)
     setNamaPejabat("")
@@ -261,63 +257,90 @@ export default function AdminStrukturOrganisasiPage() {
 
   // Handler Ganti File Foto
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setWarningFile(null)
     setErrorForm(null)
-    const file = e.target.files?.[0]
-    if (!file) return
+    setWarningFile(null)
+    const file = e.target.files?.[0] || null
 
-    if (
-      !(STRUKTUR_ORGANISASI_ALLOWED_MIME_TYPES as readonly string[]).includes(
-        file.type
-      )
-    ) {
-      setErrorForm("Format file foto harus berupa JPEG, PNG, atau WebP.")
-      if (fileInputRef.current) fileInputRef.current.value = ""
+    if (!file) {
+      setSelectedFile(null)
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
+      }
       return
     }
 
+    // Validasi MIME
+    const isValidMime = STRUKTUR_ORGANISASI_ALLOWED_MIME_TYPES.includes(
+      file.type as (typeof STRUKTUR_ORGANISASI_ALLOWED_MIME_TYPES)[number]
+    )
+    if (!isValidMime) {
+      setErrorForm("Format file tidak didukung. Gunakan format JPEG, PNG, atau WebP.")
+      setSelectedFile(null)
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
+      }
+      return
+    }
+
+    // Validasi Ukuran Maksimal (5 MB)
     if (file.size > STRUKTUR_ORGANISASI_MAX_FILE_SIZE_BYTES) {
       setErrorForm("Ukuran file foto melebihi batas maksimal 5 MB.")
-      if (fileInputRef.current) fileInputRef.current.value = ""
+      setSelectedFile(null)
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
+      }
       return
     }
 
+    // Warning Ukuran Performa (> 2 MB)
     if (file.size > STRUKTUR_ORGANISASI_PERFORMANCE_WARNING_BYTES) {
-      setWarningFile(
-        "Ukuran foto di atas 2 MB. Disarankan kompresi untuk menghemat kuota."
-      )
+      setWarningFile("Ukuran file lebih dari 2 MB. Kompresi foto direkomendasikan.")
     }
 
-    setSelectedFile(file)
+    // Object URL preview
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl)
     }
-    setPreviewUrl(URL.createObjectURL(file))
+    const newPreview = URL.createObjectURL(file)
+    setSelectedFile(file)
+    setPreviewUrl(newPreview)
   }
 
-  // Generasi Nama File Aman (MIME type extension + random UUID)
-  const getSafeFileName = (file: File): string => {
-    let ext = "jpg"
-    if (file.type === "image/png") ext = "png"
-    if (file.type === "image/webp") ext = "webp"
-    const randomId = crypto.randomUUID()
-    return `${randomId}.${ext}`
+  // Sanitasi Nama File Foto
+  const getSafeFileName = (originalName: string, slotKey: string): string => {
+    const lastDotIndex = originalName.lastIndexOf(".")
+    const baseName = lastDotIndex !== -1 ? originalName.slice(0, lastDotIndex) : originalName
+    const ext = lastDotIndex !== -1 ? originalName.slice(lastDotIndex).toLowerCase() : ".jpg"
+
+    const cleanBase = baseName
+      .replace(/\s+/g, "-")
+      .replace(/[^A-Za-z0-9._-]/g, "")
+      .slice(0, 40) || "foto"
+
+    const timestamp = Date.now()
+    const randomSuffix = Math.random().toString(36).substring(2, 7)
+
+    return `${slotKey}-${timestamp}-${randomSuffix}-${cleanBase}${ext}`
   }
 
-  // Rekonsiliasi Otomatis Hapus File Tambahan Lama
+  // Safe Rekonsiliasi & Cleanup Storage Slot
   const rekonsiliasiFolderSlot = async (
     record: StrukturOrganisasi
-  ): Promise<{ success: boolean; remainingCount: number }> => {
+  ): Promise<{ success: boolean; deletedCount: number }> => {
     const slotKey = record.slot_key
     const folderPath = `${STRUKTUR_ORGANISASI_STORAGE_ROOT}/${slotKey}/foto`
 
     try {
-      const { data: fileList, error: listError } = await supabase.storage
+      const { data: fileList, error: errList } = await supabase.storage
         .from(STRUKTUR_ORGANISASI_BUCKET)
         .list(folderPath, { limit: 100 })
 
-      if (listError || !fileList) {
-        return { success: false, remainingCount: 0 }
+      if (errList) {
+        console.error("rekonsiliasiFolderSlot list error:", errList)
+        return { success: false, deletedCount: 0 }
       }
 
       const activeFileName =
@@ -326,7 +349,7 @@ export default function AdminStrukturOrganisasiPage() {
           ? record.foto_storage_path.slice(folderPath.length + 1)
           : null
 
-      const filesToDelete = fileList
+      const filesToDelete = (fileList || [])
         .map((f) => f.name)
         .filter((name) => {
           if (!name || name.includes("/") || name.includes("\\") || name === "." || name === "..") {
@@ -340,163 +363,103 @@ export default function AdminStrukturOrganisasiPage() {
           }
           return true
         })
+        .map((name) => `${folderPath}/${name}`)
 
-      if (filesToDelete.length === 0) {
-        setCleanupState((prev) => ({
-          ...prev,
-          [slotKey]: { sedangMemeriksa: false, fileTambahan: [], gagalMemeriksa: false },
-        }))
-        return { success: true, remainingCount: 0 }
+      if (filesToDelete.length > 0) {
+        const { error: errRemove } = await supabase.storage
+          .from(STRUKTUR_ORGANISASI_BUCKET)
+          .remove(filesToDelete)
+
+        if (errRemove) {
+          console.error("rekonsiliasiFolderSlot remove error:", errRemove)
+          return { success: false, deletedCount: 0 }
+        }
       }
 
-      const fullPathsToDelete = filesToDelete.map((f) => `${folderPath}/${f}`)
-      const { error: removeError } = await supabase.storage
-        .from(STRUKTUR_ORGANISASI_BUCKET)
-        .remove(fullPathsToDelete)
-
-      if (removeError) {
-        setCleanupState((prev) => ({
-          ...prev,
-          [slotKey]: {
-            sedangMemeriksa: false,
-            fileTambahan: filesToDelete,
-            gagalMemeriksa: true,
-          },
-        }))
-        return { success: false, remainingCount: filesToDelete.length }
-      }
-
-      setCleanupState((prev) => ({
-        ...prev,
-        [slotKey]: { sedangMemeriksa: false, fileTambahan: [], gagalMemeriksa: false },
-      }))
-
-      return { success: true, remainingCount: 0 }
-    } catch {
-      setCleanupState((prev) => ({
-        ...prev,
-        [slotKey]: { sedangMemeriksa: false, fileTambahan: [], gagalMemeriksa: true },
-      }))
-      return { success: false, remainingCount: 0 }
+      return { success: true, deletedCount: filesToDelete.length }
+    } catch (err) {
+      console.error("rekonsiliasiFolderSlot catch error:", err)
+      return { success: false, deletedCount: 0 }
     }
   }
 
-  // Simpan Perubahan (Inline Save Handler)
-  const handleSimpan = async (
-    e: FormEvent,
-    currentRecord: StrukturOrganisasi
-  ) => {
+  // Simpan Inline Edit (Update Nama & Foto)
+  const handleSimpan = async (e: FormEvent, currentRecord: StrukturOrganisasi) => {
     e.preventDefault()
+    if (isSaving) return
+
     setPesanSukses(null)
     setPesanError(null)
     setErrorForm(null)
 
-    const slotKey = currentRecord.slot_key
-    if (!STRUKTUR_ORGANISASI_SLOT_KEYS.includes(slotKey)) {
-      setErrorForm("Slot jabatan tidak valid.")
-      return
-    }
-
-    const namaBersih = namaPejabat.trim()
-    const payloadNama = namaBersih === "" ? null : namaBersih
-
-    if (payloadNama && payloadNama.length > 200) {
+    const namaClean = namaPejabat.trim()
+    if (namaClean.length > 200) {
       setErrorForm("Nama pejabat maksimal 200 karakter.")
       return
     }
 
-    // Opsi A: Hanya Ubah Nama Pejabat (Tanpa Foto Baru)
-    if (!selectedFile) {
-      try {
-        setIsSaving(true)
-        const { data: updatedRow, error: errUpdate } = await supabase
-          .from(STRUKTUR_ORGANISASI_TABLE)
-          .update({ nama_pejabat: payloadNama })
-          .eq("slot_key", slotKey)
-          .select(
-            "slot_key, nama_jabatan, nama_pejabat, foto_url, foto_storage_path, parent_slot_key, kelompok_layout, urutan, created_at, updated_at"
-          )
-          .single()
-
-        if (errUpdate || !updatedRow) {
-          throw new Error(
-            `Gagal memperbarui nama pejabat: ${errUpdate?.message || "Data tidak ditemukan."}`
-          )
-        }
-
-        setPesanSukses(
-          `Nama pejabat ${currentRecord.nama_jabatan} berhasil diperbarui.`
-        )
-        handleBatal()
-        await loadData()
-      } catch (err) {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : "Gagal memperbarui nama pejabat."
-        setErrorForm(msg)
-      } finally {
-        setIsSaving(false)
-      }
-      return
-    }
-
-    // Opsi B: Safe Replace Foto (Sertakan Foto Baru)
-    let newStoragePath: string | null = null
-
     try {
       setIsSaving(true)
+      const slotKey = currentRecord.slot_key
 
-      const safeFileName = getSafeFileName(selectedFile)
-      newStoragePath = `${STRUKTUR_ORGANISASI_STORAGE_ROOT}/${slotKey}/foto/${safeFileName}`
+      let finalFotoUrl = currentRecord.foto_url
+      let finalStoragePath = currentRecord.foto_storage_path
+      let newUploadedPath: string | null = null
 
-      const { error: errUpload } = await supabase.storage
-        .from(STRUKTUR_ORGANISASI_BUCKET)
-        .upload(newStoragePath, selectedFile, {
-          cacheControl: "3600",
-          upsert: false,
-        })
+      // Step 1: Upload foto baru jika ada file baru terpilih
+      if (selectedFile) {
+        const safeFileName = getSafeFileName(selectedFile.name, slotKey)
+        const storagePath = `${STRUKTUR_ORGANISASI_STORAGE_ROOT}/${slotKey}/foto/${safeFileName}`
 
-      if (errUpload) {
-        throw new Error(`Gagal mengunggah foto baru: ${errUpload.message}`)
+        const { error: errUpload } = await supabase.storage
+          .from(STRUKTUR_ORGANISASI_BUCKET)
+          .upload(storagePath, selectedFile, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: selectedFile.type,
+          })
+
+        if (errUpload) {
+          throw new Error(`Gagal mengunggah foto baru ke Storage: ${errUpload.message}`)
+        }
+
+        newUploadedPath = storagePath
+
+        const { data: publicUrlData } = supabase.storage
+          .from(STRUKTUR_ORGANISASI_BUCKET)
+          .getPublicUrl(storagePath)
+
+        const publicUrl = publicUrlData?.publicUrl
+        if (!publicUrl) {
+          await supabase.storage.from(STRUKTUR_ORGANISASI_BUCKET).remove([storagePath])
+          throw new Error("Gagal mendapatkan URL publik foto baru.")
+        }
+
+        finalFotoUrl = publicUrl
+        finalStoragePath = storagePath
       }
 
-      const { data: urlData } = supabase.storage
-        .from(STRUKTUR_ORGANISASI_BUCKET)
-        .getPublicUrl(newStoragePath)
-
-      const publicUrl = urlData?.publicUrl || ""
-      if (!isValidHttpsUrl(publicUrl)) {
-        await supabase.storage
-          .from(STRUKTUR_ORGANISASI_BUCKET)
-          .remove([newStoragePath])
-        throw new Error(
-          "Gagal mendapatkan URL HTTPS publik dari Supabase Storage."
-        )
+      // Step 2: Update database record SQL
+      const payloadUpdate = {
+        nama_pejabat: namaClean || null,
+        foto_url: finalFotoUrl || null,
+        foto_storage_path: finalStoragePath || null,
+        updated_at: new Date().toISOString(),
       }
 
       const { data: updatedRow, error: errUpdateDb } = await supabase
         .from(STRUKTUR_ORGANISASI_TABLE)
-        .update({
-          nama_pejabat: payloadNama,
-          foto_url: publicUrl,
-          foto_storage_path: newStoragePath,
-        })
+        .update(payloadUpdate)
         .eq("slot_key", slotKey)
-        .select(
-          "slot_key, nama_jabatan, nama_pejabat, foto_url, foto_storage_path, parent_slot_key, kelompok_layout, urutan, created_at, updated_at"
-        )
+        .select("*")
         .single()
 
       if (errUpdateDb || !updatedRow) {
-        const { error: errRemoveNew } = await supabase.storage
-          .from(STRUKTUR_ORGANISASI_BUCKET)
-          .remove([newStoragePath])
-
-        if (errRemoveNew) {
-          throw new Error(
-            `Gagal memperbarui database: ${errUpdateDb?.message || "Data tidak ditemukan."}. File baru juga gagal dibersihkan secara otomatis.`
-          )
+        // Rollback upload file baru jika insert DB gagal
+        if (newUploadedPath) {
+          await supabase.storage
+            .from(STRUKTUR_ORGANISASI_BUCKET)
+            .remove([newUploadedPath])
         }
 
         throw new Error(
@@ -563,10 +526,10 @@ export default function AdminStrukturOrganisasiPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
       {/* Header Admin */}
-      <header className="bg-[#2c1b01] text-white shadow-md">
-        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
+      <header className="bg-[#2c1b01] text-white shadow-md mb-8">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center space-x-3">
               <Link
@@ -627,90 +590,85 @@ export default function AdminStrukturOrganisasiPage() {
       </header>
 
       {/* Main Container */}
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Alert Pesan Sukses (Green 50 / Green 200 / Green 700 with Auto Dismiss 4s, No Close X) */}
-        {pesanSukses && (
-          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
-            <div className="flex items-center gap-2">
-              <svg
-                className="h-5 w-5 flex-shrink-0 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span>{pesanSukses}</span>
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Global Toast Notifications */}
+        <div aria-live="polite">
+          {pesanSukses && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="h-5 w-5 flex-shrink-0 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                <span>{pesanSukses}</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Alert Pesan Error */}
-        {pesanError && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm">
-            <div className="flex items-center gap-2">
-              <svg
-                className="h-5 w-5 flex-shrink-0 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span className="text-sm font-medium">{pesanError}</span>
+          {pesanError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="h-5 w-5 flex-shrink-0 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span>{pesanError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPesanError(null)}
+                  className="text-red-600 hover:text-red-900 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setPesanError(null)}
-              className="text-red-600 hover:text-red-900 cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Loading Utama */}
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-600 border-t-transparent" />
-            <p className="mt-4 text-sm font-medium text-gray-600">
+          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent mb-3"></div>
+            <p className="text-sm font-medium text-gray-600">
               Memuat data struktur organisasi...
             </p>
           </div>
         ) : errorDaftar ? (
           /* Error Load Utama */
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center shadow-sm">
-            <svg
-              className="mx-auto h-12 w-12 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h3 className="mt-3 text-lg font-bold text-red-900">
+          <div className="rounded-2xl border border-red-200 bg-white p-10 text-center shadow-sm">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">
               Struktur organisasi belum dapat dimuat.
             </h3>
-            <p className="mt-1 text-sm text-red-700">{errorDaftar}</p>
+            <p className="text-sm text-gray-600 mb-6">{errorDaftar}</p>
             <button
               type="button"
               onClick={loadData}
-              className="mt-4 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700 cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2c1b01] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#3a2604] transition-colors cursor-pointer"
             >
               Coba Lagi
             </button>
@@ -718,45 +676,41 @@ export default function AdminStrukturOrganisasiPage() {
         ) : (
           /* Tabel Daftar 16 Slot Admin (INLINE EDIT TABLE ROW) */
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">
-                  Daftar Struktur Organisasi
-                </h2>
-                <p className="text-xs text-gray-500">
-                  Total 16 jabatan tetap Nagari Aia Manggih Barat
-                </p>
-              </div>
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">
-                16 Jabatan
-              </span>
+            {/* Header Section Krem/White */}
+            <div className="p-5 border-b border-gray-200 bg-white">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                Daftar Struktur Organisasi
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Total {items.length} jabatan tetap Nagari Aia Manggih Barat
+              </p>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-600 min-w-[760px] table-fixed">
+              <table className="w-full text-left border-collapse min-w-[760px] table-fixed">
                 <colgroup>
-                  <col className="w-[22%]" />
+                  <col className="w-[20%]" />
                   <col className="w-[25%]" />
-                  <col className="w-[35%]" />
-                  <col className="w-[18%]" />
+                  <col className="w-[30%]" />
+                  <col className="w-[25%]" />
                 </colgroup>
-                <thead className="bg-gray-50 text-xs uppercase text-gray-500 border-b border-gray-200">
+                <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
                   <tr>
-                    <th scope="col" className="px-4 py-3.5 font-semibold text-center">
+                    <th scope="col" className="px-6 py-4 font-bold text-center">
                       PREVIEW
                     </th>
-                    <th scope="col" className="px-4 py-3.5 font-semibold text-left">
+                    <th scope="col" className="px-6 py-4 font-bold text-left">
                       JABATAN
                     </th>
-                    <th scope="col" className="px-4 py-3.5 font-semibold text-left">
+                    <th scope="col" className="px-6 py-4 font-bold text-left">
                       NAMA PEJABAT
                     </th>
-                    <th scope="col" className="px-4 py-3.5 font-semibold text-center">
+                    <th scope="col" className="px-6 py-4 font-bold text-right">
                       AKSI
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className="divide-y divide-gray-100 bg-white text-sm">
                   {items.map((item) => {
                     const isEditing = editingSlot === item.slot_key
                     const slotCleanup = cleanupState[item.slot_key]
@@ -769,14 +723,16 @@ export default function AdminStrukturOrganisasiPage() {
                     return (
                       <tr
                         key={item.slot_key}
-                        className={`transition-colors hover:bg-amber-50/30 ${
-                          isEditing ? "bg-amber-50/60" : ""
+                        className={`transition-colors ${
+                          isEditing
+                            ? "bg-[#f7f2e8]/40"
+                            : "hover:bg-gray-50/80"
                         }`}
                       >
-                        {/* 1. Preview Foto (Centered in Cell) */}
-                        <td className="px-4 py-3.5 align-middle text-center">
-                          <div className="flex items-center justify-center gap-2.5">
-                            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-100 shadow-sm">
+                        {/* 1. Preview Foto (Centered & Fixed Layout) */}
+                        <td className="px-6 py-4 align-middle text-center">
+                          <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-100 shadow-xs">
                               {previewUrl && isEditing ? (
                                 <img
                                   src={previewUrl}
@@ -811,10 +767,10 @@ export default function AdminStrukturOrganisasiPage() {
                               )}
                             </div>
 
-                            {/* Control Ganti Foto (Inline di samping Foto saat Editing) */}
+                            {/* Control Ganti Foto (Inline tanpa menggeser layout) */}
                             {isEditing && (
-                              <div className="flex flex-col items-start gap-1 flex-shrink-0">
-                                <label className="cursor-pointer inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors">
+                              <div className="flex flex-col items-center sm:items-start gap-1 flex-shrink-0">
+                                <label className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-2.5 py-1 text-xs font-semibold text-[#6b4b1d] shadow-xs hover:bg-[#ebdcc4] transition-colors">
                                   <span>Ganti Foto</span>
                                   <input
                                     ref={fileInputRef}
@@ -837,14 +793,14 @@ export default function AdminStrukturOrganisasiPage() {
                         </td>
 
                         {/* 2. Jabatan (Read-Only, Fixed Position) */}
-                        <td className="px-4 py-3.5 align-middle text-left">
-                          <div className="font-semibold text-gray-900 truncate">
+                        <td className="px-6 py-4 align-middle text-left font-semibold text-gray-900">
+                          <div className="truncate">
                             {item.nama_jabatan}
                           </div>
                         </td>
 
                         {/* 3. Nama Pejabat (Bounded Direct Inline Input) */}
-                        <td className="px-4 py-3.5 align-middle text-left min-w-0">
+                        <td className="px-6 py-4 align-middle text-left min-w-0">
                           {isEditing ? (
                             <div className="w-full max-w-full min-w-0 space-y-1">
                               <input
@@ -854,8 +810,8 @@ export default function AdminStrukturOrganisasiPage() {
                                 value={namaPejabat}
                                 onChange={(e) => setNamaPejabat(e.target.value)}
                                 disabled={isSaving}
-                                placeholder="Nama pejabat"
-                                className="block w-full min-w-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 disabled:bg-gray-100"
+                                placeholder="Masukkan nama pejabat..."
+                                className="block w-full min-w-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white disabled:bg-gray-100"
                               />
                               {errorForm && (
                                 <p className="text-xs font-medium text-red-600">
@@ -874,24 +830,34 @@ export default function AdminStrukturOrganisasiPage() {
                           )}
                         </td>
 
-                        {/* 4. Aksi (Centered/Fixed Position Buttons) */}
-                        <td className="px-4 py-3.5 align-middle text-center">
-                          <div className="flex items-center justify-center gap-2">
+                        {/* 4. Aksi (Right-Aligned Fixed Position Buttons) */}
+                        <td className="px-6 py-4 align-middle text-right">
+                          <div className="flex items-center justify-end gap-2 flex-nowrap">
                             {isEditing ? (
-                              <button
-                                type="button"
-                                onClick={(e) => handleSimpan(e as unknown as FormEvent, item)}
-                                disabled={isSaving}
-                                className="inline-flex items-center justify-center rounded-lg bg-amber-500 px-3.5 py-1.5 text-xs font-semibold text-gray-950 shadow hover:bg-amber-400 disabled:opacity-50 cursor-pointer whitespace-nowrap"
-                              >
-                                {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={handleBatal}
+                                  disabled={isSaving}
+                                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                                >
+                                  Batal
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleSimpan(e as unknown as FormEvent, item)}
+                                  disabled={isSaving}
+                                  className="inline-flex items-center justify-center rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-3.5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                                >
+                                  {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
+                                </button>
+                              </>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => handleEdit(item)}
                                 disabled={isSaving || isCleaning}
-                                className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 shadow-sm transition-colors hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500/20 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap"
                               >
                                 Edit
                               </button>
@@ -902,7 +868,7 @@ export default function AdminStrukturOrganisasiPage() {
                                 type="button"
                                 onClick={() => handleRetryCleanup(item)}
                                 disabled={isCleaning || isSaving}
-                                className="inline-flex items-center justify-center rounded-lg border border-amber-300 bg-amber-100 px-2.5 py-1.5 text-xs font-semibold text-amber-900 shadow-sm hover:bg-amber-200 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                                className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-900 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer whitespace-nowrap"
                               >
                                 {isCleaning ? "Membersihkan..." : "Bersihkan File Lama"}
                               </button>

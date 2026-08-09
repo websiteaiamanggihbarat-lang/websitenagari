@@ -116,9 +116,8 @@ export async function fetchPetaNagariAktif(): Promise<PetaNagari[]> {
       .from("peta_nagari")
       .select(KOLOM_PETA_NAGARI)
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
-      .order("tahun_peta", { ascending: false })
-      .order("judul_peta", { ascending: true })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (error) {
       throw new Error(`Gagal mengambil peta nagari aktif: ${error.message}`)
@@ -145,9 +144,8 @@ export async function fetchSemuaPetaNagariAdmin(): Promise<PetaNagari[]> {
     const { data, error } = await supabase
       .from("peta_nagari")
       .select(KOLOM_PETA_NAGARI)
-      .order("urutan", { ascending: true })
-      .order("tahun_peta", { ascending: false })
-      .order("judul_peta", { ascending: true })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (error) {
       throw new Error(`Gagal mengambil seluruh data peta nagari: ${error.message}`)

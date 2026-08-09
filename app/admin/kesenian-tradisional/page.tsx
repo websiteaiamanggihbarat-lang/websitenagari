@@ -1,16 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import {
   BUCKET_FOTO_KESENIAN,
+  GaleriKesenianTradisional,
   KategoriKesenian,
   KesenianTradisional,
   PILIHAN_KATEGORI_KESENIAN,
   buatSlugJenisKesenian,
   getLabelKategoriKesenian,
-  isSlugJenisValid,
 } from "@/lib/kesenian"
 
 interface FormKesenianState {
@@ -26,7 +26,6 @@ interface FormKesenianState {
   nomor_kontak: string
   jadwal_latihan: string
   tautan_peta: string
-  urutan: string
 }
 
 const FORM_AWAL: FormKesenianState = {
@@ -42,7 +41,17 @@ const FORM_AWAL: FormKesenianState = {
   nomor_kontak: "",
   jadwal_latihan: "",
   tautan_peta: "",
-  urutan: "0",
+}
+
+interface ExistingGaleriItem extends GaleriKesenianTradisional {
+  isPendingDelete?: boolean
+}
+
+interface NewPhotoItem {
+  localId: string
+  file: File
+  previewUrl: string
+  caption: string
 }
 
 async function keluarDariAdmin(labelError = "Logout error") {
@@ -72,8 +81,10 @@ async function keluarDariAdmin(labelError = "Logout error") {
 }
 
 export default function AdminKesenianTradisionalPage() {
+  const formRef = useRef<HTMLDivElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
   const [listKesenian, setListKesenian] = useState<KesenianTradisional[]>([])
-  const [coverMap, setCoverMap] = useState<Record<string, boolean>>({})
 
   const [loadingList, setLoadingList] = useState(true)
   const [loadingForm, setLoadingForm] = useState(false)
@@ -81,7 +92,6 @@ export default function AdminKesenianTradisionalPage() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const [newCreatedId, setNewCreatedId] = useState<string | null>(null)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -89,6 +99,11 @@ export default function AdminKesenianTradisionalPage() {
 
   const [formData, setFormData] = useState<FormKesenianState>(FORM_AWAL)
   const [isSlugAutoMode, setIsSlugAutoMode] = useState<boolean>(true)
+
+  // State untuk Inline Galeri
+  const [existingGaleri, setExistingGaleri] = useState<ExistingGaleriItem[]>([])
+  const [newPhotos, setNewPhotos] = useState<NewPhotoItem[]>([])
+  const [deletedGaleriIds, setDeletedGaleriIds] = useState<string[]>([])
 
   const listKesenianTerfilter =
     filterKategori === "semua"
@@ -122,12 +137,12 @@ export default function AdminKesenianTradisionalPage() {
     }
 
     try {
-      // 1. Baca seluruh kesenian
+      // Baca seluruh data kesenian tradisional diurutkan berdasarkan created_at DESC (Terbaru Dulu)
       const { data: dataKesenian, error: errKesenian } = await supabase
         .from("kesenian_tradisional")
         .select("*")
-        .order("urutan", { ascending: true })
-        .order("nama_kesenian", { ascending: true })
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
 
       if (errKesenian) {
         setPesanError(`Gagal membaca data kesenian: ${errKesenian.message}`)
@@ -137,29 +152,9 @@ export default function AdminKesenianTradisionalPage() {
 
       const kesenianArr = (dataKesenian as KesenianTradisional[]) || []
       setListKesenian(kesenianArr)
-
-      // 2. Baca status cover aktif dari galeri_kesenian_tradisional
-      const { data: dataCover, error: errCover } = await supabase
-        .from("galeri_kesenian_tradisional")
-        .select("kesenian_id")
-        .eq("is_cover", true)
-        .eq("is_active", true)
-
-      if (errCover) {
-        console.error("Gagal membaca cover map:", errCover)
-      }
-
-      const mapCover: Record<string, boolean> = {}
-      if (dataCover) {
-        for (const item of dataCover) {
-          if (item.kesenian_id) {
-            mapCover[item.kesenian_id] = true
-          }
-        }
-      }
-      setCoverMap(mapCover)
-    } catch (err: any) {
-      setPesanError(`Terjadi kesalahan memuat data: ${err.message || err}`)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan memuat data: ${msg}`)
     } finally {
       setLoadingList(false)
     }
@@ -169,17 +164,45 @@ export default function AdminKesenianTradisionalPage() {
     fetchData()
   }, [])
 
+  // Auto dismiss success toast notification after 4000ms
+  useEffect(() => {
+    if (!pesanSukses) return
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSukses])
+
+  // Clean up object URLs when newPhotos state changes or unmounts
+  const cleanupNewPhotoPreviews = (photos: NewPhotoItem[]) => {
+    photos.forEach((item) => {
+      if (item.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl)
+      }
+    })
+  }
+
   const handleOpenTambah = () => {
+    cleanupNewPhotoPreviews(newPhotos)
+
     setEditingId(null)
     setFormData(FORM_AWAL)
     setIsSlugAutoMode(true)
+    setExistingGaleri([])
+    setNewPhotos([])
+    setDeletedGaleriIds([])
     setPesanSukses(null)
     setPesanError(null)
-    setNewCreatedId(null)
     setIsFormOpen(true)
+
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 50)
   }
 
-  const handleOpenEdit = (item: KesenianTradisional) => {
+  const handleOpenEdit = async (item: KesenianTradisional) => {
+    cleanupNewPhotoPreviews(newPhotos)
+
     setEditingId(item.id)
     setFormData({
       nama_kesenian: item.nama_kesenian || "",
@@ -194,39 +217,116 @@ export default function AdminKesenianTradisionalPage() {
       nomor_kontak: item.nomor_kontak || "",
       jadwal_latihan: item.jadwal_latihan || "",
       tautan_peta: item.tautan_peta || "",
-      urutan: (item.urutan ?? 0).toString(),
     })
     setIsSlugAutoMode(!item.jenis_slug)
+    setNewPhotos([])
+    setDeletedGaleriIds([])
     setPesanSukses(null)
     setPesanError(null)
-    setNewCreatedId(null)
     setIsFormOpen(true)
+
+    // Read existing gallery photos for this kesenian
+    try {
+      const { data: dataGaleri, error: errGaleri } = await supabase
+        .from("galeri_kesenian_tradisional")
+        .select("*")
+        .eq("kesenian_id", item.id)
+        .order("is_cover", { ascending: false })
+        .order("created_at", { ascending: true })
+
+      if (!errGaleri && dataGaleri) {
+        setExistingGaleri(dataGaleri as ExistingGaleriItem[])
+      } else {
+        setExistingGaleri([])
+      }
+    } catch {
+      setExistingGaleri([])
+    }
+
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 50)
   }
 
   const handleBatalForm = () => {
+    cleanupNewPhotoPreviews(newPhotos)
+
     setIsFormOpen(false)
     setEditingId(null)
     setFormData(FORM_AWAL)
     setIsSlugAutoMode(true)
+    setExistingGaleri([])
+    setNewPhotos([])
+    setDeletedGaleriIds([])
   }
 
-  const handleJenisKesenianChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    const newFormData = { ...formData, jenis_kesenian: val }
-    if (isSlugAutoMode) {
-      newFormData.jenis_slug = buatSlugJenisKesenian(val)
-    }
-    setFormData(newFormData)
+  // File Picker Selection
+  const handleSelectNewPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const validNewPhotos: NewPhotoItem[] = []
+
+    Array.from(files).forEach((file) => {
+      const mimeValid = ["image/jpeg", "image/png", "image/webp"].includes(file.type)
+      const ext = file.name.split(".").pop()?.toLowerCase() || ""
+      const extValid = ["jpg", "jpeg", "png", "webp"].includes(ext)
+
+      if (!mimeValid && !extValid) {
+        alert(`Format file "${file.name}" tidak didukung. Harap pilih gambar JPG, PNG, atau WebP.`)
+        return
+      }
+
+      if (file.size > 2 * 1024 * 1024) {
+        alert(`Ukuran file "${file.name}" melebihi batas 2 MB.`)
+        return
+      }
+
+      validNewPhotos.push({
+        localId: crypto.randomUUID(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        caption: "",
+      })
+    })
+
+    setNewPhotos((prev) => [...prev, ...validNewPhotos])
+    e.target.value = ""
   }
 
-  const handleJenisSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "")
-      .replace(/-+/g, "-")
-    setIsSlugAutoMode(false)
-    setFormData({ ...formData, jenis_slug: val })
+  const handleRemoveNewPhoto = (localId: string) => {
+    setNewPhotos((prev) => {
+      const target = prev.find((item) => item.localId === localId)
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl)
+      }
+      return prev.filter((item) => item.localId !== localId)
+    })
+  }
+
+  const handleDeleteExistingPhoto = (id: string) => {
+    setDeletedGaleriIds((prev) => [...prev, id])
+  }
+
+  const handleSetCoverExistingPhoto = (id: string) => {
+    setExistingGaleri((prev) =>
+      prev.map((item) => ({
+        ...item,
+        is_cover: item.id === id,
+      }))
+    )
+  }
+
+  const handleUpdateExistingCaption = (id: string, newCaption: string) => {
+    setExistingGaleri((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, caption: newCaption } : item))
+    )
+  }
+
+  const handleUpdateNewCaption = (localId: string, newCaption: string) => {
+    setNewPhotos((prev) =>
+      prev.map((item) => (item.localId === localId ? { ...item, caption: newCaption } : item))
+    )
   }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -235,9 +335,8 @@ export default function AdminKesenianTradisionalPage() {
 
     setPesanSukses(null)
     setPesanError(null)
-    setNewCreatedId(null)
 
-    // Validasi
+    // Validasi Data Utama
     const namaClean = formData.nama_kesenian.trim()
     const deskripsiClean = formData.deskripsi_singkat.trim()
     const petaClean = formData.tautan_peta.trim()
@@ -261,8 +360,6 @@ export default function AdminKesenianTradisionalPage() {
     const jenisClean = editingItem?.jenis_kesenian || namaClean
     const slugClean = editingItem?.jenis_slug || buatSlugJenisKesenian(namaClean)
 
-    const numUrutan = Math.max(0, parseInt(formData.urutan || "0", 10) || 0)
-
     const payload = {
       nama_kesenian: namaClean,
       kategori: formData.kategori,
@@ -276,52 +373,111 @@ export default function AdminKesenianTradisionalPage() {
       nomor_kontak: formData.nomor_kontak.trim() || null,
       jadwal_latihan: formData.jadwal_latihan.trim() || null,
       tautan_peta: petaClean || null,
-      urutan: numUrutan,
+      urutan: 0,
     }
 
     setLoadingForm(true)
 
     try {
       if (editingId) {
-        // UPDATE (jangan ubah is_active melalui form edit utama)
+        // MODE EDIT
+        // 1. Update Data Utama Parent
         const { error: errUpdate } = await supabase
           .from("kesenian_tradisional")
           .update(payload)
           .eq("id", editingId)
 
         if (errUpdate) {
-          if (errUpdate.code === "23505") {
-            setPesanError(
-              "Kesenian dengan nama dan lokasi/alamat tersebut sudah terdaftar."
-            )
-          } else {
-            setPesanError(`Gagal memperbarui kesenian: ${errUpdate.message}`)
-          }
+          setPesanError(`Gagal memperbarui kesenian: ${errUpdate.message}`)
           setLoadingForm(false)
           return
         }
 
-        setPesanSukses(`Data kesenian "${namaClean}" berhasil diperbarui.`)
-        setIsFormOpen(false)
-        setEditingId(null)
-        setFormData(FORM_AWAL)
+        // 2. Hapus Galeri yang ditandai Delete
+        if (deletedGaleriIds.length > 0) {
+          const toDeleteItems = existingGaleri.filter((g) => deletedGaleriIds.includes(g.id))
+          const storagePaths = toDeleteItems.map((g) => g.storage_path).filter(Boolean)
+
+          if (storagePaths.length > 0) {
+            await supabase.storage.from(BUCKET_FOTO_KESENIAN).remove(storagePaths)
+          }
+
+          await supabase
+            .from("galeri_kesenian_tradisional")
+            .delete()
+            .in("id", deletedGaleriIds)
+        }
+
+        // 3. Update Existing Galeri (caption & is_cover)
+        const remainingExisting = existingGaleri.filter((g) => !deletedGaleriIds.includes(g.id))
+        for (const item of remainingExisting) {
+          await supabase
+            .from("galeri_kesenian_tradisional")
+            .update({
+              caption: item.caption ? item.caption.trim() : null,
+              is_cover: item.is_cover,
+            })
+            .eq("id", item.id)
+        }
+
+        // 4. Upload New Photos jika ada
+        if (newPhotos.length > 0) {
+          const hasCoverInExisting = remainingExisting.some((g) => g.is_cover)
+
+          for (let i = 0; i < newPhotos.length; i++) {
+            const photo = newPhotos[i]
+            const timestamp = Date.now()
+            const randomId = crypto.randomUUID()
+            const ext = photo.file.name.split(".").pop()?.toLowerCase() || "jpg"
+            const storagePath = `kesenian-tradisional/${editingId}/${timestamp}-${randomId}.${ext}`
+
+            const { error: errUpload } = await supabase.storage
+              .from(BUCKET_FOTO_KESENIAN)
+              .upload(storagePath, photo.file, {
+                cacheControl: "3600",
+                upsert: false,
+                contentType: photo.file.type || "image/jpeg",
+              })
+
+            if (!errUpload) {
+              const { data: publicData } = supabase.storage
+                .from(BUCKET_FOTO_KESENIAN)
+                .getPublicUrl(storagePath)
+
+              const isCover = !hasCoverInExisting && i === 0
+
+              await supabase.from("galeri_kesenian_tradisional").insert({
+                kesenian_id: editingId,
+                foto_url: publicData?.publicUrl || "",
+                storage_path: storagePath,
+                caption: photo.caption.trim() || null,
+                teks_alt: `Foto ${namaClean}`,
+                is_cover: isCover,
+                is_active: true,
+                urutan: 0,
+              })
+            }
+          }
+        }
+
+        setPesanSukses(`Kesenian "${namaClean}" berhasil diperbarui.`)
+        handleBatalForm()
         await fetchData()
       } else {
-        // CREATE (is_active selalu false)
-        const { data: newRec, error: errInsert } = await supabase
+        // MODE CREATE
+        // 1. Insert Parent Kesenian (is_active: true secara otomatis)
+        const parentId = crypto.randomUUID()
+        const { error: errInsert } = await supabase
           .from("kesenian_tradisional")
           .insert({
+            id: parentId,
             ...payload,
-            is_active: false,
+            is_active: true, // OTOMATIS AKTIF
           })
-          .select("id")
-          .single()
 
         if (errInsert) {
           if (errInsert.code === "23505") {
-            setPesanError(
-              "Kesenian dengan nama dan lokasi/alamat tersebut sudah terdaftar."
-            )
+            setPesanError("Kesenian dengan nama tersebut sudah terdaftar.")
           } else {
             setPesanError(`Gagal menambah kesenian: ${errInsert.message}`)
           }
@@ -329,182 +485,108 @@ export default function AdminKesenianTradisionalPage() {
           return
         }
 
-        setPesanSukses(
-          `Data kesenian "${namaClean}" berhasil ditambahkan (status default: Nonaktif). Silakan unggah foto utama melalui tombol Kelola Galeri.`
-        )
-        if (newRec && newRec.id) {
-          setNewCreatedId(newRec.id)
+        // 2. Upload New Photos
+        if (newPhotos.length > 0) {
+          for (let i = 0; i < newPhotos.length; i++) {
+            const photo = newPhotos[i]
+            const timestamp = Date.now()
+            const randomId = crypto.randomUUID()
+            const ext = photo.file.name.split(".").pop()?.toLowerCase() || "jpg"
+            const storagePath = `kesenian-tradisional/${parentId}/${timestamp}-${randomId}.${ext}`
+
+            const { error: errUpload } = await supabase.storage
+              .from(BUCKET_FOTO_KESENIAN)
+              .upload(storagePath, photo.file, {
+                cacheControl: "3600",
+                upsert: false,
+                contentType: photo.file.type || "image/jpeg",
+              })
+
+            if (!errUpload) {
+              const { data: publicData } = supabase.storage
+                .from(BUCKET_FOTO_KESENIAN)
+                .getPublicUrl(storagePath)
+
+              await supabase.from("galeri_kesenian_tradisional").insert({
+                kesenian_id: parentId,
+                foto_url: publicData?.publicUrl || "",
+                storage_path: storagePath,
+                caption: photo.caption.trim() || null,
+                teks_alt: `Foto ${namaClean}`,
+                is_cover: i === 0, // Foto pertama otomatis jadi cover
+                is_active: true,
+                urutan: 0,
+              })
+            }
+          }
         }
-        setIsFormOpen(false)
-        setFormData(FORM_AWAL)
+
+        setPesanSukses(`Kesenian "${namaClean}" berhasil ditambahkan.`)
+        handleBatalForm()
         await fetchData()
       }
-    } catch (err: any) {
-      setPesanError(`Terjadi kesalahan: ${err.message || err}`)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan: ${msg}`)
     } finally {
       setLoadingForm(false)
     }
   }
 
-  const handleAktifkan = async (item: KesenianTradisional) => {
-    setPesanSukses(null)
-    setPesanError(null)
-    setNewCreatedId(null)
-    setActionLoadingId(item.id)
-
-    try {
-      // 1. Query galeri: harus ada minimal 1 dengan is_cover = true & is_active = true
-      const { data: coverActive, error: errCheck } = await supabase
-        .from("galeri_kesenian_tradisional")
-        .select("id")
-        .eq("kesenian_id", item.id)
-        .eq("is_cover", true)
-        .eq("is_active", true)
-        .maybeSingle()
-
-      if (errCheck) {
-        setPesanError(`Gagal memeriksa galeri foto: ${errCheck.message}`)
-        setActionLoadingId(null)
-        return
-      }
-
-      if (!coverActive) {
-        setPesanError(
-          "Kesenian belum dapat diaktifkan karena belum memiliki foto utama yang aktif."
-        )
-        setActionLoadingId(null)
-        return
-      }
-
-      // 2. Aktifkan
-      const { error: errAktif } = await supabase
-        .from("kesenian_tradisional")
-        .update({ is_active: true })
-        .eq("id", item.id)
-
-      if (errAktif) {
-        setPesanError(`Gagal mengaktifkan kesenian: ${errAktif.message}`)
-      } else {
-        setPesanSukses(`Kesenian "${item.nama_kesenian}" berhasil diaktifkan.`)
-        await fetchData()
-      }
-    } catch (err: any) {
-      setPesanError(`Terjadi kesalahan: ${err.message || err}`)
-    } finally {
-      setActionLoadingId(null)
-    }
-  }
-
-  const handleNonaktifkan = async (item: KesenianTradisional) => {
-    setPesanSukses(null)
-    setPesanError(null)
-    setNewCreatedId(null)
-    setActionLoadingId(item.id)
-
-    try {
-      const { error: errNonaktif } = await supabase
-        .from("kesenian_tradisional")
-        .update({ is_active: false })
-        .eq("id", item.id)
-
-      if (errNonaktif) {
-        setPesanError(`Gagal menonaktifkan kesenian: ${errNonaktif.message}`)
-      } else {
-        setPesanSukses(`Kesenian "${item.nama_kesenian}" telah dinonaktifkan.`)
-        await fetchData()
-      }
-    } catch (err: any) {
-      setPesanError(`Terjadi kesalahan: ${err.message || err}`)
-    } finally {
-      setActionLoadingId(null)
-    }
-  }
-
   const handleHapus = async (item: KesenianTradisional) => {
     const konfirmasi = window.confirm(
-      `Apakah Anda yakin ingin menghapus kesenian "${item.nama_kesenian}" beserta seluruh galeri dan foto di Storage?`
+      `Apakah Anda yakin ingin menghapus kesenian "${item.nama_kesenian}" beserta seluruh galeri dan foto terkait?`
     )
     if (!konfirmasi) return
 
     setPesanSukses(null)
     setPesanError(null)
-    setNewCreatedId(null)
     setActionLoadingId(item.id)
 
     try {
       // Step 1: Baca seluruh storage_path galeri milik kesenian
-      const { data: listGaleri, error: errGaleri } = await supabase
+      const { data: listGaleri } = await supabase
         .from("galeri_kesenian_tradisional")
         .select("storage_path")
         .eq("kesenian_id", item.id)
-
-      if (errGaleri) {
-        setPesanError(
-          `Gagal membaca data galeri sebelum menghapus: ${errGaleri.message}`
-        )
-        setActionLoadingId(null)
-        return
-      }
 
       const storagePaths = (listGaleri || [])
         .map((g) => g.storage_path)
         .filter((p): p is string => Boolean(p && p.trim()))
 
-      // Step 2: Ubah kesenian dan galeri terkait menjadi is_active = false terlebih dahulu
-      await supabase
-        .from("kesenian_tradisional")
-        .update({ is_active: false })
-        .eq("id", item.id)
-
-      await supabase
-        .from("galeri_kesenian_tradisional")
-        .update({ is_active: false })
-        .eq("kesenian_id", item.id)
-
-      // Step 3: Hapus seluruh file Storage jika ada
+      // Step 2: Hapus seluruh file Storage jika ada
       if (storagePaths.length > 0) {
-        const { error: errStorage } = await supabase.storage
-          .from(BUCKET_FOTO_KESENIAN)
-          .remove(storagePaths)
-
-        if (errStorage) {
-          // Step 4: Jika hapus Storage gagal, jangan hapus record DB!
-          setPesanError(
-            `Gagal menghapus file foto dari Storage: ${errStorage.message}. Data kesenian dan galeri telah dinonaktifkan tetapi belum dihapus dari database.`
-          )
-          await fetchData()
-          setActionLoadingId(null)
-          return
-        }
+        await supabase.storage.from(BUCKET_FOTO_KESENIAN).remove(storagePaths)
       }
 
-      // Step 5: Hapus record kesenian utama (CASCADE akan menghapus baris galeri di DB)
+      // Step 3: Hapus galeri dan record kesenian utama
+      await supabase.from("galeri_kesenian_tradisional").delete().eq("kesenian_id", item.id)
+
       const { error: errDeleteMain } = await supabase
         .from("kesenian_tradisional")
         .delete()
         .eq("id", item.id)
 
       if (errDeleteMain) {
-        setPesanError(
-          `File foto di Storage telah berhasil dihapus, namun gagal menghapus record database: ${errDeleteMain.message}`
-        )
+        setPesanError(`Gagal menghapus record database kesenian: ${errDeleteMain.message}`)
       } else {
-        setPesanSukses(
-          `Kesenian "${item.nama_kesenian}" beserta seluruh foto galerinya berhasil dihapus.`
-        )
+        setPesanSukses(`Kesenian "${item.nama_kesenian}" berhasil dihapus.`)
       }
       await fetchData()
-    } catch (err: any) {
-      setPesanError(`Terjadi kesalahan saat menghapus data: ${err.message || err}`)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan saat menghapus data: ${msg}`)
     } finally {
       setActionLoadingId(null)
     }
   }
 
+  const activeExistingGaleri = existingGaleri.filter((g) => !deletedGaleriIds.includes(g.id))
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
-      {/* Top Header Navigation */}
-      <div className="bg-[#2c1b01] text-white shadow-md mb-6">
+      {/* Top Header Navigation (Samakan dengan Kelola Layanan Informasi) */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
             <Link
@@ -513,18 +595,8 @@ export default function AdminKesenianTradisionalPage() {
               title="Kembali ke Dashboard Admin"
               aria-label="Kembali ke Dashboard Admin"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </Link>
             <div>
@@ -532,7 +604,7 @@ export default function AdminKesenianTradisionalPage() {
                 Kelola Kesenian Tradisional
               </h1>
               <p className="text-xs sm:text-sm text-amber-200/80">
-                Kelola data utama sanggar, kelompok seni, dan kesenian daerah Nagari Aia Manggih Barat
+                Kelola data kesenian tradisional Nagari Aia Manggih Barat.
               </p>
             </div>
           </div>
@@ -544,18 +616,8 @@ export default function AdminKesenianTradisionalPage() {
                 onClick={handleOpenTambah}
                 className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
               >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Tambah Kesenian Baru
               </button>
@@ -564,15 +626,9 @@ export default function AdminKesenianTradisionalPage() {
             <button
               type="button"
               onClick={handleLogout}
-              disabled={loadingList || loadingForm}
-              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
             >
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -586,106 +642,54 @@ export default function AdminKesenianTradisionalPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-
-        {/* Alert Notifications */}
-        {pesanSukses && (
-          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Global Toast Notifications */}
+        <div aria-live="polite">
+          {pesanSukses && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
               <div className="flex items-center gap-2">
-                <svg
-                  className="h-5 w-5 text-green-600 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
+                <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 <span>{pesanSukses}</span>
               </div>
-              <button
-                onClick={() => setPesanSukses(null)}
-                className="text-green-600 hover:text-green-800"
-              >
-                ✕
-              </button>
             </div>
-            {newCreatedId && (
-              <div className="mt-3">
-                <Link
-                  href={`/admin/kesenian-tradisional/${newCreatedId}`}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700 shadow-sm"
-                >
-                  Kelola Galeri Foto Sekarang →
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
+          )}
 
-        {pesanError && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
+          {pesanError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
               <div className="flex items-center gap-2">
-                <svg
-                  className="h-5 w-5 text-red-600 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
+                <svg className="h-5 w-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>{pesanError}</span>
               </div>
-              <button
-                onClick={() => setPesanError(null)}
-                className="text-red-600 hover:text-red-800"
-              >
-                ✕
-              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Form Overlay / Section */}
+        {/* SECTION: FORM UNIFIED TAMBAH / EDIT KESENIAN TRADISIONAL */}
         {isFormOpen && (
-          <div className="mb-8 rounded-2xl border border-gray-200/80 bg-white p-6 shadow-xl sm:p-8">
-            <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  {editingId ? "Edit Data Kesenian Tradisional" : "Tambah Data Kesenian Baru"}
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {editingId
-                    ? "Perbarui informasi utama kelompok kesenian."
-                    : "Data baru akan tersimpan dalam status Nonaktif hingga foto utama diunggah."}
-                </p>
-              </div>
-              <button
-                onClick={handleBatalForm}
-                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+          <div ref={formRef} id="form-kesenian-section" className="mb-8 scroll-mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {/* Header Krem Section */}
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                {editingId ? "Edit Kesenian Tradisional" : "Tambah Kesenian Tradisional Baru"}
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                {editingId
+                  ? "Ubah informasi kesenian tradisional dan foto galerinya."
+                  : "Lengkapi informasi kesenian tradisional dan pilih foto galeri."}
+              </p>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Body Form Putih */}
+            <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
+              {/* SUBSECTION 1: DATA UTAMA */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Nama Kesenian */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Nama Kesenian / Kelompok <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -693,14 +697,14 @@ export default function AdminKesenianTradisionalPage() {
                     required
                     value={formData.nama_kesenian}
                     onChange={(e) => setFormData({ ...formData, nama_kesenian: e.target.value })}
-                    placeholder="Contoh: Randai SDN 07"
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    placeholder="Contoh: Randai Sanggar Sakato"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Kategori */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Kategori Kesenian <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -708,7 +712,7 @@ export default function AdminKesenianTradisionalPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, kategori: e.target.value as KategoriKesenian })
                     }
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   >
                     {PILIHAN_KATEGORI_KESENIAN.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -720,7 +724,7 @@ export default function AdminKesenianTradisionalPage() {
 
                 {/* Deskripsi Singkat */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Deskripsi Singkat <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -729,27 +733,27 @@ export default function AdminKesenianTradisionalPage() {
                     value={formData.deskripsi_singkat}
                     onChange={(e) => setFormData({ ...formData, deskripsi_singkat: e.target.value })}
                     placeholder="Ringkasan singkat tentang kelompok kesenian ini..."
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                   />
                 </div>
 
                 {/* Penjelasan Lengkap */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Penjelasan Lengkap / Sejarah <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <textarea
-                    rows={5}
+                    rows={4}
                     value={formData.penjelasan_lengkap}
                     onChange={(e) => setFormData({ ...formData, penjelasan_lengkap: e.target.value })}
                     placeholder="Detail riwayat, struktur, keanggotaan, atau penjelasan mendalam..."
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                   />
                 </div>
 
-                {/* Nama Kelompok Pengelola */}
+                {/* Nama Sanggar / Kelompok Pengelola */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Nama Sanggar / Kelompok Pengelola <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
@@ -757,13 +761,13 @@ export default function AdminKesenianTradisionalPage() {
                     value={formData.nama_kelompok_pengelola}
                     onChange={(e) => setFormData({ ...formData, nama_kelompok_pengelola: e.target.value })}
                     placeholder="Contoh: Sanggar Seni Sakato"
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Nama Ketua */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Nama Ketua / Penanggung Jawab <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
@@ -771,13 +775,13 @@ export default function AdminKesenianTradisionalPage() {
                     value={formData.nama_ketua}
                     onChange={(e) => setFormData({ ...formData, nama_ketua: e.target.value })}
                     placeholder="Nama lengkap ketua..."
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
-                {/* Alamat */}
+                {/* Alamat / Jorong */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Alamat / Jorong <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
@@ -785,13 +789,13 @@ export default function AdminKesenianTradisionalPage() {
                     value={formData.alamat}
                     onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
                     placeholder="Contoh: Padang Sarai, Jorong Kampung Padang"
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Nomor Kontak */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Nomor Kontak / WhatsApp <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
@@ -799,13 +803,13 @@ export default function AdminKesenianTradisionalPage() {
                     value={formData.nomor_kontak}
                     onChange={(e) => setFormData({ ...formData, nomor_kontak: e.target.value })}
                     placeholder="Contoh: 081234567890"
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Jadwal Latihan */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Jadwal Latihan <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
@@ -813,66 +817,182 @@ export default function AdminKesenianTradisionalPage() {
                     value={formData.jadwal_latihan}
                     onChange={(e) => setFormData({ ...formData, jadwal_latihan: e.target.value })}
                     placeholder="Contoh: Setiap Sabtu malam pukul 20.00 WIB"
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
-                  />
-                </div>
-
-                {/* Urutan */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Urutan Tampil (Integer &ge; 0)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formData.urutan}
-                    onChange={(e) => setFormData({ ...formData, urutan: e.target.value })}
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Tautan Peta */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Tautan Peta (Google Maps URL) <span className="text-xs font-normal text-gray-500">(Opsional, wajib diawali https://)</span>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Tautan Peta (Google Maps URL - Wajib https://) <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
                     type="url"
                     value={formData.tautan_peta}
                     onChange={(e) => setFormData({ ...formData, tautan_peta: e.target.value })}
                     placeholder="https://maps.google.com/..."
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+              {/* SUBSECTION 2: GALERI FOTO INLINE */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="text-base font-bold text-[#2c1b01]">Galeri Foto</h3>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Tambahkan foto dokumentasi kesenian tradisional. Foto pertama otomatis dijadikan foto utama / cover.
+                    </p>
+                  </div>
+
+                  <div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      multiple
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleSelectNewPhotos}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] text-white font-semibold text-xs shadow-sm transition-colors cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>Tambahkan Foto</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid Photo Cards */}
+                {activeExistingGaleri.length === 0 && newPhotos.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-6 text-center text-gray-500 text-xs">
+                    Belum ada foto galeri yang ditambahkan. Klik tombol <strong>"Tambahkan Foto"</strong> di atas.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {/* Existing Gallery Photos */}
+                    {activeExistingGaleri.map((photo) => (
+                      <div
+                        key={photo.id}
+                        className="relative rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm flex flex-col group"
+                      >
+                        <div className="relative h-32 w-full bg-gray-100 overflow-hidden">
+                          <img
+                            src={photo.foto_url}
+                            alt={photo.teks_alt || "Foto Galeri"}
+                            className="h-full w-full object-cover"
+                          />
+
+                          {/* Delete Button (Deferred) */}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteExistingPhoto(photo.id)}
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 hover:bg-red-600 text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                            title="Hapus foto"
+                          >
+                            ✕
+                          </button>
+
+                          {/* Cover Badge / Button */}
+                          {photo.is_cover ? (
+                            <span className="absolute bottom-2 left-2 rounded-md bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-gray-950 shadow-sm">
+                              ★ Cover
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSetCoverExistingPhoto(photo.id)}
+                              className="absolute bottom-2 left-2 rounded-md bg-black/60 hover:bg-black/80 px-2 py-0.5 text-[10px] font-semibold text-white transition-colors cursor-pointer"
+                            >
+                              Jadikan Cover
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="p-2 bg-white flex-1 flex flex-col">
+                          <input
+                            type="text"
+                            placeholder="Keterangan foto (opsional)..."
+                            value={photo.caption || ""}
+                            onChange={(e) => handleUpdateExistingCaption(photo.id, e.target.value)}
+                            className="w-full text-xs text-gray-800 border-0 focus:ring-0 p-1 border-b border-gray-200 focus:border-[#6b4b1d]"
+                          />
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* New Selected Photos */}
+                    {newPhotos.map((photo) => (
+                      <div
+                        key={photo.localId}
+                        className="relative rounded-xl border border-amber-200 bg-amber-50/20 overflow-hidden shadow-sm flex flex-col group"
+                      >
+                        <div className="relative h-32 w-full bg-gray-100 overflow-hidden">
+                          <img
+                            src={photo.previewUrl}
+                            alt="Preview Foto Baru"
+                            className="h-full w-full object-cover"
+                          />
+
+                          {/* Delete Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveNewPhoto(photo.localId)}
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 hover:bg-red-600 text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                            title="Hapus dari daftar pilihan"
+                          >
+                            ✕
+                          </button>
+
+                          <span className="absolute bottom-2 left-2 rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                            Foto Baru
+                          </span>
+                        </div>
+
+                        <div className="p-2 bg-white flex-1 flex flex-col">
+                          <input
+                            type="text"
+                            placeholder="Keterangan foto (opsional)..."
+                            value={photo.caption}
+                            onChange={(e) => handleUpdateNewCaption(photo.localId, e.target.value)}
+                            className="w-full text-xs text-gray-800 border-0 focus:ring-0 p-1 border-b border-gray-200 focus:border-[#6b4b1d]"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Form Buttons (Single Batal Button) */}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
                 <button
                   type="button"
                   onClick={handleBatalForm}
                   disabled={loadingForm}
-                  className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={loadingForm}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#2c1b01] px-6 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#4a3210] disabled:opacity-50"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   {loadingForm ? (
                     <>
-                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Menyimpan...
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
+                      <span>Menyimpan...</span>
                     </>
                   ) : editingId ? (
-                    "Simpan Perubahan"
+                    <span>Simpan Perubahan</span>
                   ) : (
-                    "Tambah Kesenian"
+                    <span>Tambah Kesenian</span>
                   )}
                 </button>
               </div>
@@ -881,16 +1001,14 @@ export default function AdminKesenianTradisionalPage() {
         )}
 
         {/* Panel Filter Kategori */}
-        <div className="mb-6 rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <label htmlFor="filter-kategori-select" className="text-sm font-semibold text-gray-700">
-              Filter Kategori:
-            </label>
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filter Kategori:</span>
             <select
               id="filter-kategori-select"
               value={filterKategori}
               onChange={(e) => setFilterKategori(e.target.value)}
-              className="rounded-xl border border-gray-300 px-3.5 py-2 text-sm text-gray-900 focus:border-[#8c734b] focus:outline-none focus:ring-2 focus:ring-[#8c734b]/20"
+              className="px-3 py-2 rounded-xl border border-gray-300 text-sm bg-white focus:ring-2 focus:ring-[#6b4b1d] focus:border-[#6b4b1d]"
             >
               <option value="semua">Semua Kategori</option>
               {PILIHAN_KATEGORI_KESENIAN.map((opt) => (
@@ -910,43 +1028,26 @@ export default function AdminKesenianTradisionalPage() {
               </button>
             )}
           </div>
-
-          <p className="text-xs text-gray-500 font-medium">
-            {filterKategori === "semua"
-              ? "Menampilkan seluruh data kesenian tradisional."
-              : `Menampilkan kategori ${getLabelKategoriKesenian(filterKategori)} — ${listKesenianTerfilter.length} data ditemukan.`}
-          </p>
         </div>
 
-        {/* Tabel / Daftar Kesenian */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-md">
-          <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">
-              Daftar Kesenian Tradisional ({listKesenianTerfilter.length})
-            </h3>
-            {loadingList && <span className="text-xs text-gray-500">Memuat data...</span>}
-          </div>
-
+        {/* Tabel / Daftar Kesenian Tradisional (Tanpa Bar Header Tambahan) */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {loadingList ? (
-            <div className="p-12 text-center text-sm text-gray-500">
-              <svg
-                className="mx-auto h-8 w-8 animate-spin text-[#8c734b]"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              <p className="mt-2">Sedang memuat data kesenian...</p>
+            <div className="p-12 text-center text-gray-500">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent mb-3"></div>
+              <p className="text-sm font-medium">Sedang memuat data kesenian...</p>
             </div>
           ) : listKesenianTerfilter.length === 0 ? (
-            <div className="p-12 text-center text-sm text-gray-500">
+            <div className="p-12 text-center text-gray-500">
+              <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
               <p className="text-base font-semibold text-gray-700">
                 {filterKategori !== "semua"
                   ? `Tidak ada kesenian tradisional pada kategori ini.`
-                  : "Belum ada data kesenian tradisional."}
+                  : "Belum Ada Data Kesenian Tradisional"}
               </p>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="text-xs text-gray-500 mt-1">
                 {filterKategori !== "semua"
                   ? "Coba pilih kategori lain atau reset filter."
                   : 'Klik tombol "Tambah Kesenian Baru" di atas untuk mendaftarkan kesenian.'}
@@ -954,106 +1055,57 @@ export default function AdminKesenianTradisionalPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-700">
-                <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
                   <tr>
-                    <th className="px-6 py-3.5">Urutan</th>
-                    <th className="px-6 py-3.5">Nama Kesenian</th>
-                    <th className="px-6 py-3.5">Kategori</th>
-                    <th className="px-6 py-3.5">Alamat / Jorong</th>
-                    <th className="px-6 py-3.5">Status Publikasi</th>
-                    <th className="px-6 py-3.5 text-center min-w-[190px]">Aksi</th>
+                    <th scope="col" className="px-6 py-4 font-bold w-[35%]">Nama Kesenian</th>
+                    <th scope="col" className="px-6 py-4 font-bold w-[20%]">Kategori</th>
+                    <th scope="col" className="px-6 py-4 font-bold w-[22%]">Alamat / Jorong</th>
+                    <th scope="col" className="px-6 py-4 font-bold text-right w-[23%]">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 border-t border-gray-100">
+                <tbody className="divide-y divide-gray-100 bg-white text-sm">
                   {listKesenianTerfilter.map((item) => {
-                    const isProcessing = actionLoadingId === item.id
+                    const isBusy = actionLoadingId === item.id
 
                     return (
-                      <tr key={item.id} className="hover:bg-gray-50/60 transition">
-                        <td className="px-6 py-4 font-semibold text-gray-900">
-                          {item.urutan}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-gray-900">{item.nama_kesenian}</div>
+                      <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="py-4 px-6">
+                          <p className="font-bold text-gray-900 text-base">
+                            {item.nama_kesenian}
+                          </p>
                           {item.deskripsi_singkat && (
-                            <div className="text-xs text-gray-500 line-clamp-1 max-w-xs mt-0.5">
+                            <p className="text-xs text-gray-500 line-clamp-1 max-w-md mt-0.5">
                               {item.deskripsi_singkat}
-                            </div>
+                            </p>
                           )}
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center rounded-md bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
-                            {getLabelKategoriKesenian(item.kategori)}
-                          </span>
+                        <td className="py-4 px-6 font-semibold text-gray-800">
+                          {getLabelKategoriKesenian(item.kategori)}
                         </td>
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="py-4 px-6 font-medium text-gray-700">
                           {item.alamat || "-"}
                         </td>
-                        <td className="px-6 py-4">
-                          {item.is_active ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 border border-blue-200">
-                              <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
-                              Aktif
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-200">
-                              <span className="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
-                              Nonaktif
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 align-middle">
-                          <div className="grid min-w-[190px] grid-cols-2 gap-2 mx-auto">
-                            {/* Row 1: Galeri & Edit */}
-                            <Link
-                              href={`/admin/kesenian-tradisional/${item.id}`}
-                              className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-amber-500 hover:bg-amber-400 text-gray-950 px-3 py-2 text-xs font-semibold shadow-sm transition w-full"
-                              title="Kelola Galeri Foto"
-                            >
-                              <svg className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              <span>Galeri</span>
-                            </Link>
-
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Tombol Edit */}
                             <button
                               type="button"
                               onClick={() => handleOpenEdit(item)}
-                              disabled={isProcessing}
-                              className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full cursor-pointer"
+                              disabled={isBusy}
+                              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
                             >
-                              <span>Edit</span>
+                              Edit
                             </button>
 
-                            {/* Row 2: Aktifkan/Nonaktifkan & Hapus */}
-                            {item.is_active ? (
-                              <button
-                                type="button"
-                                onClick={() => handleNonaktifkan(item)}
-                                disabled={isProcessing}
-                                className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-gray-700 hover:bg-gray-800 text-white px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full cursor-pointer"
-                              >
-                                <span>{isProcessing ? "Proses..." : "Nonaktifkan"}</span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleAktifkan(item)}
-                                disabled={isProcessing}
-                                className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full cursor-pointer"
-                              >
-                                <span>{isProcessing ? "Proses..." : "Aktifkan"}</span>
-                              </button>
-                            )}
-
+                            {/* Tombol Hapus */}
                             <button
                               type="button"
                               onClick={() => handleHapus(item)}
-                              disabled={isProcessing}
-                              className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md bg-red-600 hover:bg-red-700 text-white px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 w-full cursor-pointer"
+                              disabled={isBusy}
+                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                             >
-                              <span>{isProcessing ? "Proses..." : "Hapus"}</span>
+                              Hapus
                             </button>
                           </div>
                         </td>

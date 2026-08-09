@@ -16,7 +16,7 @@ function formatTanggal(nilai) {
   })
 }
 
-function potongTeks(teks, batas = 180) {
+function potongTeks(teks, batas = 120) {
   if (!teks) {
     return ""
   }
@@ -55,6 +55,9 @@ async function keluarDariAdmin(labelError = "Logout error") {
 }
 
 export default function TambahBerita() {
+  const formRef = useRef(null)
+  const fileInputRef = useRef(null)
+
   const [judul, setJudul] = useState("")
   const [konten, setKonten] = useState("")
   const [fotoFile, setFotoFile] = useState(null)
@@ -62,13 +65,14 @@ export default function TambahBerita() {
 
   const [beritaList, setBeritaList] = useState([])
   const [editingId, setEditingId] = useState(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
-  const [error, setError] = useState("")
 
-  const fileInputRef = useRef(null)
+  const [pesanSukses, setPesanSukses] = useState(null)
+  const [pesanError, setPesanError] = useState(null)
 
   const periksaSesi = async () => {
     const {
@@ -77,7 +81,6 @@ export default function TambahBerita() {
     } = await supabase.auth.getSession()
 
     if (sessionError || !session) {
-      alert("Sesi admin tidak terbaca. Silakan login ulang.")
       window.location.href = "/login"
       return null
     }
@@ -87,7 +90,6 @@ export default function TambahBerita() {
 
   const fetchBerita = async () => {
     setLoadingData(true)
-    setError("")
 
     const session = await periksaSesi()
 
@@ -108,12 +110,7 @@ export default function TambahBerita() {
 
     if (fetchError) {
       console.error("fetchBerita error:", fetchError)
-
-      setError(
-        fetchError.message ||
-          "Gagal memuat data berita."
-      )
-
+      setPesanError(fetchError.message || "Gagal memuat data berita.")
       setLoadingData(false)
       return
     }
@@ -125,6 +122,15 @@ export default function TambahBerita() {
   useEffect(() => {
     fetchBerita()
   }, [])
+
+  // Auto dismiss success toast message after 4000ms
+  useEffect(() => {
+    if (!pesanSukses) return
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSukses])
 
   // Logout otomatis jika admin tidak aktif selama 5 menit.
   useEffect(() => {
@@ -206,21 +212,33 @@ export default function TambahBerita() {
     }
   }
 
+  const handleOpenTambah = () => {
+    resetForm()
+    setPesanSukses(null)
+    setPesanError(null)
+    setIsFormOpen(true)
+
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 50)
+  }
+
+  const handleBatalForm = () => {
+    resetForm()
+    setIsFormOpen(false)
+  }
+
   const uploadFotoBerita = async () => {
     if (!fotoFile) {
       return existingFotoUrl || ""
     }
 
     if (!fotoFile.type.startsWith("image/")) {
-      throw new Error(
-        "File yang dipilih harus berupa gambar."
-      )
+      throw new Error("File yang dipilih harus berupa gambar.")
     }
 
     if (fotoFile.size > 2 * 1024 * 1024) {
-      throw new Error(
-        "Ukuran foto terlalu besar. Maksimal 2 MB."
-      )
+      throw new Error("Ukuran foto terlalu besar. Maksimal 2 MB.")
     }
 
     const namaAman = fotoFile.name
@@ -240,9 +258,7 @@ export default function TambahBerita() {
       })
 
     if (uploadError) {
-      throw new Error(
-        `Gagal mengunggah foto: ${uploadError.message}`
-      )
+      throw new Error(`Gagal mengunggah foto: ${uploadError.message}`)
     }
 
     const { data: publicData } = supabase
@@ -260,18 +276,20 @@ export default function TambahBerita() {
       return
     }
 
+    setPesanSukses(null)
+    setPesanError(null)
+
     if (!judul.trim()) {
-      alert("Judul berita wajib diisi.")
+      setPesanError("Judul berita wajib diisi.")
       return
     }
 
     if (!konten.trim()) {
-      alert("Isi berita wajib diisi.")
+      setPesanError("Isi berita wajib diisi.")
       return
     }
 
     setLoading(true)
-    setError("")
 
     const session = await periksaSesi()
 
@@ -281,8 +299,7 @@ export default function TambahBerita() {
     }
 
     try {
-      const fotoUrlToSave =
-        await uploadFotoBerita()
+      const fotoUrlToSave = await uploadFotoBerita()
 
       let simpanError = null
 
@@ -316,30 +333,26 @@ export default function TambahBerita() {
         throw simpanError
       }
 
-      alert(
+      setPesanSukses(
         editingId
-          ? "Berita berhasil diperbarui!"
-          : "Berita berhasil dipublikasikan!"
+          ? "Berita berhasil diperbarui."
+          : "Berita berhasil dipublikasikan."
       )
 
-      resetForm()
+      handleBatalForm()
       await fetchBerita()
     } catch (simpanError) {
-      console.error(
-        "simpanBerita error:",
-        simpanError
-      )
-
-      alert(
-        simpanError?.message ||
-          "Gagal menyimpan berita."
-      )
+      console.error("simpanBerita error:", simpanError)
+      setPesanError(simpanError?.message || "Gagal menyimpan berita.")
     } finally {
       setLoading(false)
     }
   }
 
   const handleEdit = (item) => {
+    setPesanSukses(null)
+    setPesanError(null)
+
     setEditingId(item.id)
     setJudul(item.judul || "")
     setKonten(item.konten || "")
@@ -350,14 +363,11 @@ export default function TambahBerita() {
       fileInputRef.current.value = ""
     }
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    })
-  }
+    setIsFormOpen(true)
 
-  const handleCancelEdit = () => {
-    resetForm()
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 50)
   }
 
   const handleDelete = async (item) => {
@@ -379,8 +389,9 @@ export default function TambahBerita() {
       return
     }
 
+    setPesanSukses(null)
+    setPesanError(null)
     setLoading(true)
-    setError("")
 
     const { error: deleteError } = await supabase
       .from("berita")
@@ -388,23 +399,16 @@ export default function TambahBerita() {
       .eq("id", item.id)
 
     if (deleteError) {
-      console.error(
-        "hapus berita error:",
-        deleteError
-      )
-
-      alert(
-        `Gagal menghapus berita: ${deleteError.message}`
-      )
-
+      console.error("hapus berita error:", deleteError)
+      setPesanError(`Gagal menghapus berita: ${deleteError.message}`)
       setLoading(false)
       return
     }
 
-    alert("Berita berhasil dihapus.")
+    setPesanSukses("Berita berhasil dihapus.")
 
     if (editingId === item.id) {
-      resetForm()
+      handleBatalForm()
     }
 
     await fetchBerita()
@@ -417,53 +421,236 @@ export default function TambahBerita() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-      <div className="mx-auto max-w-7xl px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-8">
-        {/* Header */}
-        <div className="mb-4 sm:mb-6 md:mb-8">
-          <div className="mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-              <Link
-                href="/admin"
-                className="rounded-lg p-2 transition-colors hover:bg-white/50"
-                title="Kembali ke Admin Panel"
-              >
-                <svg
-                  className="h-5 w-5 text-gray-700 sm:h-6 sm:w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
-              </Link>
-
-              <div className="min-w-0 flex-1">
-                <h1 className="break-words text-lg font-bold text-gray-900 sm:text-xl md:text-2xl lg:text-3xl">
-                  {editingId
-                    ? "Edit Berita"
-                    : "Kelola Berita"}
-                </h1>
-
-                <p className="mt-1 text-xs text-gray-600 sm:text-sm">
-                  Tambah, edit, dan hapus berita Nagari
-                </p>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation (Samakan dengan Kelola Layanan Informasi) */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <Link
+              href="/admin"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
+              title="Kembali ke Dashboard Admin"
+              aria-label="Kembali ke Dashboard Admin"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Kelola Berita
+              </h1>
+              <p className="text-xs sm:text-sm text-amber-200/80">
+                Tambah, edit, dan hapus berita Nagari.
+              </p>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {!isFormOpen && (
+              <button
+                type="button"
+                onClick={handleOpenTambah}
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Tambah Berita Baru
+              </button>
+            )}
 
             <button
               type="button"
               onClick={handleLogout}
-              disabled={loading}
-              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-red-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
+              className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
             >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Global Toast Notifications */}
+        <div aria-live="polite">
+          {pesanSukses && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{pesanSukses}</span>
+              </div>
+            </div>
+          )}
+
+          {pesanError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <svg className="h-5 w-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{pesanError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPesanError(null)}
+                  className="text-red-600 hover:text-red-900 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* SECTION 1: Form Tambah / Edit Berita (Krem Header, Body Putih) */}
+        {isFormOpen && (
+          <div ref={formRef} id="form-berita-section" className="mb-8 scroll-mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {/* Header Krem Section */}
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                {editingId ? "Edit Berita" : "Tambah Berita Baru"}
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                {editingId
+                  ? "Ubah informasi berita Nagari."
+                  : "Lengkapi judul, isi, dan foto berita Nagari."}
+              </p>
+            </div>
+
+            {/* Body Form Putih */}
+            <form onSubmit={simpanBerita} className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Judul Berita <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={judul}
+                  onChange={(e) => setJudul(e.target.value)}
+                  placeholder="Masukkan judul berita..."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Isi Berita <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={8}
+                  value={konten}
+                  onChange={(e) => setKonten(e.target.value)}
+                  placeholder="Tuliskan isi berita Nagari di sini..."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Foto Berita <span className="text-xs font-normal text-gray-500">(Opsional, maksimal 2 MB)</span>
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setFotoFile(file)
+                  }}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white file:mr-3 file:rounded-md file:border-0 file:bg-[#2c1b01] file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white"
+                />
+
+                {fotoFile && (
+                  <p className="mt-2 text-xs font-medium text-green-700">
+                    Foto baru dipilih: <strong>{fotoFile.name}</strong>
+                  </p>
+                )}
+
+                {existingFotoUrl && !fotoFile && (
+                  <div className="mt-3">
+                    <p className="mb-1.5 text-xs text-gray-500 font-medium">
+                      Foto yang sedang digunakan:
+                    </p>
+                    <img
+                      src={existingFotoUrl}
+                      alt="Foto berita saat ini"
+                      className="h-40 w-full max-w-sm rounded-xl border border-gray-200 object-cover shadow-xs"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Foto lama akan tetap digunakan jika tidak memilih foto baru.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Buttons (Batal & Simpan) */}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={handleBatalForm}
+                  disabled={loading}
+                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : editingId ? (
+                    <span>Simpan Perubahan</span>
+                  ) : (
+                    <span>Publikasikan Berita</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* SECTION 2: Tabel Daftar Berita (Outer Card Konsisten) */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          {/* Header Section Krem/White + Search Box */}
+          <div className="p-5 border-b border-gray-200 bg-white flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                Daftar Berita
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Menampilkan seluruh berita Nagari.
+              </p>
+            </div>
+
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                placeholder="Cari judul atau isi berita..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 py-1.5 pl-9 pr-8 text-xs text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white cursor-pointer"
+              />
               <svg
-                className="h-4 w-4 flex-shrink-0"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -472,408 +659,134 @@ export default function TambahBerita() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
               </svg>
 
-              Logout
-            </button>
-          </div>
-
-          <div className="h-1 w-20 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587] sm:w-24" />
-        </div>
-
-        <div className="grid grid-cols-1 items-start gap-4 sm:gap-5 md:gap-6 lg:grid-cols-12">
-          {/* Form berita */}
-          <div className="lg:col-span-5">
-            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-lg sm:p-5 md:p-6">
-              <h2 className="mb-2 text-base font-semibold text-gray-900 sm:text-lg md:text-xl">
-                {editingId
-                  ? "Edit Data Berita"
-                  : "Form Berita Baru"}
-              </h2>
-
-              <p className="mb-5 text-xs text-gray-500 sm:text-sm">
-                Judul dan isi berita wajib diisi. Foto bersifat opsional.
-              </p>
-
-              <form
-                onSubmit={simpanBerita}
-                className="space-y-5"
-              >
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Judul Berita
-                  </label>
-
-                  <input
-                    type="text"
-                    placeholder="Masukkan judul berita"
-                    value={judul}
-                    onChange={(event) =>
-                      setJudul(event.target.value)
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#2c1b01] sm:px-4 sm:py-3"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Isi Berita
-                  </label>
-
-                  <textarea
-                    placeholder="Tuliskan isi berita di sini..."
-                    value={konten}
-                    onChange={(event) =>
-                      setKonten(event.target.value)
-                    }
-                    rows={12}
-                    className="min-h-[240px] w-full resize-y rounded-lg border border-gray-300 px-3 py-2.5 text-base transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#2c1b01] sm:px-4 sm:py-3"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Foto Berita{" "}
-                    <span className="text-xs font-normal text-gray-400">
-                      (opsional, maksimal 2 MB)
-                    </span>
-                  </label>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                      const file =
-                        event.target.files?.[0] ||
-                        null
-
-                      setFotoFile(file)
-                    }}
-                    className="w-full cursor-pointer rounded-lg border border-gray-300 px-2 py-2 text-xs file:mr-2 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#2c1b01] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-[#3a2604] sm:px-3 sm:py-2.5 sm:text-sm sm:file:mr-4 sm:file:px-4 sm:file:py-2.5 sm:file:text-sm"
-                  />
-
-                  {fotoFile && (
-                    <p className="mt-2 break-words text-xs text-green-700">
-                      Foto baru dipilih:{" "}
-                      <strong>{fotoFile.name}</strong>
-                    </p>
-                  )}
-
-                  {existingFotoUrl &&
-                    !fotoFile && (
-                      <div className="mt-3">
-                        <p className="mb-2 text-xs text-gray-500">
-                          Foto yang sedang digunakan:
-                        </p>
-
-                        <img
-                          src={existingFotoUrl}
-                          alt="Foto berita saat ini"
-                          className="h-36 w-full rounded-lg border border-gray-200 object-cover"
-                        />
-
-                        <p className="mt-2 text-xs text-gray-500">
-                          Foto lama akan tetap digunakan jika tidak memilih foto baru.
-                        </p>
-                      </div>
-                    )}
-                </div>
-
-                <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:gap-3">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="min-h-[44px] flex-1 rounded-lg bg-gradient-to-r from-[#2c1b01] to-[#1a1200] py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-[#3a2604] hover:to-[#100b00] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 sm:py-2.5 sm:text-base"
-                  >
-                    {loading
-                      ? "Menyimpan..."
-                      : editingId
-                        ? "Simpan Perubahan"
-                        : "Publikasikan Berita"}
-                  </button>
-
-                  {editingId && (
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      disabled={loading}
-                      className="min-h-[44px] rounded-lg bg-gray-200 px-4 py-3 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-300 disabled:opacity-60 sm:px-6 sm:py-2.5 sm:text-base"
-                    >
-                      Batal
-                    </button>
-                  )}
-                </div>
-              </form>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Hapus pencarian"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Daftar berita */}
-          <div className="lg:col-span-7">
-            <div className="flex min-h-[650px] max-h-[950px] flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-lg sm:p-5 md:p-6">
-              <div className="mb-4 flex-shrink-0">
-                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-base font-semibold text-gray-900 sm:text-lg md:text-xl">
-                      Daftar Berita
-                    </h2>
-
-                    <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-                      {searchQuery
-                        ? `${filteredBeritaList.length} dari ${beritaList.length} berita`
-                        : `${beritaList.length} berita tersedia`}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={fetchBerita}
-                    disabled={
-                      loading || loadingData
-                    }
-                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-gray-100 px-3 py-2.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60 sm:px-4 sm:text-sm"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
+                <tr>
+                  <th scope="col" className="px-6 py-4 font-bold w-[15%]">PREVIEW</th>
+                  <th scope="col" className="px-6 py-4 font-bold w-[45%]">JUDUL BERITA</th>
+                  <th scope="col" className="px-6 py-4 font-bold w-[20%]">DITAMBAHKAN</th>
+                  <th scope="col" className="px-6 py-4 font-bold text-right w-[20%]">AKSI</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white text-sm">
+                {loadingData ? (
+                  <tr>
+                    <td colSpan={4} className="py-16 text-center text-gray-500">
+                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent mb-3"></div>
+                      <p className="text-sm font-medium">Memuat data berita...</p>
+                    </td>
+                  </tr>
+                ) : beritaList.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-12 text-center text-gray-500">
+                      <p className="text-base font-semibold text-gray-700">Belum ada berita.</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Gunakan tombol &quot;Tambah Berita Baru&quot; di bagian atas untuk mempublikasikan berita pertama.
+                      </p>
+                    </td>
+                  </tr>
+                ) : filteredBeritaList.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-12 text-center text-gray-500">
+                      <p className="text-base font-semibold text-gray-700">Tidak ada berita yang cocok dengan pencarian.</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Coba kata kunci pencarian yang berbeda.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredBeritaList.map((item) => (
+                    <tr
+                      key={item.id}
+                      className={`hover:bg-gray-50/80 transition-colors ${
+                        editingId === item.id ? "bg-[#f0e8db]/30" : ""
+                      }`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-
-                    Refresh
-                  </button>
-                </div>
-
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Cari judul atau isi berita..."
-                    value={searchQuery}
-                    onChange={(event) =>
-                      setSearchQuery(
-                        event.target.value
-                      )
-                    }
-                    className="min-h-[44px] w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-10 text-base transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#2c1b01] sm:text-sm"
-                  />
-
-                  <svg
-                    className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSearchQuery("")
-                      }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700"
-                      aria-label="Hapus pencarian"
-                    >
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {error && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
-              {loadingData && (
-                <div className="flex flex-1 flex-col items-center justify-center py-12">
-                  <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-[#2c1b01]" />
-
-                  <p className="mt-4 text-sm text-gray-500">
-                    Memuat data berita...
-                  </p>
-                </div>
-              )}
-
-              {!loadingData &&
-                beritaList.length === 0 && (
-                  <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
-                    <svg
-                      className="h-12 w-12 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"
-                      />
-                    </svg>
-
-                    <p className="mt-4 text-sm text-gray-500">
-                      Belum ada berita.
-                    </p>
-                  </div>
-                )}
-
-              {!loadingData &&
-                beritaList.length > 0 &&
-                filteredBeritaList.length ===
-                  0 && (
-                  <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
-                    <svg
-                      className="h-12 w-12 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-
-                    <p className="mt-4 text-sm text-gray-500">
-                      Tidak ada berita yang cocok dengan pencarian.
-                    </p>
-                  </div>
-                )}
-
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 sm:pr-2">
-                {!loadingData &&
-                  filteredBeritaList.map(
-                    (item) => (
-                      <article
-                        id={`berita-${item.id}`}
-                        key={item.id}
-                        className={`rounded-xl border p-4 transition-all hover:shadow-md ${
-                          editingId === item.id
-                            ? "border-yellow-400 bg-yellow-50/40"
-                            : "border-gray-200 bg-white"
-                        }`}
-                      >
-                        <div className="flex flex-col gap-4 sm:flex-row">
-                          {item.foto_url && (
+                      {/* Preview */}
+                      <td className="py-4 px-6">
+                        {item.foto_url ? (
+                          <div className="relative h-14 w-20 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 shadow-xs">
                             <img
                               src={item.foto_url}
                               alt={item.judul}
-                              className="h-44 w-full flex-shrink-0 rounded-lg border border-gray-200 object-cover sm:h-32 sm:w-44"
+                              className="h-full w-full object-cover"
                             />
-                          )}
-
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                              <div className="min-w-0">
-                                <h3 className="break-words text-base font-bold text-gray-900 sm:text-lg">
-                                  {item.judul}
-                                </h3>
-
-                                <p className="mt-1 text-xs text-gray-500">
-                                  {formatTanggal(
-                                    item.created_at
-                                  )}
-                                </p>
-                              </div>
-
-                              <div className="flex w-full gap-2 sm:w-auto">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleEdit(item)
-                                  }
-                                  disabled={loading}
-                                  className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-yellow-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-yellow-600 disabled:opacity-60 sm:flex-none"
-                                >
-                                  <svg
-                                    className="h-4 w-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                    />
-                                  </svg>
-
-                                  Edit
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDelete(item)
-                                  }
-                                  disabled={loading}
-                                  className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60 sm:flex-none"
-                                >
-                                  <svg
-                                    className="h-4 w-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    />
-                                  </svg>
-
-                                  Hapus
-                                </button>
-                              </div>
-                            </div>
-
-                            <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed text-gray-700">
-                              {potongTeks(
-                                item.konten
-                              )}
-                            </p>
                           </div>
+                        ) : (
+                          <div className="flex h-14 w-20 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 text-gray-400">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2" />
+                            </svg>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Judul Berita */}
+                      <td className="py-4 px-6 text-gray-900">
+                        <h3 className="font-bold text-gray-900 text-sm line-clamp-1">
+                          {item.judul}
+                        </h3>
+                        <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">
+                          {potongTeks(item.konten)}
+                        </p>
+                      </td>
+
+                      {/* Ditambahkan */}
+                      <td className="py-4 px-6 text-gray-600">
+                        <span className="text-xs">
+                          {formatTanggal(item.created_at)}
+                        </span>
+                      </td>
+
+                      {/* Aksi */}
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {/* Tombol 1: Edit */}
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(item)}
+                            disabled={loading}
+                            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+                          >
+                            Edit
+                          </button>
+
+                          {/* Tombol 2: Hapus */}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item)}
+                            disabled={loading}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                          >
+                            Hapus
+                          </button>
                         </div>
-                      </article>
-                    )
-                  )}
-              </div>
-            </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

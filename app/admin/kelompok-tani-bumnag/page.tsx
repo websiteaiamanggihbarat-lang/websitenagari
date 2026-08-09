@@ -25,7 +25,6 @@ interface FormState {
   wilayah_kegiatan: string
   nomor_kontak: string
   tautan_peta: string
-  urutan: string
 }
 
 const FORM_AWAL: FormState = {
@@ -40,7 +39,6 @@ const FORM_AWAL: FormState = {
   wilayah_kegiatan: "",
   nomor_kontak: "",
   tautan_peta: "",
-  urutan: "0",
 }
 
 interface SupabaseErrorLike {
@@ -67,7 +65,7 @@ function formatSupabaseError(
       " Data dengan kombinasi nama, jenis entitas, dan alamat tersebut sudah terdaftar (duplikat)."
   } else if (code === "23514") {
     specificAdvice =
-      " Data melanggar aturan validasi database (check constraint). Pastikan bidang wajib diisi, tautan peta diawali https://, tahun berdiri 1800-2100, dan aktivasi sudah memiliki cover."
+      " Data melanggar aturan validasi database (check constraint)."
   } else if (code === "42501") {
     specificAdvice =
       " Akses ditolak oleh Row Level Security (RLS) atau kebijakan hak akses Supabase."
@@ -115,7 +113,6 @@ async function keluarDariAdmin(labelError = "Logout error") {
 
 export default function AdminKelompokTaniBumnagPage() {
   const [listData, setListData] = useState<KelompokTaniBumnag[]>([])
-  const [coverMap, setCoverMap] = useState<Record<string, boolean>>({})
 
   const [loadingList, setLoadingList] = useState(true)
   const [loadingForm, setLoadingForm] = useState(false)
@@ -130,15 +127,14 @@ export default function AdminKelompokTaniBumnagPage() {
 
   const [formData, setFormData] = useState<FormState>(FORM_AWAL)
 
+  // Filter & Search State (Hanya Search dan Jenis Entitas)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterJenis, setFilterJenis] = useState<string>("semua")
+
   const handleLogout = async () => {
     setLoadingList(true)
     await keluarDariAdmin("Logout error")
   }
-
-  // Filter & Search State
-  const [searchQuery, setSearchQuery] = useState("")
-  const [filterJenis, setFilterJenis] = useState<string>("semua")
-  const [filterStatus, setFilterStatus] = useState<string>("semua")
 
   const periksaUserAuth = async (): Promise<boolean> => {
     const {
@@ -162,12 +158,12 @@ export default function AdminKelompokTaniBumnagPage() {
     }
 
     try {
-      // 1. Baca seluruh data entitas (termasuk draft)
+      // Baca seluruh data entitas diurutkan berdasarkan created_at DESC
       const { data: dataEntitas, error: errEntitas } = await supabase
         .from("kelompok_tani_bumnag")
         .select("*")
-        .order("urutan", { ascending: true })
         .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
 
       if (errEntitas) {
         setPesanError(formatSupabaseError(errEntitas, "Gagal membaca data entitas"))
@@ -177,30 +173,9 @@ export default function AdminKelompokTaniBumnagPage() {
 
       const arr = (dataEntitas as KelompokTaniBumnag[]) || []
       setListData(arr)
-
-      // 2. Baca cover aktif dari galeri
-      const { data: dataCover, error: errCover } = await supabase
-        .from("galeri_kelompok_tani_bumnag")
-        .select("kelompok_tani_bumnag_id")
-        .eq("is_cover", true)
-        .eq("is_active", true)
-
-      if (errCover) {
-        console.error("Gagal membaca cover map:", errCover)
-      }
-
-      const mapCover: Record<string, boolean> = {}
-      if (dataCover) {
-        for (const item of dataCover) {
-          if (item.kelompok_tani_bumnag_id) {
-            mapCover[item.kelompok_tani_bumnag_id] = true
-          }
-        }
-      }
-      setCoverMap(mapCover)
     } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(formatSupabaseError(e, "Terjadi kesalahan memuat data"))
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan sistem saat memuat data: ${msg}`)
     } finally {
       setLoadingList(false)
     }
@@ -210,34 +185,42 @@ export default function AdminKelompokTaniBumnagPage() {
     fetchData()
   }, [])
 
+  // Auto dismiss success toast message after 4 seconds
+  useEffect(() => {
+    if (!pesanSukses) return
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSukses])
+
   const handleOpenTambah = () => {
-    setEditingId(null)
-    setFormData(FORM_AWAL)
     setPesanSukses(null)
     setPesanError(null)
     setNewCreatedId(null)
+    setEditingId(null)
+    setFormData(FORM_AWAL)
     setIsFormOpen(true)
   }
 
   const handleOpenEdit = (item: KelompokTaniBumnag) => {
+    setPesanSukses(null)
+    setPesanError(null)
+    setNewCreatedId(null)
     setEditingId(item.id)
     setFormData({
-      nama_entitas: item.nama_entitas || "",
-      jenis_entitas: item.jenis_entitas || "kelompok_tani",
-      bidang_utama: item.bidang_utama || "",
+      nama_entitas: item.nama_entitas,
+      jenis_entitas: item.jenis_entitas,
+      bidang_utama: item.bidang_utama,
       deskripsi: item.deskripsi || "",
       nama_pimpinan: item.nama_pimpinan || "",
-      tahun_berdiri: item.tahun_berdiri !== null ? item.tahun_berdiri.toString() : "",
-      jumlah_anggota: item.jumlah_anggota !== null ? item.jumlah_anggota.toString() : "",
+      tahun_berdiri: item.tahun_berdiri ? item.tahun_berdiri.toString() : "",
+      jumlah_anggota: item.jumlah_anggota ? item.jumlah_anggota.toString() : "",
       alamat: item.alamat || "",
       wilayah_kegiatan: item.wilayah_kegiatan || "",
       nomor_kontak: item.nomor_kontak || "",
       tautan_peta: item.tautan_peta || "",
-      urutan: (item.urutan ?? 0).toString(),
     })
-    setPesanSukses(null)
-    setPesanError(null)
-    setNewCreatedId(null)
     setIsFormOpen(true)
   }
 
@@ -247,346 +230,213 @@ export default function AdminKelompokTaniBumnagPage() {
     setFormData(FORM_AWAL)
   }
 
+  const validateForm = (): boolean => {
+    if (!formData.nama_entitas.trim()) {
+      setPesanError("Nama Entitas wajib diisi.")
+      return false
+    }
+    if (!formData.bidang_utama.trim()) {
+      setPesanError("Bidang Utama / Kegiatan wajib diisi.")
+      return false
+    }
+    if (!formData.deskripsi.trim()) {
+      setPesanError("Deskripsi / Profil Singkat wajib diisi.")
+      return false
+    }
+
+    if (formData.tahun_berdiri.trim()) {
+      const thn = parseInt(formData.tahun_berdiri.trim(), 10)
+      if (isNaN(thn) || thn < 1800 || thn > 2100) {
+        setPesanError("Tahun berdiri tidak valid (harus 1800 - 2100).")
+        return false
+      }
+    }
+
+    if (formData.jumlah_anggota.trim()) {
+      const jml = parseInt(formData.jumlah_anggota.trim(), 10)
+      if (isNaN(jml) || jml < 0) {
+        setPesanError("Jumlah anggota tidak boleh negatif.")
+        return false
+      }
+    }
+
+    if (formData.tautan_peta.trim()) {
+      if (!formData.tautan_peta.trim().startsWith("https://")) {
+        setPesanError("Tautan peta wajib diawali dengan https://")
+        return false
+      }
+    }
+
+    return true
+  }
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (loadingForm) return
-
     setPesanSukses(null)
     setPesanError(null)
-    setNewCreatedId(null)
 
-    const validAuth = await periksaUserAuth()
-    if (!validAuth) return
-
-    // Validasi
-    const namaClean = formData.nama_entitas.trim()
-    const bidangClean = formData.bidang_utama.trim()
-    const deskripsiClean = formData.deskripsi.trim()
-    const petaClean = formData.tautan_peta.trim()
-
-    if (!namaClean) {
-      setPesanError("Nama entitas wajib diisi.")
-      return
-    }
-
-    if (!bidangClean) {
-      setPesanError(`${getLabelBidang(formData.jenis_entitas)} wajib diisi.`)
-      return
-    }
-
-    if (!deskripsiClean) {
-      setPesanError("Deskripsi wajib diisi.")
-      return
-    }
-
-    if (petaClean && !petaClean.toLowerCase().startsWith("https://")) {
-      setPesanError("Tautan peta wajib diawali dengan https://")
-      return
-    }
-
-    let numTahun: number | null = null
-    if (formData.tahun_berdiri.trim()) {
-      const parsed = parseInt(formData.tahun_berdiri.trim(), 10)
-      if (isNaN(parsed) || parsed < 1800 || parsed > 2100) {
-        setPesanError("Tahun berdiri harus berupa angka antara 1800 dan 2100.")
-        return
-      }
-      numTahun = parsed
-    }
-
-    let numAnggota: number | null = null
-    if (formData.jumlah_anggota.trim()) {
-      const parsed = parseInt(formData.jumlah_anggota.trim(), 10)
-      if (isNaN(parsed) || parsed < 0) {
-        setPesanError("Jumlah anggota harus berupa angka positif (minimal 0).")
-        return
-      }
-      numAnggota = parsed
-    }
-
-    const numUrutan = Math.max(0, parseInt(formData.urutan || "0", 10) || 0)
-
-    const payload = {
-      nama_entitas: namaClean,
-      jenis_entitas: formData.jenis_entitas,
-      bidang_utama: bidangClean,
-      deskripsi: deskripsiClean,
-      nama_pimpinan: formData.nama_pimpinan.trim() || null,
-      tahun_berdiri: numTahun,
-      jumlah_anggota: numAnggota,
-      alamat: formData.alamat.trim() || null,
-      wilayah_kegiatan: formData.wilayah_kegiatan.trim() || null,
-      nomor_kontak: formData.nomor_kontak.trim() || null,
-      tautan_peta: petaClean || null,
-      urutan: numUrutan,
-    }
+    if (loadingForm) return
+    if (!validateForm()) return
 
     setLoadingForm(true)
 
+    const validSesi = await periksaUserAuth()
+    if (!validSesi) {
+      setLoadingForm(false)
+      return
+    }
+
+    const payload = {
+      nama_entitas: formData.nama_entitas.trim(),
+      jenis_entitas: formData.jenis_entitas,
+      bidang_utama: formData.bidang_utama.trim(),
+      deskripsi: formData.deskripsi.trim(),
+      nama_pimpinan: formData.nama_pimpinan.trim() || null,
+      tahun_berdiri: formData.tahun_berdiri.trim()
+        ? parseInt(formData.tahun_berdiri.trim(), 10)
+        : null,
+      jumlah_anggota: formData.jumlah_anggota.trim()
+        ? parseInt(formData.jumlah_anggota.trim(), 10)
+        : null,
+      alamat: formData.alamat.trim() || null,
+      wilayah_kegiatan: formData.wilayah_kegiatan.trim() || null,
+      nomor_kontak: formData.nomor_kontak.trim() || null,
+      tautan_peta: formData.tautan_peta.trim() || null,
+    }
+
     try {
       if (editingId) {
-        // UPDATE (is_active tidak diubah via form utama)
+        // Mode Edit (Preserve status is_active)
         const { error: errUpdate } = await supabase
           .from("kelompok_tani_bumnag")
           .update(payload)
           .eq("id", editingId)
 
         if (errUpdate) {
-          setPesanError(formatSupabaseError(errUpdate, "Gagal memperbarui entitas"))
+          setPesanError(formatSupabaseError(errUpdate, "Gagal memperbarui data entitas"))
           setLoadingForm(false)
           return
         }
 
-        setPesanSukses(
-          `Data ${getLabelJenisEntitas(formData.jenis_entitas)} "${namaClean}" berhasil diperbarui.`
-        )
-        setIsFormOpen(false)
-        setEditingId(null)
-        setFormData(FORM_AWAL)
+        setPesanSukses(`Perubahan data "${payload.nama_entitas}" berhasil disimpan!`)
+        handleBatalForm()
         await fetchData()
       } else {
-        // CREATE (is_active selalu false)
-        const { data: newRec, error: errInsert } = await supabase
+        // Mode Tambah Baru (is_active: true secara otomatis)
+        const newId = crypto.randomUUID()
+        const payloadInsert = {
+          id: newId,
+          ...payload,
+          is_active: true, // OTOMATIS AKTIF
+          urutan: 0,
+        }
+
+        const { error: errInsert } = await supabase
           .from("kelompok_tani_bumnag")
-          .insert({
-            ...payload,
-            is_active: false,
-          })
-          .select("id")
-          .single()
+          .insert(payloadInsert)
 
         if (errInsert) {
-          setPesanError(formatSupabaseError(errInsert, "Gagal menambah entitas"))
+          setPesanError(formatSupabaseError(errInsert, "Gagal menambahkan data baru"))
           setLoadingForm(false)
           return
         }
 
-        setPesanSukses(
-          `Data ${getLabelJenisEntitas(formData.jenis_entitas)} "${namaClean}" berhasil ditambahkan (status default: Nonaktif). Silakan kelola galeri dan produk melalui tombol yang tersedia.`
-        )
-        if (newRec && newRec.id) {
-          setNewCreatedId(newRec.id)
-        }
-        setIsFormOpen(false)
-        setFormData(FORM_AWAL)
+        setNewCreatedId(newId)
+        setPesanSukses(`Data "${payload.nama_entitas}" berhasil ditambahkan.`)
+        handleBatalForm()
         await fetchData()
       }
     } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(formatSupabaseError(e, "Terjadi kesalahan simpan"))
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan sistem: ${msg}`)
     } finally {
       setLoadingForm(false)
     }
   }
 
-  const handleAktifkan = async (item: KelompokTaniBumnag) => {
-    setPesanSukses(null)
-    setPesanError(null)
-    setNewCreatedId(null)
-
-    const validAuth = await periksaUserAuth()
-    if (!validAuth) return
-
-    setActionLoadingId(item.id)
-
-    try {
-      // 1. Cek keberadaan cover aktif di database
-      const { data: coverActive, error: errCheck } = await supabase
-        .from("galeri_kelompok_tani_bumnag")
-        .select("id")
-        .eq("kelompok_tani_bumnag_id", item.id)
-        .eq("is_cover", true)
-        .eq("is_active", true)
-        .maybeSingle()
-
-      if (errCheck) {
-        setPesanError(formatSupabaseError(errCheck, "Gagal memeriksa galeri foto"))
-        setActionLoadingId(null)
-        return
-      }
-
-      if (!coverActive) {
-        setPesanError(
-          `Entitas "${item.nama_entitas}" belum dapat diaktifkan karena belum memiliki foto utama/cover aktif (is_cover = true & is_active = true). Silakan unggah foto di Kelola Galeri terlebih dahulu.`
-        )
-        setActionLoadingId(null)
-        return
-      }
-
-      // 2. Update is_active = true
-      const { error: errAktif } = await supabase
-        .from("kelompok_tani_bumnag")
-        .update({ is_active: true })
-        .eq("id", item.id)
-
-      if (errAktif) {
-        setPesanError(formatSupabaseError(errAktif, "Gagal mengaktifkan entitas"))
-      } else {
-        setPesanSukses(
-          `Data ${getLabelJenisEntitas(item.jenis_entitas)} "${item.nama_entitas}" berhasil diaktifkan.`
-        )
-        await fetchData()
-      }
-    } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(formatSupabaseError(e, "Terjadi kesalahan aktivasi"))
-    } finally {
-      setActionLoadingId(null)
-    }
-  }
-
-  const handleNonaktifkan = async (item: KelompokTaniBumnag) => {
-    setPesanSukses(null)
-    setPesanError(null)
-    setNewCreatedId(null)
-
-    const validAuth = await periksaUserAuth()
-    if (!validAuth) return
-
-    setActionLoadingId(item.id)
-
-    try {
-      const { error: errNonaktif } = await supabase
-        .from("kelompok_tani_bumnag")
-        .update({ is_active: false })
-        .eq("id", item.id)
-
-      if (errNonaktif) {
-        setPesanError(formatSupabaseError(errNonaktif, "Gagal menonaktifkan entitas"))
-      } else {
-        setPesanSukses(
-          `Data ${getLabelJenisEntitas(item.jenis_entitas)} "${item.nama_entitas}" telah dinonaktifkan.`
-        )
-        await fetchData()
-      }
-    } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(formatSupabaseError(e, "Terjadi kesalahan nonaktifkan"))
-    } finally {
-      setActionLoadingId(null)
-    }
-  }
-
   const handleHapus = async (item: KelompokTaniBumnag) => {
     const konfirmasi = window.confirm(
-      `Apakah Anda yakin ingin menghapus ${getLabelJenisEntitas(item.jenis_entitas)} "${item.nama_entitas}" beserta seluruh galeri, foto Storage, dan produknya?`
+      `Apakah Anda yakin ingin menghapus data "${item.nama_entitas}"?\n\nPERINGATAN: Seluruh foto galeri dan daftar produk/unit usaha terkait juga akan dihapus secara permanen!`
     )
     if (!konfirmasi) return
 
     setPesanSukses(null)
     setPesanError(null)
-    setNewCreatedId(null)
-
-    const validAuth = await periksaUserAuth()
-    if (!validAuth) return
-
     setActionLoadingId(item.id)
 
     try {
-      // Step 1: Baca seluruh storage_path galeri milik entitas
-      const { data: listGaleri, error: errGaleri } = await supabase
+      // 1. Ambil storage path galeri untuk dibersihkan dari Storage
+      const { data: listGaleri } = await supabase
         .from("galeri_kelompok_tani_bumnag")
         .select("storage_path")
         .eq("kelompok_tani_bumnag_id", item.id)
 
-      if (errGaleri) {
-        setPesanError(
-          formatSupabaseError(errGaleri, "Gagal membaca galeri sebelum menghapus")
-        )
-        setActionLoadingId(null)
-        return
-      }
-
-      const storagePaths = (listGaleri || [])
-        .map((g) => g.storage_path)
-        .filter((p): p is string => Boolean(p && p.trim()))
-
-      // Step 2: Menonaktifkan entitas induk & galeri anak terlebih dahulu
-      await supabase
-        .from("kelompok_tani_bumnag")
-        .update({ is_active: false })
-        .eq("id", item.id)
-
-      await supabase
-        .from("galeri_kelompok_tani_bumnag")
-        .update({ is_active: false })
-        .eq("kelompok_tani_bumnag_id", item.id)
-
-      // Step 3: Hapus seluruh file Storage jika ada secara aman
-      if (storagePaths.length > 0) {
-        const { error: errStorage } = await supabase.storage
-          .from(BUCKET_KELOMPOK_TANI_BUMNAG)
-          .remove(storagePaths)
-
-        if (errStorage) {
-          setPesanError(
-            formatSupabaseError(
-              errStorage,
-              "Gagal menghapus file foto dari Storage. Data telah dinonaktifkan tetapi belum dihapus dari database."
-            )
-          )
-          await fetchData()
-          setActionLoadingId(null)
-          return
+      if (listGaleri && listGaleri.length > 0) {
+        const paths = listGaleri.map((g) => g.storage_path).filter(Boolean)
+        if (paths.length > 0) {
+          await supabase.storage.from(BUCKET_KELOMPOK_TANI_BUMNAG).remove(paths)
         }
       }
 
-      // Step 4: Hapus record utama (ON DELETE CASCADE menghapus galeri & produk di DB)
-      const { error: errDeleteMain } = await supabase
+      // 2. Hapus child galeri dan produk usaha
+      await supabase.from("galeri_kelompok_tani_bumnag").delete().eq("kelompok_tani_bumnag_id", item.id)
+      await supabase.from("produk_usaha_kelompok_tani_bumnag").delete().eq("kelompok_tani_bumnag_id", item.id)
+
+      // 3. Hapus entitas parent
+      const { error: errDelete } = await supabase
         .from("kelompok_tani_bumnag")
         .delete()
         .eq("id", item.id)
 
-      if (errDeleteMain) {
-        setPesanError(
-          formatSupabaseError(
-            errDeleteMain,
-            "File Storage berhasil dihapus, namun gagal menghapus record database"
-          )
-        )
+      if (errDelete) {
+        setPesanError(formatSupabaseError(errDelete, `Gagal menghapus data "${item.nama_entitas}"`))
       } else {
-        setPesanSukses(
-          `Data ${getLabelJenisEntitas(item.jenis_entitas)} "${item.nama_entitas}" beserta seluruh foto dan produknya berhasil dihapus.`
-        )
+        setPesanSukses(`Data "${item.nama_entitas}" beserta rincian galeri & produk berhasil dihapus.`)
         await fetchData()
       }
     } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(formatSupabaseError(e, "Terjadi kesalahan saat menghapus"))
+      const msg = err instanceof Error ? err.message : String(err)
+      setPesanError(`Terjadi kesalahan saat menghapus data: ${msg}`)
     } finally {
       setActionLoadingId(null)
     }
   }
 
-  // Filter & Search Logic
+  // Filtering data berdasarkan SearchQuery & FilterJenis
   const filteredList = listData.filter((item) => {
-    const matchSearch =
-      item.nama_entitas.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.bidang_utama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.nama_pimpinan || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.alamat || "").toLowerCase().includes(searchQuery.toLowerCase())
+    // Filter Jenis
+    if (filterJenis !== "semua" && item.jenis_entitas !== filterJenis) {
+      return false
+    }
 
-    const matchJenis =
-      filterJenis === "semua" || item.jenis_entitas === filterJenis
+    // Filter Search Text
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim()
+      const matchNama = item.nama_entitas.toLowerCase().includes(q)
+      const matchPimpinan = item.nama_pimpinan ? item.nama_pimpinan.toLowerCase().includes(q) : false
+      const matchBidang = item.bidang_utama.toLowerCase().includes(q)
+      const matchAlamat = item.alamat ? item.alamat.toLowerCase().includes(q) : false
+      const matchWilayah = item.wilayah_kegiatan ? item.wilayah_kegiatan.toLowerCase().includes(q) : false
 
-    const matchStatus =
-      filterStatus === "semua" ||
-      (filterStatus === "aktif" && item.is_active) ||
-      (filterStatus === "nonaktif" && !item.is_active)
+      if (!matchNama && !matchPimpinan && !matchBidang && !matchAlamat && !matchWilayah) {
+        return false
+      }
+    }
 
-    return matchSearch && matchJenis && matchStatus
+    return true
   })
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 pb-16">
-      {/* Top Header Navigation */}
-      <div className="bg-[#2c1b01] text-white shadow-md">
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation (Samakan dengan Kelola Layanan Informasi) */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
             <Link
               href="/admin"
               className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
               title="Kembali ke Dashboard Admin"
+              aria-label="Kembali ke Dashboard Admin"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -597,7 +447,7 @@ export default function AdminKelompokTaniBumnagPage() {
                 Kelola Kelompok Tani & BUMNag
               </h1>
               <p className="text-xs sm:text-sm text-amber-200/80">
-                Panel Administrasi Data Utama Kelompok Tani dan BUMNag
+                Kelola data kelompok tani dan BUMNag Nagari Aia Manggih Barat.
               </p>
             </div>
           </div>
@@ -612,22 +462,16 @@ export default function AdminKelompokTaniBumnagPage() {
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Tambah Data Utama
+                Tambah Data Baru
               </button>
             )}
 
             <button
               type="button"
               onClick={handleLogout}
-              disabled={loadingList || loadingForm}
-              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
             >
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -641,77 +485,64 @@ export default function AdminKelompokTaniBumnagPage() {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
-        {/* Toast Notifikasi Sukses */}
-        {pesanSukses && (
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-start justify-between shadow-sm">
-            <div className="flex items-start space-x-3">
-              <svg className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <div>
-                <p className="text-sm font-medium">{pesanSukses}</p>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Global Toast Notifications */}
+        <div aria-live="polite">
+          {pesanSukses && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>{pesanSukses}</span>
+                </div>
+
                 {newCreatedId && (
                   <Link
                     href={`/admin/kelompok-tani-bumnag/${newCreatedId}`}
-                    className="inline-flex items-center text-xs font-semibold text-emerald-700 underline hover:text-emerald-900 mt-1"
+                    className="flex-shrink-0 text-xs font-bold text-emerald-800 underline hover:text-emerald-950"
                   >
-                    Lanjut Unggah Galeri & Produk →
+                    Kelola Galeri & Produk Sekarang ↗
                   </Link>
                 )}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setPesanSukses(null)}
-              className="text-emerald-500 hover:text-emerald-700 text-sm font-bold"
-            >
-              ×
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* Toast Notifikasi Error */}
-        {pesanError && (
-          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 flex items-start justify-between shadow-sm">
-            <div className="flex items-start space-x-3">
-              <svg className="w-5 h-5 text-red-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm font-medium whitespace-pre-wrap">{pesanError}</p>
+          {pesanError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{pesanError}</span>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setPesanError(null)}
-              className="text-red-500 hover:text-red-700 text-sm font-bold"
-            >
-              ×
-            </button>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Modal Form Tambah / Edit Data Utama */}
+        {/* SECTION: FORM TAMBAH / EDIT KELOMPOK TANI & BUMNAG */}
         {isFormOpen && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-xl relative animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                {editingId ? "Edit Data Utama" : "Tambah Data Utama Baru"}
+          <div id="form-entitas-section" className="mb-8 scroll-mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            {/* Header Krem Section */}
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                {editingId ? "Edit Data Kelompok Tani / BUMNag" : "Tambah Data Kelompok Tani / BUMNag"}
               </h2>
-              <button
-                type="button"
-                onClick={handleBatalForm}
-                className="text-gray-400 hover:text-gray-600 text-sm font-medium"
-              >
-                Tutup
-              </button>
+              <p className="text-xs text-gray-600 mt-0.5">
+                {editingId
+                  ? "Ubah data kelompok tani atau BUMNag."
+                  : "Lengkapi data utama kelompok tani atau BUMNag."}
+              </p>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-6">
+            {/* Body Form Putih */}
+            <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Jenis Entitas */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Jenis Entitas <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -722,7 +553,7 @@ export default function AdminKelompokTaniBumnagPage() {
                         jenis_entitas: e.target.value as JenisEntitasKelompokTaniBumnag,
                       })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   >
                     {PILIHAN_JENIS_ENTITAS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -734,7 +565,7 @@ export default function AdminKelompokTaniBumnagPage() {
 
                 {/* Nama Entitas */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Nama Entitas <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -745,13 +576,13 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, nama_entitas: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
-                {/* Bidang Utama (Dinamis Label) */}
+                {/* Bidang Utama */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     {getLabelBidang(formData.jenis_entitas)} <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -766,14 +597,14 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, bidang_utama: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
-                {/* Nama Pimpinan (Dinamis Label) */}
+                {/* Nama Pimpinan */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
-                    {getLabelPimpinan(formData.jenis_entitas)} (Opsional)
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    {getLabelPimpinan(formData.jenis_entitas)} <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
                     type="text"
@@ -782,14 +613,14 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, nama_pimpinan: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Tahun Berdiri */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
-                    Tahun Berdiri (Opsional)
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Tahun Berdiri <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
                     type="number"
@@ -800,14 +631,14 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, tahun_berdiri: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Jumlah Anggota */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
-                    Jumlah Anggota (Opsional)
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Jumlah Anggota <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
                     type="number"
@@ -817,14 +648,14 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, jumlah_anggota: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Wilayah Kegiatan */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
-                    Wilayah Kegiatan (Opsional)
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Wilayah Kegiatan <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
                     type="text"
@@ -833,14 +664,14 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, wilayah_kegiatan: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Nomor Kontak */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
-                    Nomor Kontak (Opsional)
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Nomor Kontak <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
                     type="text"
@@ -849,30 +680,14 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, nomor_kontak: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
-                  />
-                </div>
-
-                {/* Urutan Tampil */}
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
-                    Urutan Tampil (Opsional)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formData.urutan}
-                    onChange={(e) =>
-                      setFormData({ ...formData, urutan: e.target.value })
-                    }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
 
                 {/* Tautan Peta */}
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
-                    Tautan Peta (Google Maps - Wajib https://)
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Tautan Peta (Google Maps - Wajib https://) <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                   </label>
                   <input
                     type="url"
@@ -881,15 +696,15 @@ export default function AdminKelompokTaniBumnagPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, tautan_peta: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white"
                   />
                 </div>
               </div>
 
               {/* Alamat Lengkap */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
-                  Alamat Lengkap (Opsional)
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Alamat Lengkap <span className="text-xs font-normal text-gray-500">(Opsional)</span>
                 </label>
                 <textarea
                   rows={2}
@@ -898,13 +713,13 @@ export default function AdminKelompokTaniBumnagPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, alamat: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white resize-y"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                 />
               </div>
 
               {/* Deskripsi Lengkap */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Deskripsi / Profil Singkat <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -915,28 +730,35 @@ export default function AdminKelompokTaniBumnagPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, deskripsi: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white resize-y"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] bg-white resize-y"
                 />
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
+              {/* Action Buttons (Single Batal Button di Footer) */}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
                 <button
                   type="button"
                   onClick={handleBatalForm}
-                  className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors"
+                  disabled={loadingForm}
+                  className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={loadingForm}
-                  className="px-6 py-2.5 rounded-xl bg-[#2c1b01] text-white font-semibold text-sm hover:bg-[#1a1200] transition-colors disabled:opacity-50"
+                  className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
                 >
-                  {loadingForm
-                    ? "Menyimpan..."
-                    : editingId
-                    ? "Simpan Perubahan"
-                    : "Tambah Data (Status: Nonaktif)"}
+                  {loadingForm ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : editingId ? (
+                    <span>Simpan Perubahan</span>
+                  ) : (
+                    <span>Simpan Data</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -944,14 +766,14 @@ export default function AdminKelompokTaniBumnagPage() {
         )}
 
         {/* Filter & Search Control Panel */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="w-full md:w-1/3 relative">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="w-full md:w-1/2 relative">
             <input
               type="text"
               placeholder="Cari nama, pimpinan, bidang, alamat..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 text-sm"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#6b4b1d] focus:border-[#6b4b1d] text-sm bg-white"
             />
             <svg
               className="w-5 h-5 text-gray-400 absolute left-3 top-3"
@@ -963,40 +785,25 @@ export default function AdminKelompokTaniBumnagPage() {
             </svg>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase">Jenis:</span>
-              <select
-                value={filterJenis}
-                onChange={(e) => setFilterJenis(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-gray-300 text-sm bg-white"
-              >
-                <option value="semua">Semua Jenis</option>
-                <option value="kelompok_tani">Kelompok Tani</option>
-                <option value="bumnag">BUMNag</option>
-              </select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase">Status:</span>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-gray-300 text-sm bg-white"
-              >
-                <option value="semua">Semua Status</option>
-                <option value="aktif">Aktif</option>
-                <option value="nonaktif">Draft / Nonaktif</option>
-              </select>
-            </div>
+          <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Jenis:</span>
+            <select
+              value={filterJenis}
+              onChange={(e) => setFilterJenis(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-gray-300 text-sm bg-white focus:ring-2 focus:ring-[#6b4b1d] focus:border-[#6b4b1d]"
+            >
+              <option value="semua">Semua Jenis</option>
+              <option value="kelompok_tani">Kelompok Tani</option>
+              <option value="bumnag">BUMNag</option>
+            </select>
           </div>
         </div>
 
-        {/* Tabel Data Admin */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Tabel Data Admin (Kolom: Nama Entitas, Jenis, Bidang, Aksi) */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {loadingList ? (
             <div className="p-12 text-center text-gray-500">
-              <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent mb-3"></div>
               <p className="text-sm font-medium">Memuat data Kelompok Tani dan BUMNag...</p>
             </div>
           ) : filteredList.length === 0 ? (
@@ -1012,36 +819,21 @@ export default function AdminKelompokTaniBumnagPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-100/70 border-b border-gray-200 text-xs font-semibold uppercase tracking-wider text-gray-600">
-                    <th className="py-3.5 px-4 w-16 text-center">Urutan</th>
-                    <th className="py-3.5 px-4">Jenis & Nama Entitas</th>
-                    <th className="py-3.5 px-4">Pimpinan & Kontak</th>
-                    <th className="py-3.5 px-4">Bidang & Wilayah</th>
-                    <th className="py-3.5 px-4 text-center">Status Cover & Aktif</th>
-                    <th className="py-3.5 px-4 text-right">Aksi</th>
+                <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
+                  <tr>
+                    <th scope="col" className="px-6 py-4 font-bold w-[30%]">Nama Entitas</th>
+                    <th scope="col" className="px-6 py-4 font-bold w-[18%]">Jenis</th>
+                    <th scope="col" className="px-6 py-4 font-bold w-[25%]">Bidang</th>
+                    <th scope="col" className="px-6 py-4 font-bold text-right w-[27%]">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 text-sm">
+                <tbody className="divide-y divide-gray-100 bg-white text-sm">
                   {filteredList.map((item) => {
-                    const hasCover = Boolean(coverMap[item.id])
                     const isBusy = actionLoadingId === item.id
 
                     return (
                       <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
-                        <td className="py-4 px-4 text-center font-bold text-gray-600">
-                          {item.urutan}
-                        </td>
-                        <td className="py-4 px-4">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full mb-1 ${
-                              item.jenis_entitas === "kelompok_tani"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-blue-100 text-blue-800"
-                            }`}
-                          >
-                            {getLabelJenisEntitas(item.jenis_entitas)}
-                          </span>
+                        <td className="py-4 px-6">
                           <p className="font-bold text-gray-900 text-base">
                             {item.nama_entitas}
                           </p>
@@ -1051,63 +843,18 @@ export default function AdminKelompokTaniBumnagPage() {
                             </p>
                           )}
                         </td>
-                        <td className="py-4 px-4">
-                          <p className="text-xs font-semibold text-gray-500 uppercase">
-                            {getLabelPimpinan(item.jenis_entitas)}:
-                          </p>
-                          <p className="font-medium text-gray-800">
-                            {item.nama_pimpinan || "-"}
-                          </p>
-                          {item.nomor_kontak && (
-                            <p className="text-xs text-gray-500">
-                              ☎ {item.nomor_kontak}
-                            </p>
-                          )}
+                        <td className="py-4 px-6 font-semibold text-gray-800">
+                          {getLabelJenisEntitas(item.jenis_entitas)}
                         </td>
-                        <td className="py-4 px-4">
-                          <p className="text-xs font-semibold text-gray-500 uppercase">
-                            {getLabelBidang(item.jenis_entitas)}:
-                          </p>
-                          <p className="font-medium text-gray-800">
-                            {item.bidang_utama}
-                          </p>
-                          {item.wilayah_kegiatan && (
-                            <p className="text-xs text-gray-500">
-                              📍 {item.wilayah_kegiatan}
-                            </p>
-                          )}
+                        <td className="py-4 px-6 font-medium text-gray-700">
+                          {item.bidang_utama}
                         </td>
-                        <td className="py-4 px-4 text-center">
-                          <div className="flex flex-col items-center space-y-1">
-                            {item.is_active ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-                                Aktif
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
-                                Draft (Nonaktif)
-                              </span>
-                            )}
-
-                            {hasCover ? (
-                              <span className="text-[11px] text-emerald-700 font-medium">
-                                ✓ Cover Siap
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-gray-400 italic">
-                                Belum ada cover
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-right">
-                          <div className="flex items-center justify-end space-x-2">
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex items-center justify-end gap-2">
                             {/* Tombol Kelola Galeri & Produk */}
                             <Link
                               href={`/admin/kelompok-tani-bumnag/${item.id}`}
-                              className="px-3 py-1.5 rounded-lg bg-amber-100 text-amber-900 hover:bg-amber-200 font-medium text-xs transition-colors"
+                              className="rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4] cursor-pointer"
                               title="Kelola foto galeri & produk"
                             >
                               Galeri & Produk
@@ -1118,38 +865,17 @@ export default function AdminKelompokTaniBumnagPage() {
                               type="button"
                               onClick={() => handleOpenEdit(item)}
                               disabled={isBusy}
-                              className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 font-medium text-xs transition-colors disabled:opacity-50"
+                              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
                             >
                               Edit
                             </button>
-
-                            {/* Tombol Aktifkan / Nonaktifkan */}
-                            {item.is_active ? (
-                              <button
-                                type="button"
-                                onClick={() => handleNonaktifkan(item)}
-                                disabled={isBusy}
-                                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs transition-colors disabled:opacity-50"
-                              >
-                                Nonaktifkan
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleAktifkan(item)}
-                                disabled={isBusy}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors disabled:opacity-50"
-                              >
-                                Aktifkan
-                              </button>
-                            )}
 
                             {/* Tombol Hapus */}
                             <button
                               type="button"
                               onClick={() => handleHapus(item)}
                               disabled={isBusy}
-                              className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-xs transition-colors disabled:opacity-50"
+                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                             >
                               Hapus
                             </button>

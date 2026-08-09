@@ -1,16 +1,15 @@
 "use client"
 
-import { useEffect, useState, FormEvent } from "react"
+import { useEffect, useState, FormEvent, useRef, ChangeEvent } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import {
   DaftarLembagaOrganisasiAdmin,
+  GaleriLembagaOrganisasi,
+  LEMBAGA_ORGANISASI_BUCKET,
   fetchDaftarLembagaOrganisasiAdmin,
   fetchDetailLembagaOrganisasiAdmin,
-  isValidLembagaOrganisasiId,
 } from "@/lib/lembagaOrganisasi"
-
-const LEMBAGA_ORGANISASI_BUCKET = "foto-lembaga-organisasi"
 
 interface FormDataUtama {
   nama: string
@@ -29,6 +28,13 @@ interface DraftPengurusItem {
 interface DraftTugasItem {
   clientId: string
   isi_tugas: string
+}
+
+interface LocalGaleriItem {
+  clientId: string
+  file: File
+  previewUrl: string
+  teks_alt: string
 }
 
 const INITIAL_DATA_UTAMA: FormDataUtama = {
@@ -65,6 +71,32 @@ function parseErrorMessage(err: SupabaseErrorLike | null | undefined, defaultMsg
   return defaultMsg
 }
 
+function generateSafeFilename(file: File): string {
+  const mimeToExt: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  }
+  const ext = mimeToExt[file.type] || "jpg"
+  const timestamp = Date.now()
+  const randomStr =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID().replace(/-/g, "").slice(0, 8)
+      : Math.random().toString(36).substring(2, 10)
+  return `${timestamp}-${randomStr}.${ext}`
+}
+
+function validateImageFile(file: File): string | null {
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+  if (!allowedTypes.includes(file.type)) {
+    return "Format file harus JPG, PNG, atau WebP."
+  }
+  if (file.size > 5242880) {
+    return "Ukuran file tidak boleh melebihi 5 MB."
+  }
+  return null
+}
+
 export default function AdminLembagaOrganisasiPage() {
   const [checkingSession, setCheckingSession] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -73,17 +105,50 @@ export default function AdminLembagaOrganisasiPage() {
   const [loadingList, setLoadingList] = useState(false)
   const [submittingForm, setSubmittingForm] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null)
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
 
-  // Form State
+  // Unified Form State
+  const formRef = useRef<HTMLDivElement>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [formMode, setFormMode] = useState<"create" | "edit" | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [loadingEditData, setLoadingEditData] = useState(false)
+
+  // Form Fields State
   const [dataUtama, setDataUtama] = useState<FormDataUtama>(INITIAL_DATA_UTAMA)
   const [draftPengurus, setDraftPengurus] = useState<DraftPengurusItem[]>([])
   const [draftTugas, setDraftTugas] = useState<DraftTugasItem[]>([])
+
+  // Galeri State (Local files for upload & existing DB items)
+  const [localGaleriFiles, setLocalGaleriFiles] = useState<LocalGaleriItem[]>([])
+  const [existingGaleri, setExistingGaleri] = useState<GaleriLembagaOrganisasi[]>([])
+  const [pendingDeleteGaleriIds, setPendingDeleteGaleriIds] = useState<string[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      if (typeof window !== "undefined") {
+        localStorage.clear()
+        sessionStorage.clear()
+      }
+      const response = await fetch("/auth/signout", {
+        method: "POST",
+        credentials: "include",
+        redirect: "follow",
+      })
+      if (response.redirected) {
+        window.location.href = response.url
+      } else {
+        window.location.href = `/login?logout=success&t=${Date.now()}`
+      }
+    } catch (error) {
+      console.error("Logout error", error)
+      window.location.href = `/login?logout=success&t=${Date.now()}`
+    }
+  }
 
   const periksaAuth = async (): Promise<boolean> => {
     try {
@@ -129,39 +194,180 @@ export default function AdminLembagaOrganisasiPage() {
     initAuthAndData()
   }, [])
 
-  const handleToggleForm = () => {
-    if (isFormOpen) {
-      // Check if dirty
-      const hasContent =
-        dataUtama.nama.trim() ||
-        dataUtama.deskripsi.trim() ||
-        dataUtama.alamat.trim() ||
-        dataUtama.kontak.trim() ||
-        dataUtama.jam_kerja.trim() ||
-        draftPengurus.length > 0 ||
-        draftTugas.length > 0
+  // Auto dismiss success toast message after 4 seconds
+  useEffect(() => {
+    if (!pesanSukses) return
+    const timerId = window.setTimeout(() => {
+      setPesanSukses(null)
+    }, 4000)
+    return () => window.clearTimeout(timerId)
+  }, [pesanSukses])
 
-      if (hasContent) {
-        const confirmClose = window.confirm(
-          "Apakah Anda yakin ingin menutup form? Isian yang belum disimpan akan hilang."
-        )
-        if (!confirmClose) return
+  // Clean up object URLs to prevent memory leaks
+  const clearLocalGaleriPreviews = () => {
+    localGaleriFiles.forEach((item) => {
+      if (item.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl)
+      }
+    })
+    setLocalGaleriFiles([])
+  }
+
+  // Open Create Mode
+  const handleOpenCreateForm = () => {
+    clearLocalGaleriPreviews()
+    setFormMode("create")
+    setEditingId(null)
+    setDataUtama(INITIAL_DATA_UTAMA)
+    setDraftPengurus([])
+    setDraftTugas([])
+    setExistingGaleri([])
+    setPendingDeleteGaleriIds([])
+    setFieldErrors({})
+    setPesanSukses(null)
+    setPesanError(null)
+    setIsFormOpen(true)
+
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 100)
+  }
+
+  // Open Edit Mode (In-line from Kelola Rincian button)
+  const handleOpenEditForm = async (item: DaftarLembagaOrganisasiAdmin) => {
+    clearLocalGaleriPreviews()
+    setFormMode("edit")
+    setEditingId(item.id)
+    setFieldErrors({})
+    setPesanSukses(null)
+    setPesanError(null)
+    setIsFormOpen(true)
+    setLoadingEditData(true)
+
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 100)
+
+    try {
+      const detail = await fetchDetailLembagaOrganisasiAdmin(item.id)
+      if (!detail) {
+        setPesanError("Data rincian tidak ditemukan.")
+        setIsFormOpen(false)
+        return
       }
 
-      setIsFormOpen(false)
-      setDataUtama(INITIAL_DATA_UTAMA)
-      setDraftPengurus([])
-      setDraftTugas([])
-      setFieldErrors({})
-    } else {
-      setDataUtama(INITIAL_DATA_UTAMA)
-      setDraftPengurus([])
-      setDraftTugas([])
-      setFieldErrors({})
-      setPesanSukses(null)
-      setPesanError(null)
-      setIsFormOpen(true)
+      setDataUtama({
+        nama: detail.data.nama || "",
+        deskripsi: detail.data.deskripsi || "",
+        alamat: detail.data.alamat || "",
+        kontak: detail.data.kontak || "",
+        jam_kerja: detail.data.jam_kerja || "",
+      })
+
+      setDraftPengurus(
+        detail.pengurus.map((p) => ({
+          clientId: crypto.randomUUID(),
+          nama_jabatan: p.nama_jabatan,
+          nama_pengurus: p.nama_pengurus || "",
+        }))
+      )
+
+      setDraftTugas(
+        detail.tugas.map((t) => ({
+          clientId: crypto.randomUUID(),
+          isi_tugas: t.isi_tugas,
+        }))
+      )
+
+      setExistingGaleri(detail.galeri || [])
+      setPendingDeleteGaleriIds([])
+    } catch (err) {
+      setPesanError(parseErrorMessage(err as SupabaseErrorLike, "Gagal memuat data rincian."))
+    } finally {
+      setLoadingEditData(false)
     }
+  }
+
+  // Cancel / Close Form Handler
+  const handleCancelForm = () => {
+    const isDirty =
+      dataUtama.nama.trim() ||
+      dataUtama.deskripsi.trim() ||
+      dataUtama.alamat.trim() ||
+      dataUtama.kontak.trim() ||
+      dataUtama.jam_kerja.trim() ||
+      draftPengurus.length > 0 ||
+      draftTugas.length > 0 ||
+      localGaleriFiles.length > 0 ||
+      pendingDeleteGaleriIds.length > 0
+
+    if (isDirty) {
+      const confirmClose = window.confirm(
+        "Apakah Anda yakin ingin membatalkan? Perubahan yang belum disimpan akan hilang."
+      )
+      if (!confirmClose) return
+    }
+
+    clearLocalGaleriPreviews()
+    setIsFormOpen(false)
+    setFormMode(null)
+    setEditingId(null)
+    setDataUtama(INITIAL_DATA_UTAMA)
+    setDraftPengurus([])
+    setDraftTugas([])
+    setExistingGaleri([])
+    setPendingDeleteGaleriIds([])
+    setFieldErrors({})
+  }
+
+  // Handle Local Galeri Selection
+  const handleAddLocalGaleriFiles = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return
+
+    const filesArray = Array.from(e.target.files)
+    const newItems: LocalGaleriItem[] = []
+
+    for (const file of filesArray) {
+      const errorMsg = validateImageFile(file)
+      if (errorMsg) {
+        setPesanError(`File '${file.name}': ${errorMsg}`)
+        continue
+      }
+      newItems.push({
+        clientId: crypto.randomUUID(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        teks_alt: "",
+      })
+    }
+
+    if (newItems.length > 0) {
+      setLocalGaleriFiles((prev) => [...prev, ...newItems])
+    }
+
+    e.target.value = ""
+  }
+
+  const handleRemoveLocalGaleriItem = (clientId: string) => {
+    setLocalGaleriFiles((prev) => {
+      const target = prev.find((item) => item.clientId === clientId)
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl)
+      }
+      return prev.filter((item) => item.clientId !== clientId)
+    })
+  }
+
+  const handleUpdateLocalGaleriAlt = (clientId: string, val: string) => {
+    setLocalGaleriFiles((prev) =>
+      prev.map((item) => (item.clientId === clientId ? { ...item, teks_alt: val } : item))
+    )
+  }
+
+  // Handle Deferred Deletion of Existing Galeri Items in Edit Mode
+  const handleMarkExistingGaleriDelete = (id: string) => {
+    setPendingDeleteGaleriIds((prev) => [...prev, id])
+    setExistingGaleri((prev) => prev.filter((g) => g.id !== id))
   }
 
   // Handle Pengurus Rows
@@ -235,52 +441,29 @@ export default function AdminLembagaOrganisasiPage() {
     })
   }
 
-  // Validation
+  // Validasi Client-side Form
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
 
-    const namaTrim = dataUtama.nama.trim()
-    if (namaTrim.length < 2 || namaTrim.length > 200) {
-      errors.nama = "Nama harus diisi 2 sampai 200 karakter."
+    if (!dataUtama.nama.trim()) {
+      errors.nama = "Nama lembaga / organisasi wajib diisi."
+    }
+    if (!dataUtama.deskripsi.trim()) {
+      errors.deskripsi = "Deskripsi / profil wajib diisi."
+    }
+    if (!dataUtama.alamat.trim()) {
+      errors.alamat = "Alamat kantor / sekelompok wajib diisi."
     }
 
-    const deskripsiTrim = dataUtama.deskripsi.trim()
-    if (deskripsiTrim.length < 10 || deskripsiTrim.length > 5000) {
-      errors.deskripsi = "Deskripsi harus diisi 10 sampai 5000 karakter."
-    }
-
-    const alamatTrim = dataUtama.alamat.trim()
-    if (alamatTrim.length < 3 || alamatTrim.length > 500) {
-      errors.alamat = "Alamat harus diisi 3 sampai 500 karakter."
-    }
-
-    const kontakTrim = dataUtama.kontak.trim()
-    if (kontakTrim.length > 0 && (kontakTrim.length < 1 || kontakTrim.length > 100)) {
-      errors.kontak = "Kontak maksimal 100 karakter."
-    }
-
-    const jamKerjaTrim = dataUtama.jam_kerja.trim()
-    if (jamKerjaTrim.length > 0 && (jamKerjaTrim.length < 1 || jamKerjaTrim.length > 300)) {
-      errors.jam_kerja = "Jam kerja maksimal 300 karakter."
-    }
-
-    // Validate pengurus rows
     draftPengurus.forEach((p, idx) => {
-      const jabatanTrim = p.nama_jabatan.trim()
-      if (jabatanTrim.length < 2 || jabatanTrim.length > 150) {
-        errors[`pengurus_jabatan_${p.clientId}`] = `Baris #${idx + 1}: Nama jabatan harus 2-150 karakter.`
-      }
-      const pengurusTrim = p.nama_pengurus.trim()
-      if (pengurusTrim.length > 0 && pengurusTrim.length > 200) {
-        errors[`pengurus_nama_${p.clientId}`] = `Baris #${idx + 1}: Nama pengurus maksimal 200 karakter.`
+      if (!p.nama_jabatan.trim()) {
+        errors[`pengurus_jabatan_${p.clientId}`] = `Nama jabatan pengurus #${idx + 1} wajib diisi.`
       }
     })
 
-    // Validate tugas rows
     draftTugas.forEach((t, idx) => {
-      const tugasTrim = t.isi_tugas.trim()
-      if (tugasTrim.length < 3 || tugasTrim.length > 1000) {
-        errors[`tugas_${t.clientId}`] = `Tugas #${idx + 1}: Isi tugas harus 3-1000 karakter.`
+      if (!t.isi_tugas.trim()) {
+        errors[`tugas_${t.clientId}`] = `Isi tugas #${idx + 1} wajib diisi.`
       }
     })
 
@@ -288,292 +471,291 @@ export default function AdminLembagaOrganisasiPage() {
     return Object.keys(errors).length === 0
   }
 
-  // Create Submit Logic with Rollback Protection
-  const handleSubmitCreate = async (e: FormEvent) => {
+  // Submit Unified Form (Create / Edit)
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    if (submittingForm) return
-
     setPesanSukses(null)
     setPesanError(null)
 
-    if (!validateForm()) {
-      return
-    }
-
-    if (!isAuthenticated) {
-      window.location.href = "/login"
-      return
-    }
+    if (submittingForm) return
+    if (!validateForm()) return
 
     setSubmittingForm(true)
 
-    const parentId = crypto.randomUUID()
-    const payloadParent = {
-      id: parentId,
-      jenis: "lembaga",
-      nama: dataUtama.nama.trim(),
-      deskripsi: dataUtama.deskripsi.trim(),
-      alamat: dataUtama.alamat.trim(),
-      kontak: dataUtama.kontak.trim() || null,
-      jam_kerja: dataUtama.jam_kerja.trim() || null,
-      is_active: false,
-    }
-
     try {
-      // Step 1: Insert Parent
-      const { error: insertParentErr } = await supabase
-        .from("lembaga_organisasi")
-        .insert(payloadParent)
+      if (formMode === "create") {
+        // Step 1: Insert Parent Row as is_active = false
+        const { data: parentData, error: parentErr } = await supabase
+          .from("lembaga_organisasi")
+          .insert({
+            nama: dataUtama.nama.trim(),
+            deskripsi: dataUtama.deskripsi.trim(),
+            alamat: dataUtama.alamat.trim(),
+            kontak: dataUtama.kontak.trim() || null,
+            jam_kerja: dataUtama.jam_kerja.trim() || null,
+            is_active: false,
+          })
+          .select("id, nama")
+          .single()
 
-      if (insertParentErr) {
-        setPesanError(parseErrorMessage(insertParentErr, "Gagal menyimpan data utama."))
-        setSubmittingForm(false)
-        return
-      }
+        if (parentErr || !parentData) {
+          setPesanError(parseErrorMessage(parentErr, "Gagal menyimpan data utama lembaga."))
+          return
+        }
 
-      // Step 2: Insert Pengurus Batch (if any)
-      if (draftPengurus.length > 0) {
-        const pengurusPayload = draftPengurus.map((p, idx) => ({
-          id: crypto.randomUUID(),
-          lembaga_organisasi_id: parentId,
-          nama_jabatan: p.nama_jabatan.trim(),
-          nama_pengurus: p.nama_pengurus.trim() || null,
-          foto_url: null,
-          foto_storage_path: null,
-          urutan: idx + 1,
-        }))
+        const newId = parentData.id
 
-        const { error: insertPengurusErr } = await supabase
+        // Step 2: Insert Pengurus
+        if (draftPengurus.length > 0) {
+          const pengurusPayload = draftPengurus.map((p, idx) => ({
+            lembaga_organisasi_id: newId,
+            nama_jabatan: p.nama_jabatan.trim(),
+            nama_pengurus: p.nama_pengurus.trim() || null,
+            urutan: idx + 1,
+          }))
+          const { error: pErr } = await supabase
+            .from("pengurus_lembaga_organisasi")
+            .insert(pengurusPayload)
+
+          if (pErr) {
+            setPesanError(`Data tersimpan, namun gagal menyimpan pengurus: ${parseErrorMessage(pErr, "")}`)
+            return
+          }
+        }
+
+        // Step 3: Insert Tugas
+        if (draftTugas.length > 0) {
+          const tugasPayload = draftTugas.map((t, idx) => ({
+            lembaga_organisasi_id: newId,
+            isi_tugas: t.isi_tugas.trim(),
+            urutan: idx + 1,
+          }))
+          const { error: tErr } = await supabase
+            .from("tugas_lembaga_organisasi")
+            .insert(tugasPayload)
+
+          if (tErr) {
+            setPesanError(`Data tersimpan, namun gagal menyimpan tugas: ${parseErrorMessage(tErr, "")}`)
+            return
+          }
+        }
+
+        // Step 4: Upload & Insert Local Galeri Files
+        if (localGaleriFiles.length > 0) {
+          for (let i = 0; i < localGaleriFiles.length; i++) {
+            const item = localGaleriFiles[i]
+            const filename = generateSafeFilename(item.file)
+            const storagePath = `${newId}/${filename}`
+
+            const { error: uploadErr } = await supabase.storage
+              .from(LEMBAGA_ORGANISASI_BUCKET)
+              .upload(storagePath, item.file, { contentType: item.file.type })
+
+            if (!uploadErr) {
+              const { data: pubData } = supabase.storage
+                .from(LEMBAGA_ORGANISASI_BUCKET)
+                .getPublicUrl(storagePath)
+
+              await supabase.from("galeri_lembaga_organisasi").insert({
+                lembaga_organisasi_id: newId,
+                foto_url: pubData.publicUrl,
+                foto_storage_path: storagePath,
+                teks_alt: item.teks_alt.trim() || null,
+                is_cover: i === 0, // Foto pertama sebagai default cover
+                is_active: true,
+                urutan: i + 1,
+              })
+            }
+          }
+        }
+
+        // Step 5: Update Parent Row to set is_active = true (Auto-Publish)
+        const { error: activeErr } = await supabase
+          .from("lembaga_organisasi")
+          .update({ is_active: true })
+          .eq("id", newId)
+
+        if (activeErr) {
+          setPesanError("Data tersimpan, namun gagal mengaktifkan publikasi.")
+          return
+        }
+
+        clearLocalGaleriPreviews()
+        setIsFormOpen(false)
+        setFormMode(null)
+        setEditingId(null)
+        setPesanSukses(`Lembaga / Organisasi '${parentData.nama}' berhasil ditambahkan.`)
+        await loadData()
+      } else if (formMode === "edit" && editingId) {
+        // Mode Edit
+        // Step 1: Update Parent Data
+        const { error: updateParentErr } = await supabase
+          .from("lembaga_organisasi")
+          .update({
+            nama: dataUtama.nama.trim(),
+            deskripsi: dataUtama.deskripsi.trim(),
+            alamat: dataUtama.alamat.trim(),
+            kontak: dataUtama.kontak.trim() || null,
+            jam_kerja: dataUtama.jam_kerja.trim() || null,
+          })
+          .eq("id", editingId)
+
+        if (updateParentErr) {
+          setPesanError(parseErrorMessage(updateParentErr, "Gagal memperbarui data utama."))
+          return
+        }
+
+        // Step 2: Reconcile Pengurus
+        await supabase
           .from("pengurus_lembaga_organisasi")
-          .insert(pengurusPayload)
+          .delete()
+          .eq("lembaga_organisasi_id", editingId)
 
-        if (insertPengurusErr) {
-          // Rollback parent
-          await supabase.from("lembaga_organisasi").delete().eq("id", parentId)
-          setPesanError(parseErrorMessage(insertPengurusErr, "Gagal menyimpan pengurus. Data dibatalkan."))
-          setSubmittingForm(false)
-          return
+        if (draftPengurus.length > 0) {
+          const pengurusPayload = draftPengurus.map((p, idx) => ({
+            lembaga_organisasi_id: editingId,
+            nama_jabatan: p.nama_jabatan.trim(),
+            nama_pengurus: p.nama_pengurus.trim() || null,
+            urutan: idx + 1,
+          }))
+          await supabase.from("pengurus_lembaga_organisasi").insert(pengurusPayload)
         }
-      }
 
-      // Step 3: Insert Tugas Batch (if any)
-      if (draftTugas.length > 0) {
-        const tugasPayload = draftTugas.map((t, idx) => ({
-          id: crypto.randomUUID(),
-          lembaga_organisasi_id: parentId,
-          isi_tugas: t.isi_tugas.trim(),
-          urutan: idx + 1,
-        }))
-
-        const { error: insertTugasErr } = await supabase
+        // Step 3: Reconcile Tugas
+        await supabase
           .from("tugas_lembaga_organisasi")
-          .insert(tugasPayload)
+          .delete()
+          .eq("lembaga_organisasi_id", editingId)
 
-        if (insertTugasErr) {
-          // Rollback pengurus and parent
-          await supabase.from("pengurus_lembaga_organisasi").delete().eq("lembaga_organisasi_id", parentId)
-          await supabase.from("lembaga_organisasi").delete().eq("id", parentId)
-          setPesanError(parseErrorMessage(insertTugasErr, "Gagal menyimpan daftar tugas. Data dibatalkan."))
-          setSubmittingForm(false)
-          return
+        if (draftTugas.length > 0) {
+          const tugasPayload = draftTugas.map((t, idx) => ({
+            lembaga_organisasi_id: editingId,
+            isi_tugas: t.isi_tugas.trim(),
+            urutan: idx + 1,
+          }))
+          await supabase.from("tugas_lembaga_organisasi").insert(tugasPayload)
         }
+
+        // Step 4: Delete Pending Deleted Galeri Items
+        if (pendingDeleteGaleriIds.length > 0) {
+          const { data: rowsToDelete } = await supabase
+            .from("galeri_lembaga_organisasi")
+            .select("foto_storage_path")
+            .in("id", pendingDeleteGaleriIds)
+
+          const paths = rowsToDelete
+            ?.map((r) => r.foto_storage_path)
+            .filter((p): p is string => Boolean(p))
+
+          if (paths && paths.length > 0) {
+            await supabase.storage.from(LEMBAGA_ORGANISASI_BUCKET).remove(paths)
+          }
+
+          await supabase
+            .from("galeri_lembaga_organisasi")
+            .delete()
+            .in("id", pendingDeleteGaleriIds)
+        }
+
+        // Step 5: Upload & Insert New Local Galeri Photos
+        if (localGaleriFiles.length > 0) {
+          const existingCount = existingGaleri.length
+          for (let i = 0; i < localGaleriFiles.length; i++) {
+            const item = localGaleriFiles[i]
+            const filename = generateSafeFilename(item.file)
+            const storagePath = `${editingId}/${filename}`
+
+            const { error: uploadErr } = await supabase.storage
+              .from(LEMBAGA_ORGANISASI_BUCKET)
+              .upload(storagePath, item.file, { contentType: item.file.type })
+
+            if (!uploadErr) {
+              const { data: pubData } = supabase.storage
+                .from(LEMBAGA_ORGANISASI_BUCKET)
+                .getPublicUrl(storagePath)
+
+              const hasExistingCover = existingGaleri.some((g) => g.is_cover)
+              await supabase.from("galeri_lembaga_organisasi").insert({
+                lembaga_organisasi_id: editingId,
+                foto_url: pubData.publicUrl,
+                foto_storage_path: storagePath,
+                teks_alt: item.teks_alt.trim() || null,
+                is_cover: !hasExistingCover && i === 0,
+                is_active: true,
+                urutan: existingCount + i + 1,
+              })
+            }
+          }
+        }
+
+        clearLocalGaleriPreviews()
+        setIsFormOpen(false)
+        setFormMode(null)
+        setEditingId(null)
+        setPesanSukses(`Lembaga / Organisasi '${dataUtama.nama}' berhasil diperbarui.`)
+        await loadData()
       }
-
-      // All Succeeded
-      setIsFormOpen(false)
-      setDataUtama(INITIAL_DATA_UTAMA)
-      setDraftPengurus([])
-      setDraftTugas([])
-      setFieldErrors({})
-
-      setPesanSukses("Data lembaga/organisasi dan rincian awal berhasil disimpan sebagai draft.")
-      await loadData()
-    } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Terjadi kesalahan saat menyimpan data."))
+    } catch (err) {
+      setPesanError(parseErrorMessage(err as SupabaseErrorLike, "Terjadi kesalahan saat menyimpan."))
     } finally {
       setSubmittingForm(false)
     }
   }
 
-  // Toggle Activation Logic
-  const handleToggleStatus = async (item: DaftarLembagaOrganisasiAdmin) => {
-    if (togglingStatusId || deletingId) return
-    if (!isValidLembagaOrganisasiId(item.id)) return
-
-    setPesanSukses(null)
-    setPesanError(null)
-
-    if (!isAuthenticated) {
-      window.location.href = "/login"
-      return
-    }
-
-    setTogglingStatusId(item.id)
-
-    try {
-      if (!item.is_active) {
-        // Wants to ACTIVATE: Check cover photo availability
-        const { data: coverData, error: coverErr } = await supabase
-          .from("galeri_lembaga_organisasi")
-          .select("id")
-          .eq("lembaga_organisasi_id", item.id)
-          .eq("is_cover", true)
-          .eq("is_active", true)
-          .limit(1)
-
-        if (coverErr) {
-          setPesanError("Gagal memeriksa status cover foto. Aktivasi dibatalkan.")
-          setTogglingStatusId(null)
-          return
-        }
-
-        if (!coverData || coverData.length === 0) {
-          setPesanError("Tentukan foto cover terlebih dahulu melalui Kelola Rincian.")
-          setTogglingStatusId(null)
-          return
-        }
-
-        // Perform activation
-        const { error: actErr } = await supabase
-          .from("lembaga_organisasi")
-          .update({ is_active: true })
-          .eq("id", item.id)
-
-        if (actErr) {
-          setPesanError(parseErrorMessage(actErr, "Gagal mengaktifkan data."))
-          setTogglingStatusId(null)
-          return
-        }
-
-        setPesanSukses("Data berhasil diaktifkan dan ditampilkan pada halaman publik.")
-        await loadData()
-      } else {
-        // Wants to DEACTIVATE
-        const confirmDeactivate = window.confirm(
-          `Apakah Anda yakin ingin menonaktifkan '${item.nama}' dari halaman publik?`
-        )
-        if (!confirmDeactivate) {
-          setTogglingStatusId(null)
-          return
-        }
-
-        const { error: deactErr } = await supabase
-          .from("lembaga_organisasi")
-          .update({ is_active: false })
-          .eq("id", item.id)
-
-        if (deactErr) {
-          setPesanError(parseErrorMessage(deactErr, "Gagal menonaktifkan data."))
-          setTogglingStatusId(null)
-          return
-        }
-
-        setPesanSukses("Data berhasil dinonaktifkan dari halaman publik.")
-        await loadData()
-      }
-    } catch (err: unknown) {
-      const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Terjadi kesalahan saat mengubah status publikasi."))
-    } finally {
-      setTogglingStatusId(null)
-    }
-  }
-
-  // Safe Delete Complete Logic
+  // Safe Delete Completer with Storage Cleanup
   const handleSafeDelete = async (id: string, nama: string) => {
-    if (deletingId || togglingStatusId) return
-    if (!isValidLembagaOrganisasiId(id)) return
-
-    setPesanSukses(null)
-    setPesanError(null)
-
     const confirmDelete = window.confirm(
-      `PERINGATAN HAPUS PERMANEN!\n\nApakah Anda yakin ingin menghapus '${nama}'?\n\nSeluruh data pengurus, tugas, galeri, dan file foto di Storage akan dihapus secara permanen.`
+      `Apakah Anda yakin ingin menghapus '${nama}'?\n\nPERINGATAN: Seluruh foto cover, galeri, pengurus, dan tugas terkait di Storage & database akan dihapus secara permanen!`
     )
     if (!confirmDelete) return
 
-    if (!isAuthenticated) {
-      window.location.href = "/login"
-      return
-    }
-
     setDeletingId(id)
+    setPesanSukses(null)
+    setPesanError(null)
 
     try {
-      // Step 1: Deactivate parent first for safety
-      await supabase
-        .from("lembaga_organisasi")
-        .update({ is_active: false })
-        .eq("id", id)
-
-      // Step 2: Fetch detail admin to get all storage paths
-      const detailAdmin = await fetchDetailLembagaOrganisasiAdmin(id)
-
-      if (detailAdmin) {
-        const storagePaths: string[] = []
-
-        detailAdmin.pengurus.forEach((p) => {
-          if (p.foto_storage_path) storagePaths.push(p.foto_storage_path)
-        })
-
-        detailAdmin.galeri.forEach((g) => {
-          if (g.foto_storage_path) storagePaths.push(g.foto_storage_path)
-        })
-
-        const uniquePaths = Array.from(new Set(storagePaths))
-
-        // Step 3: Remove storage objects if any
-        if (uniquePaths.length > 0) {
-          const { error: storageRemoveErr } = await supabase.storage
-            .from(LEMBAGA_ORGANISASI_BUCKET)
-            .remove(uniquePaths)
-
-          if (storageRemoveErr) {
-            setPesanError("Gagal menghapus file foto di Storage. Penghapusan data dibatalkan demi keamanan.")
-            setDeletingId(null)
-            return
-          }
-        }
-      }
-
-      // Step 4: Delete Galeri Child rows
-      const { error: errGaleri } = await supabase
+      // Fetch Galeri Storage files
+      const { data: galeriFiles } = await supabase
         .from("galeri_lembaga_organisasi")
-        .delete()
+        .select("foto_url")
         .eq("lembaga_organisasi_id", id)
 
-      if (errGaleri) {
-        setPesanError(parseErrorMessage(errGaleri, "Gagal menghapus data galeri."))
-        setDeletingId(null)
-        return
-      }
-
-      // Step 5: Delete Tugas Child rows
-      const { error: errTugas } = await supabase
-        .from("tugas_lembaga_organisasi")
-        .delete()
-        .eq("lembaga_organisasi_id", id)
-
-      if (errTugas) {
-        setPesanError(parseErrorMessage(errTugas, "Gagal menghapus data tugas."))
-        setDeletingId(null)
-        return
-      }
-
-      // Step 6: Delete Pengurus Child rows
-      const { error: errPengurus } = await supabase
+      // Fetch Pengurus Storage files
+      const { data: pengurusFiles } = await supabase
         .from("pengurus_lembaga_organisasi")
-        .delete()
+        .select("foto_url")
         .eq("lembaga_organisasi_id", id)
 
-      if (errPengurus) {
-        setPesanError(parseErrorMessage(errPengurus, "Gagal menghapus data pengurus."))
-        setDeletingId(null)
-        return
+      const storagePaths: string[] = []
+      const extractPath = (url: string | null | undefined): string | null => {
+        if (!url) return null
+        try {
+          const parts = url.split(`${LEMBAGA_ORGANISASI_BUCKET}/`)
+          if (parts.length >= 2) return parts[1]
+        } catch {
+          // ignore
+        }
+        return null
       }
 
-      // Step 7: Delete Parent Row
+      galeriFiles?.forEach((g) => {
+        const p = extractPath(g.foto_url)
+        if (p) storagePaths.push(p)
+      })
+
+      pengurusFiles?.forEach((p) => {
+        const pathStr = extractPath(p.foto_url)
+        if (pathStr) storagePaths.push(pathStr)
+      })
+
+      if (storagePaths.length > 0) {
+        await supabase.storage.from(LEMBAGA_ORGANISASI_BUCKET).remove(storagePaths)
+      }
+
+      await supabase.from("galeri_lembaga_organisasi").delete().eq("lembaga_organisasi_id", id)
+      await supabase.from("tugas_lembaga_organisasi").delete().eq("lembaga_organisasi_id", id)
+      await supabase.from("pengurus_lembaga_organisasi").delete().eq("lembaga_organisasi_id", id)
+
       const { data: delData, error: errDelete } = await supabase
         .from("lembaga_organisasi")
         .delete()
@@ -599,442 +781,581 @@ export default function AdminLembagaOrganisasiPage() {
 
   if (checkingSession) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#6b4b1d] border-t-transparent" />
-        <p className="mt-4 text-sm font-medium text-gray-600">Memeriksa sesi autentikasi...</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f2e8]">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#6b4b1d] border-r-transparent"></div>
+          <p className="mt-2 text-sm text-gray-600">Memeriksa sesi admin...</p>
+        </div>
       </div>
     )
   }
 
+  if (!isAuthenticated) {
+    return null
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
+      {/* Top Header Navigation (Matching Kelola Layanan Informasi) */}
+      <div className="bg-[#2c1b01] text-white shadow-md mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <Link
+              href="/admin"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
+              title="Kembali ke Dashboard Admin"
+              aria-label="Kembali ke Dashboard Admin"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
             <div>
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/admin"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
-                  title="Kembali ke Dashboard Admin"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </Link>
-                <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-                  Kelola Lembaga dan Organisasi
-                </h1>
-              </div>
-              <p className="mt-1 text-sm text-gray-600 sm:ml-12">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Kelola Lembaga dan Organisasi
+              </h1>
+              <p className="text-xs sm:text-sm text-amber-200/80">
                 Kelola data lembaga dan organisasi Nagari Aia Manggih Barat.
               </p>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {!isFormOpen && (
+              <button
+                type="button"
+                onClick={handleOpenCreateForm}
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Tambah Lembaga / Organisasi Baru
+              </button>
+            )}
 
             <button
               type="button"
-              onClick={handleToggleForm}
-              disabled={submittingForm}
-              className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all active:scale-95 disabled:opacity-50 sm:w-auto ${
-                isFormOpen
-                  ? "bg-gray-600 hover:bg-gray-700"
-                  : "bg-gradient-to-r from-[#6b4b1d] to-[#2c1b01] hover:opacity-90"
-              }`}
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
             >
-              {isFormOpen ? (
-                <>
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  <span>Tutup Form</span>
-                </>
-              ) : (
-                <>
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span>Tambahkan Lembaga/Organisasi</span>
-                </>
-              )}
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              <span>Logout</span>
             </button>
           </div>
-          <div className="mt-4 h-1 w-24 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587]" />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Global Toast Messages */}
+        <div aria-live="polite">
+          {pesanSukses && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{pesanSukses}</span>
+              </div>
+            </div>
+          )}
+
+          {pesanError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{pesanError}</span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Notifikasi Global */}
-        {pesanSukses && (
-          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-800 shadow-sm">
-            {pesanSukses}
-          </div>
-        )}
-        {pesanError && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800 shadow-sm">
-            {pesanError}
-          </div>
-        )}
-
-        {/* Form Tambah Lengkap Inline (Di Atas Riwayat) */}
+        {/* SECTION: UNIFIED FORM TAMBAH / EDIT LEMBAGA/ORGANISASI */}
         {isFormOpen && (
-          <div className="mb-10 rounded-3xl border border-gray-200 bg-white p-6 shadow-xl sm:p-8 space-y-8">
-            <div className="border-b border-gray-100 pb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Tambah Lembaga / Organisasi Baru</h2>
-                <p className="mt-1 text-xs text-gray-500">
-                  Lengkapi data utama, struktur pengurus, dan daftar tugas. Data baru otomatis menjadi Draft.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleToggleForm}
-                disabled={submittingForm}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
-              >
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+          <div
+            ref={formRef}
+            id="form-lembaga-section"
+            className="mb-8 scroll-mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+          >
+            {/* Header Krem Section */}
+            <div className="bg-[#f7f2e8] p-5 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-[#2c1b01]">
+                {formMode === "edit" ? "Edit Lembaga / Organisasi" : "Tambah Lembaga / Organisasi Baru"}
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                {formMode === "edit"
+                  ? "Ubah data utama, kepengurusan, tugas, dan galeri."
+                  : "Lengkapi data utama, struktur pengurus, daftar tugas, dan galeri foto."}
+              </p>
             </div>
 
-            <form onSubmit={handleSubmitCreate} className="space-y-8">
-              {/* BAGIAN 1: DATA UTAMA */}
-              <div className="space-y-5 rounded-2xl border border-gray-100 bg-gray-50/50 p-5">
-                <div className="flex items-center gap-2 border-b border-gray-200/60 pb-3">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2c1b01] text-xs font-bold text-white">
-                    1
-                  </span>
-                  <h3 className="text-base font-bold text-gray-900">Data Utama</h3>
-                </div>
+            {/* Body Form Putih */}
+            {loadingEditData ? (
+              <div className="p-12 text-center">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-[#6b4b1d] border-r-transparent"></div>
+                <p className="mt-2 text-xs font-semibold text-gray-600">Memuat rincian data...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="p-6 space-y-8" noValidate>
+                {/* BAGIAN 1: DATA UTAMA */}
+                <div className="space-y-5 rounded-xl border border-gray-200/80 bg-gray-50/50 p-5">
+                  <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2c1b01] text-xs font-bold text-white">
+                      1
+                    </span>
+                    <h3 className="text-sm font-bold text-gray-900">Data Utama</h3>
+                  </div>
 
-                {/* Nama */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Nama Lembaga / Organisasi <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={dataUtama.nama}
-                    onChange={(e) => setDataUtama({ ...dataUtama, nama: e.target.value })}
-                    disabled={submittingForm}
-                    placeholder="Contoh: Posyandu Lansia Manggih"
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
-                  />
-                  {fieldErrors.nama && (
-                    <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.nama}</p>
-                  )}
-                </div>
-
-                {/* Deskripsi */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Deskripsi / Profil <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={dataUtama.deskripsi}
-                    onChange={(e) => setDataUtama({ ...dataUtama, deskripsi: e.target.value })}
-                    disabled={submittingForm}
-                    placeholder="Tuliskan profil dan visi misi..."
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
-                  />
-                  {fieldErrors.deskripsi && (
-                    <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.deskripsi}</p>
-                  )}
-                </div>
-
-                {/* Alamat */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Alamat Kantor / Sekelompok <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={dataUtama.alamat}
-                    onChange={(e) => setDataUtama({ ...dataUtama, alamat: e.target.value })}
-                    disabled={submittingForm}
-                    placeholder="Jalan, Jorong, atau lokasi gedung kantor..."
-                    className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
-                  />
-                  {fieldErrors.alamat && (
-                    <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.alamat}</p>
-                  )}
-                </div>
-
-                {/* Kontak & Jam Kerja Grid */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  {/* Nama */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700">
-                      Nomor Kontak <span className="text-xs font-normal text-gray-500">(Opsional)</span>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Nama Lembaga / Organisasi <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      value={dataUtama.kontak}
-                      onChange={(e) => setDataUtama({ ...dataUtama, kontak: e.target.value })}
+                      value={dataUtama.nama}
+                      onChange={(e) => setDataUtama({ ...dataUtama, nama: e.target.value })}
                       disabled={submittingForm}
-                      placeholder="Contoh: 0812-3456-7890"
-                      className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+                      placeholder="Contoh: Posyandu Lansia Manggih"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
                     />
-                    {fieldErrors.kontak && (
-                      <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.kontak}</p>
+                    {fieldErrors.nama && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.nama}</p>
                     )}
                   </div>
 
+                  {/* Deskripsi */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700">
-                      Jam Operasional <span className="text-xs font-normal text-gray-500">(Opsional)</span>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Deskripsi / Profil <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={dataUtama.deskripsi}
+                      onChange={(e) => setDataUtama({ ...dataUtama, deskripsi: e.target.value })}
+                      disabled={submittingForm}
+                      placeholder="Tuliskan profil dan visi misi..."
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+                    />
+                    {fieldErrors.deskripsi && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.deskripsi}</p>
+                    )}
+                  </div>
+
+                  {/* Alamat */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Alamat Kantor / Sekelompok <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       rows={2}
-                      value={dataUtama.jam_kerja}
-                      onChange={(e) => setDataUtama({ ...dataUtama, jam_kerja: e.target.value })}
+                      value={dataUtama.alamat}
+                      onChange={(e) => setDataUtama({ ...dataUtama, alamat: e.target.value })}
                       disabled={submittingForm}
-                      placeholder="Contoh: Senin - Jumat (08.00 - 16.00 WIB)"
-                      className="mt-1.5 block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+                      placeholder="Jalan, Jorong, atau lokasi gedung kantor..."
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
                     />
-                    {fieldErrors.jam_kerja && (
-                      <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.jam_kerja}</p>
+                    {fieldErrors.alamat && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.alamat}</p>
                     )}
                   </div>
-                </div>
-              </div>
 
-              {/* BAGIAN 2: STRUKTUR PENGURUS */}
-              <div className="space-y-5 rounded-2xl border border-gray-100 bg-gray-50/50 p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/60 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2c1b01] text-xs font-bold text-white">
-                      2
-                    </span>
-                    <h3 className="text-base font-bold text-gray-900">Struktur Pengurus</h3>
+                  {/* Kontak & Jam Kerja Grid */}
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Nomor Kontak <span className="text-xs font-normal text-gray-500">(Opsional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={dataUtama.kontak}
+                        onChange={(e) => setDataUtama({ ...dataUtama, kontak: e.target.value })}
+                        disabled={submittingForm}
+                        placeholder="Contoh: 0812-3456-7890"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Jam Operasional <span className="text-xs font-normal text-gray-500">(Opsional)</span>
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={dataUtama.jam_kerja}
+                        onChange={(e) => setDataUtama({ ...dataUtama, jam_kerja: e.target.value })}
+                        disabled={submittingForm}
+                        placeholder="Contoh: Senin - Jumat (08.00 - 16.00 WIB)"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#6b4b1d] focus:outline-none focus:ring-1 focus:ring-[#6b4b1d] disabled:opacity-50"
+                      />
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddPengurusRow}
-                    disabled={submittingForm}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#6b4b1d] bg-white px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-amber-50 disabled:opacity-50 w-fit"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Tambah Pengurus
-                  </button>
                 </div>
 
-                {draftPengurus.length === 0 ? (
-                  <p className="text-xs text-gray-500 italic text-center py-4">
-                    Belum ada pengurus yang ditambahkan. Foto pengurus dapat diunggah melalui Kelola Rincian setelah disimpan.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {draftPengurus.map((p, idx) => (
-                      <div
-                        key={p.clientId}
-                        className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center"
-                      >
-                        <span className="text-xs font-bold text-gray-400 w-6 flex-shrink-0">
-                          #{idx + 1}
-                        </span>
+                {/* BAGIAN 2: STRUKTUR PENGURUS */}
+                <div className="space-y-5 rounded-xl border border-gray-200/80 bg-gray-50/50 p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2c1b01] text-xs font-bold text-white">
+                        2
+                      </span>
+                      <h3 className="text-sm font-bold text-gray-900">Struktur Pengurus</h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddPengurusRow}
+                      disabled={submittingForm}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] hover:bg-[#ebdcc4] shadow-sm transition-colors disabled:opacity-50 cursor-pointer w-fit"
+                    >
+                      + Tambah Pengurus
+                    </button>
+                  </div>
 
-                        <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div>
-                            <input
-                              type="text"
-                              value={p.nama_jabatan}
-                              onChange={(e) =>
-                                handleUpdatePengurusRow(p.clientId, "nama_jabatan", e.target.value)
-                              }
+                  {draftPengurus.length === 0 ? (
+                    <p className="text-xs text-gray-500 italic text-center py-4">
+                      Belum ada pengurus yang ditambahkan.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {draftPengurus.map((p, idx) => (
+                        <div
+                          key={p.clientId}
+                          className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm sm:flex-row sm:items-center"
+                        >
+                          <span className="text-xs font-bold text-gray-400 w-6 flex-shrink-0">
+                            #{idx + 1}
+                          </span>
+
+                          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                              <input
+                                type="text"
+                                value={p.nama_jabatan}
+                                onChange={(e) =>
+                                  handleUpdatePengurusRow(p.clientId, "nama_jabatan", e.target.value)
+                                }
+                                disabled={submittingForm}
+                                placeholder="Nama Jabatan (misal: Ketua)"
+                                className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none disabled:opacity-50"
+                              />
+                              {fieldErrors[`pengurus_jabatan_${p.clientId}`] && (
+                                <p className="mt-1 text-[11px] text-red-600">
+                                  {fieldErrors[`pengurus_jabatan_${p.clientId}`]}
+                                </p>
+                              )}
+                            </div>
+
+                            <div>
+                              <input
+                                type="text"
+                                value={p.nama_pengurus}
+                                onChange={(e) =>
+                                  handleUpdatePengurusRow(p.clientId, "nama_pengurus", e.target.value)
+                                }
+                                disabled={submittingForm}
+                                placeholder="Nama Pejabat (misal: Ahmad, S.Pd)"
+                                className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none disabled:opacity-50"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Control Buttons */}
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleMovePengurusRow(idx, "up")}
+                              disabled={idx === 0 || submittingForm}
+                              aria-label={`Naikkan pengurus ${idx + 1}`}
+                              className="rounded border border-gray-200 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMovePengurusRow(idx, "down")}
+                              disabled={idx === draftPengurus.length - 1 || submittingForm}
+                              aria-label={`Turunkan pengurus ${idx + 1}`}
+                              className="rounded border border-gray-200 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePengurusRow(p.clientId)}
                               disabled={submittingForm}
-                              placeholder="Nama Jabatan (misal: Ketua)"
-                              className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none disabled:opacity-50"
+                              aria-label={`Hapus baris pengurus ${idx + 1}`}
+                              className="rounded px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-30 cursor-pointer"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* BAGIAN 3: DAFTAR TUGAS */}
+                <div className="space-y-5 rounded-xl border border-gray-200/80 bg-gray-50/50 p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2c1b01] text-xs font-bold text-white">
+                        3
+                      </span>
+                      <h3 className="text-sm font-bold text-gray-900">Daftar Tugas</h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddTugasRow}
+                      disabled={submittingForm}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] hover:bg-[#ebdcc4] shadow-sm transition-colors disabled:opacity-50 cursor-pointer w-fit"
+                    >
+                      + Tambah Tugas
+                    </button>
+                  </div>
+
+                  {draftTugas.length === 0 ? (
+                    <p className="text-xs text-gray-500 italic text-center py-4">
+                      Belum ada tugas yang ditambahkan.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {draftTugas.map((t, idx) => (
+                        <div
+                          key={t.clientId}
+                          className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm sm:flex-row sm:items-start"
+                        >
+                          <span className="text-xs font-bold text-gray-400 w-6 flex-shrink-0 mt-2">
+                            #{idx + 1}
+                          </span>
+
+                          <div className="flex-1">
+                            <textarea
+                              rows={2}
+                              value={t.isi_tugas}
+                              onChange={(e) => handleUpdateTugasRow(t.clientId, e.target.value)}
+                              disabled={submittingForm}
+                              placeholder="Deskripsi tugas dan fungsi..."
+                              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none disabled:opacity-50"
                             />
-                            {fieldErrors[`pengurus_jabatan_${p.clientId}`] && (
+                            {fieldErrors[`tugas_${t.clientId}`] && (
                               <p className="mt-1 text-[11px] text-red-600">
-                                {fieldErrors[`pengurus_jabatan_${p.clientId}`]}
+                                {fieldErrors[`tugas_${t.clientId}`]}
                               </p>
                             )}
                           </div>
 
-                          <div>
-                            <input
-                              type="text"
-                              value={p.nama_pengurus}
-                              onChange={(e) =>
-                                handleUpdatePengurusRow(p.clientId, "nama_pengurus", e.target.value)
-                              }
+                          {/* Control Buttons */}
+                          <div className="flex items-center gap-1.5 justify-end mt-2 sm:mt-0">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveTugasRow(idx, "up")}
+                              disabled={idx === 0 || submittingForm}
+                              aria-label={`Naikkan tugas ${idx + 1}`}
+                              className="rounded border border-gray-200 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveTugasRow(idx, "down")}
+                              disabled={idx === draftTugas.length - 1 || submittingForm}
+                              aria-label={`Turunkan tugas ${idx + 1}`}
+                              className="rounded border border-gray-200 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTugasRow(t.clientId)}
                               disabled={submittingForm}
-                              placeholder="Nama Pejabat (misal: Ahmad, S.Pd)"
-                              className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none disabled:opacity-50"
-                            />
-                            {fieldErrors[`pengurus_nama_${p.clientId}`] && (
-                              <p className="mt-1 text-[11px] text-red-600">
-                                {fieldErrors[`pengurus_nama_${p.clientId}`]}
-                              </p>
-                            )}
+                              aria-label={`Hapus baris tugas ${idx + 1}`}
+                              className="rounded px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-30 cursor-pointer"
+                            >
+                              Hapus
+                            </button>
                           </div>
                         </div>
-
-                        {/* Control Buttons */}
-                        <div className="flex items-center gap-1.5 justify-end">
-                          <button
-                            type="button"
-                            onClick={() => handleMovePengurusRow(idx, "up")}
-                            disabled={idx === 0 || submittingForm}
-                            aria-label={`Naikkan pengurus ${idx + 1}`}
-                            className="rounded-md border border-gray-200 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMovePengurusRow(idx, "down")}
-                            disabled={idx === draftPengurus.length - 1 || submittingForm}
-                            aria-label={`Turunkan pengurus ${idx + 1}`}
-                            className="rounded-md border border-gray-200 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePengurusRow(p.clientId)}
-                            disabled={submittingForm}
-                            aria-label={`Hapus baris pengurus ${idx + 1}`}
-                            className="rounded-md border border-red-200 p-1 text-red-600 hover:bg-red-50 disabled:opacity-30"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* BAGIAN 3: DAFTAR TUGAS */}
-              <div className="space-y-5 rounded-2xl border border-gray-100 bg-gray-50/50 p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/60 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2c1b01] text-xs font-bold text-white">
-                      3
-                    </span>
-                    <h3 className="text-base font-bold text-gray-900">Daftar Tugas</h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddTugasRow}
-                    disabled={submittingForm}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#6b4b1d] bg-white px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-amber-50 disabled:opacity-50 w-fit"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Tambah Tugas
-                  </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {draftTugas.length === 0 ? (
-                  <p className="text-xs text-gray-500 italic text-center py-4">
-                    Belum ada tugas yang ditambahkan.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {draftTugas.map((t, idx) => (
-                      <div
-                        key={t.clientId}
-                        className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-start"
-                      >
-                        <span className="text-xs font-bold text-gray-400 w-6 flex-shrink-0 mt-2">
-                          #{idx + 1}
-                        </span>
-
-                        <div className="flex-1">
-                          <textarea
-                            rows={2}
-                            value={t.isi_tugas}
-                            onChange={(e) => handleUpdateTugasRow(t.clientId, e.target.value)}
-                            disabled={submittingForm}
-                            placeholder="Deskripsi tugas dan fungsi..."
-                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none disabled:opacity-50"
-                          />
-                          {fieldErrors[`tugas_${t.clientId}`] && (
-                            <p className="mt-1 text-[11px] text-red-600">
-                              {fieldErrors[`tugas_${t.clientId}`]}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Control Buttons */}
-                        <div className="flex items-center gap-1.5 justify-end mt-2 sm:mt-0">
-                          <button
-                            type="button"
-                            onClick={() => handleMoveTugasRow(idx, "up")}
-                            disabled={idx === 0 || submittingForm}
-                            aria-label={`Naikkan tugas ${idx + 1}`}
-                            className="rounded-md border border-gray-200 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMoveTugasRow(idx, "down")}
-                            disabled={idx === draftTugas.length - 1 || submittingForm}
-                            aria-label={`Turunkan tugas ${idx + 1}`}
-                            className="rounded-md border border-gray-200 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteTugasRow(t.clientId)}
-                            disabled={submittingForm}
-                            aria-label={`Hapus baris tugas ${idx + 1}`}
-                            className="rounded-md border border-red-200 p-1 text-red-600 hover:bg-red-50 disabled:opacity-30"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
+                {/* BAGIAN 4: GALERI FOTO DOKUMENTASI */}
+                <div className="space-y-5 rounded-xl border border-gray-200/80 bg-gray-50/50 p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2c1b01] text-xs font-bold text-white">
+                        4
+                      </span>
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900">Galeri Foto Dokumen</h3>
+                        <p className="text-xs text-gray-500">
+                          Tambahkan foto kegiatan/gedung. Gambar diunggah secara otomatis saat tombol simpan ditekan.
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    </div>
 
-              {/* ACTION BUTTONS */}
-              <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-5">
-                <button
-                  type="button"
-                  onClick={handleToggleForm}
-                  disabled={submittingForm}
-                  className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingForm}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#6b4b1d] to-[#2c1b01] px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90 active:scale-95 disabled:opacity-50"
-                >
-                  {submittingForm ? "Menyimpan..." : "Simpan Data"}
-                </button>
-              </div>
-            </form>
+                    <label className="inline-flex items-center gap-1.5 rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] hover:bg-[#ebdcc4] shadow-sm transition-colors cursor-pointer w-fit">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>+ Tambah Foto</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        onChange={handleAddLocalGaleriFiles}
+                        disabled={submittingForm}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Existing Galeri Items (Edit Mode) */}
+                  {formMode === "edit" && existingGaleri.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Foto Tersimpan ({existingGaleri.length})
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                        {existingGaleri.map((g) => (
+                          <div
+                            key={g.id}
+                            className="group relative rounded-lg border border-gray-200 bg-white p-2 shadow-xs"
+                          >
+                            <img
+                              src={g.foto_url}
+                              alt={g.teks_alt || "Foto Galeri"}
+                              className="h-28 w-full rounded-md object-cover"
+                            />
+                            {g.is_cover && (
+                              <span className="absolute top-3 left-3 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-gray-950 shadow-xs">
+                                Cover
+                              </span>
+                            )}
+                            <div className="mt-2 flex items-center justify-between">
+                              <span className="text-[11px] text-gray-500 truncate max-w-[110px]">
+                                {g.teks_alt || "Tanpa Keterangan"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleMarkExistingGaleriDelete(g.id)}
+                                disabled={submittingForm}
+                                className="text-xs font-semibold text-red-600 hover:text-red-800 cursor-pointer"
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Local Galeri Files (Preview before Save) */}
+                  {localGaleriFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Foto Baru Dibarukan ({localGaleriFiles.length})
+                      </h4>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                        {localGaleriFiles.map((item, idx) => (
+                          <div
+                            key={item.clientId}
+                            className="rounded-lg border border-gray-200 bg-white p-3 shadow-xs space-y-2"
+                          >
+                            <div className="relative">
+                              <img
+                                src={item.previewUrl}
+                                alt={`Preview #${idx + 1}`}
+                                className="h-28 w-full rounded-md object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveLocalGaleriItem(item.clientId)}
+                                className="absolute top-2 right-2 rounded-full bg-red-600 p-1 text-white hover:bg-red-700 cursor-pointer"
+                                title="Hapus foto dari pilihan"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              value={item.teks_alt}
+                              onChange={(e) => handleUpdateLocalGaleriAlt(item.clientId, e.target.value)}
+                              placeholder="Keterangan foto / Teks Alt (Opsional)"
+                              className="w-full rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-900 focus:border-[#6b4b1d] focus:outline-none"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {existingGaleri.length === 0 && localGaleriFiles.length === 0 && (
+                    <p className="text-xs text-gray-500 italic text-center py-4">
+                      Belum ada foto galeri yang ditambahkan. Klik tombol '+ Tambah Foto' di atas untuk memilih foto.
+                    </p>
+                  )}
+                </div>
+
+                {/* ACTION BUTTONS (Single Batal Button + Save) */}
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-gray-200 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleCancelForm}
+                    disabled={submittingForm}
+                    className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 sm:w-auto cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingForm || loadingEditData}
+                    className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 sm:w-auto cursor-pointer"
+                  >
+                    {submittingForm ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
+                        <span>Menyimpan...</span>
+                      </>
+                    ) : formMode === "edit" ? (
+                      <span>Simpan Perubahan</span>
+                    ) : (
+                      <span>Simpan Data</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         )}
 
-        {/* RIWAYAT DATA LEMBAGA DAN ORGANISASI */}
+        {/* RIWAYAT / DAFTAR LEMBAGA DAN ORGANISASI */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900">Riwayat Lembaga dan Organisasi</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900">Daftar Lembaga dan Organisasi</h2>
+          </div>
 
           {loadingList ? (
             <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
@@ -1061,13 +1382,13 @@ export default function AdminLembagaOrganisasiPage() {
               {!isFormOpen && (
                 <button
                   type="button"
-                  onClick={handleToggleForm}
-                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#6b4b1d] to-[#2c1b01] px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90"
+                  onClick={handleOpenCreateForm}
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#2c1b01] hover:bg-[#6b4b1d] px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-colors cursor-pointer"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Tambahkan Lembaga/Organisasi
+                  Tambah Lembaga / Organisasi Baru
                 </button>
               )}
             </div>
@@ -1080,7 +1401,7 @@ export default function AdminLembagaOrganisasiPage() {
                   <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
                     <tr>
                       <th scope="col" className="px-6 py-4 font-bold">Cover</th>
-                      <th scope="col" className="px-6 py-4 font-bold">Nama & Status</th>
+                      <th scope="col" className="px-6 py-4 font-bold">Nama Lembaga / Organisasi</th>
                       <th scope="col" className="px-6 py-4 font-bold">Alamat</th>
                       <th scope="col" className="px-6 py-4 font-bold">Kontak</th>
                       <th scope="col" className="px-6 py-4 text-right font-bold">Aksi</th>
@@ -1089,8 +1410,6 @@ export default function AdminLembagaOrganisasiPage() {
                   <tbody className="divide-y divide-gray-100">
                     {listData.map((item) => {
                       const isDeleting = deletingId === item.id
-                      const isToggling = togglingStatusId === item.id
-                      const isDisabled = isDeleting || isToggling
 
                       return (
                         <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
@@ -1109,20 +1428,9 @@ export default function AdminLembagaOrganisasiPage() {
                             )}
                           </td>
 
-                          {/* Nama & Badge Status */}
+                          {/* Nama */}
                           <td className="px-6 py-4">
                             <div className="font-bold text-gray-900 break-words max-w-xs">{item.nama}</div>
-                            <div className="mt-1">
-                              {item.is_active ? (
-                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
-                                  Aktif
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-600/20">
-                                  Draft
-                                </span>
-                              )}
-                            </div>
                           </td>
 
                           {/* Alamat */}
@@ -1138,39 +1446,20 @@ export default function AdminLembagaOrganisasiPage() {
                           {/* Aksi */}
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <Link
-                                href={`/admin/lembaga-organisasi/${item.id}`}
-                                className="rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4]"
-                              >
-                                Kelola Rincian
-                              </Link>
-
-                              {/* Toggle Status Aktif/Nonaktif */}
                               <button
                                 type="button"
-                                onClick={() => handleToggleStatus(item)}
-                                disabled={isDisabled}
-                                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all disabled:opacity-50 ${
-                                  item.is_active
-                                    ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                                    : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                                }`}
+                                onClick={() => handleOpenEditForm(item)}
+                                className="rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4] cursor-pointer"
                               >
-                                {isToggling
-                                  ? item.is_active
-                                    ? "Menonaktifkan..."
-                                    : "Mengaktifkan..."
-                                  : item.is_active
-                                  ? "Nonaktifkan"
-                                  : "Aktifkan"}
+                                Kelola Rincian
                               </button>
 
                               {/* Safe Delete Completer */}
                               <button
                                 type="button"
                                 onClick={() => handleSafeDelete(item.id, item.nama)}
-                                disabled={isDisabled}
-                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50"
+                                disabled={isDeleting}
+                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                               >
                                 {isDeleting ? "Menghapus..." : "Hapus"}
                               </button>
@@ -1187,8 +1476,6 @@ export default function AdminLembagaOrganisasiPage() {
               <div className="space-y-4 md:hidden">
                 {listData.map((item) => {
                   const isDeleting = deletingId === item.id
-                  const isToggling = togglingStatusId === item.id
-                  const isDisabled = isDeleting || isToggling
 
                   return (
                     <div
@@ -1209,17 +1496,6 @@ export default function AdminLembagaOrganisasiPage() {
                         )}
 
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            {item.is_active ? (
-                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
-                                Aktif
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-600/20">
-                                Draft
-                              </span>
-                            )}
-                          </div>
                           <h3 className="text-base font-bold text-gray-900 break-words">{item.nama}</h3>
                         </div>
                       </div>
@@ -1235,37 +1511,19 @@ export default function AdminLembagaOrganisasiPage() {
                       </div>
 
                       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 pt-3">
-                        <Link
-                          href={`/admin/lembaga-organisasi/${item.id}`}
-                          className="rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4]"
-                        >
-                          Kelola Rincian
-                        </Link>
-
                         <button
                           type="button"
-                          onClick={() => handleToggleStatus(item)}
-                          disabled={isDisabled}
-                          className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all disabled:opacity-50 ${
-                            item.is_active
-                              ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                              : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                          }`}
+                          onClick={() => handleOpenEditForm(item)}
+                          className="rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4] cursor-pointer"
                         >
-                          {isToggling
-                            ? item.is_active
-                              ? "Menonaktifkan..."
-                              : "Mengaktifkan..."
-                            : item.is_active
-                            ? "Nonaktifkan"
-                            : "Aktifkan"}
+                          Kelola Rincian
                         </button>
 
                         <button
                           type="button"
                           onClick={() => handleSafeDelete(item.id, item.nama)}
-                          disabled={isDisabled}
-                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50"
+                          disabled={isDeleting}
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                         >
                           {isDeleting ? "Menghapus..." : "Hapus"}
                         </button>

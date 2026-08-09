@@ -124,8 +124,8 @@ export async function getKelompokTaniBumnagBeranda(
       .from("kelompok_tani_bumnag")
       .select("*")
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(limit)
 
     if (errEntitas || !listEntitas || listEntitas.length === 0) {
@@ -170,7 +170,7 @@ export async function getKelompokTaniBumnagBeranda(
 /**
  * 2. getDaftarKelompokTaniBumnagAktif(jenisEntitas?)
  * Reads all active entities with optional jenisEntitas filter.
- * Ordered by urutan ASC, created_at DESC.
+ * Ordered by created_at DESC.
  * Attaches active cover photo if available.
  */
 export async function getDaftarKelompokTaniBumnagAktif(
@@ -181,8 +181,8 @@ export async function getDaftarKelompokTaniBumnagAktif(
       .from("kelompok_tani_bumnag")
       .select("*")
       .eq("is_active", true)
-      .order("urutan", { ascending: true })
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
 
     if (jenisEntitas) {
       query = query.eq("jenis_entitas", jenisEntitas)
