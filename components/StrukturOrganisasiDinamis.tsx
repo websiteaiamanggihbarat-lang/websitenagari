@@ -262,10 +262,10 @@ export default function StrukturOrganisasiDinamis({
   return (
     <div className="w-full">
       {/* ============================================================ */}
-      {/* PANEL DESKTOP (xl:block) Mengikuti Tema Admin               */}
+      {/* PANEL DESKTOP (xl:block) Mengikuti Tema Admin & Nagari       */}
       {/* ============================================================ */}
       <div className="hidden xl:block">
-        <div className="relative mx-auto aspect-[1200/760] w-full max-w-[1360px] overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-amber-50/20 via-white to-amber-50/10 p-8 shadow-xl">
+        <div className="relative mx-auto aspect-[1200/760] w-full max-w-[1360px] overflow-hidden rounded-3xl border border-[#dcc9a6] bg-gradient-to-br from-[#fffdf9] via-white to-[#fcfaf6] p-8 shadow-xl shadow-amber-950/5">
           {/* SVG Overlay 90-Degree Orthogonal Line Connectors Dark Amber (z-10) */}
           <svg
             aria-hidden="true"
@@ -353,7 +353,7 @@ export default function StrukturOrganisasiDinamis({
       {/* ============================================================ */}
       <div className="xl:hidden space-y-8 w-full max-w-2xl mx-auto">
         {/* 1. Pimpinan */}
-        <section className="bg-gradient-to-br from-amber-500/10 via-white to-amber-900/5 p-6 rounded-2xl border border-amber-600/30 shadow-md">
+        <section className="bg-gradient-to-br from-amber-500/10 via-[#fffdf9] to-amber-900/5 p-6 rounded-2xl border border-[#dcc9a6] shadow-md">
           <h2 className="text-xs font-bold text-amber-900 uppercase tracking-widest mb-4 text-center">
             Pimpinan Nagari
           </h2>
@@ -361,7 +361,7 @@ export default function StrukturOrganisasiDinamis({
         </section>
 
         {/* 2. Sekretariat */}
-        <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6">
+        <section className="bg-[#fcfaf6] p-6 rounded-2xl border border-[#dcc9a6] shadow-md space-y-6">
           <h2 className="text-xs font-bold text-amber-900 uppercase tracking-widest mb-2">
             Sekretariat Nagari
           </h2>
@@ -395,7 +395,7 @@ export default function StrukturOrganisasiDinamis({
         </section>
 
         {/* 3. Pemerintahan */}
-        <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <section className="bg-[#fcfaf6] p-6 rounded-2xl border border-[#dcc9a6] shadow-md space-y-4">
           <h2 className="text-xs font-bold text-amber-900 uppercase tracking-widest mb-2">
             Seksi Pemerintahan
           </h2>
@@ -407,7 +407,7 @@ export default function StrukturOrganisasiDinamis({
         </section>
 
         {/* 4. Kesra dan Pelayanan */}
-        <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <section className="bg-[#fcfaf6] p-6 rounded-2xl border border-[#dcc9a6] shadow-md space-y-4">
           <h2 className="text-xs font-bold text-amber-900 uppercase tracking-widest mb-2">
             Seksi Kesejahteraan & Pelayanan
           </h2>
@@ -419,7 +419,7 @@ export default function StrukturOrganisasiDinamis({
         </section>
 
         {/* 5. Wilayah Jorong */}
-        <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <section className="bg-[#fcfaf6] p-6 rounded-2xl border border-[#dcc9a6] shadow-md space-y-4">
           <h2 className="text-xs font-bold text-amber-900 uppercase tracking-widest mb-2">
             Wilayah Jorong
           </h2>
