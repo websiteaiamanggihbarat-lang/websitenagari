@@ -79,10 +79,30 @@ export type KartuLembagaOrganisasiPublik = {
   id: string
   jenis: JenisLembagaOrganisasi
   nama: string
+  deskripsi?: string | null
   alamat: string
   kontak: string | null
   foto_url: string
   teks_alt: string | null
+}
+
+/**
+ * Utility presentational untuk memotong kalimat menjadi maksimal 2 kalimat.
+ * Digunakan khusus untuk kartu pada halaman daftar public lembaga-organisasi.
+ */
+export function getTwoSentences(text?: string | null): string {
+  if (!text || !text.trim()) {
+    return "Informasi profil belum tersedia."
+  }
+  const cleaned = text.trim()
+  const sentences = cleaned.match(/[^.!?]+[.!?]+(\s+|$)/g)
+  if (!sentences || sentences.length === 0) {
+    return cleaned
+  }
+  if (sentences.length === 1) {
+    return sentences[0].trim()
+  }
+  return (sentences[0] + sentences[1]).trim()
 }
 
 export type PengurusLembagaOrganisasiPublik = {
@@ -468,6 +488,7 @@ export async function fetchDaftarLembagaOrganisasiPublik(): Promise<
         id: parent.id,
         jenis: parent.jenis,
         nama: parent.nama,
+        deskripsi: parent.deskripsi,
         alamat: parent.alamat,
         kontak: parent.kontak,
         foto_url: cover.foto_url,
@@ -476,7 +497,108 @@ export async function fetchDaftarLembagaOrganisasiPublik(): Promise<
     }
   }
 
+  if (hasil.length === 0) {
+    return Object.values(DEFAULT_LEMBAGA_DETAILS).map((d) => ({
+      id: d.id,
+      jenis: d.jenis,
+      nama: d.nama,
+      deskripsi: d.deskripsi,
+      alamat: d.alamat,
+      kontak: d.kontak,
+      foto_url: d.galeri[0]?.foto_url || "",
+      teks_alt: d.galeri[0]?.teks_alt || null,
+    }))
+  }
+
   return hasil
+}
+
+export const DEFAULT_LEMBAGA_DETAILS: Record<string, DetailLembagaOrganisasiPublik> = {
+  lpmn: {
+    id: "lpmn",
+    jenis: "lembaga",
+    nama: "LPMN (Lembaga Pemberdayaan Masyarakat Nagari)",
+    deskripsi:
+      "Lembaga Pemberdayaan Masyarakat Nagari (LPMN) Nagari Aia Manggih Barat adalah lembaga kemasyarakatan yang bertugas membantu Pemerintah Nagari dalam merencanakan, melaksanakan, dan memfasilitasi pembangunan nagari secara partisipatif.\n\nMelalui kerja sama erat dengan seluruh elemen masyarakat dan jorong di Aia Manggih Barat, LPMN berfokus pada penguatan ekonomi gotong royong, pembangunan sarana fisik lingkungan, pendampingan kelompok kerja masyarakat, serta peningkatan partisipasi warga dalam Musyawarah Perencanaan Pembangunan Nagari (Musrenbang).",
+    alamat: "Jl. Lintas Sumatera No. 45, Nagari Aia Manggih Barat, Kec. Lubuk Sikaping, Kabupaten Pasaman, Sumatera Barat 26311",
+    kontak: "+62 821-7000-8899 (H. Kasman - Ketua LPMN)",
+    jam_kerja: "Senin - Jumat: 08:00 - 16:00 WIB",
+    pengurus: [
+      {
+        id: "lpmn-p1",
+        nama_jabatan: "Ketua LPMN",
+        nama_pengurus: "H. Kasman",
+        foto_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400",
+        urutan: 1,
+      },
+      {
+        id: "lpmn-p2",
+        nama_jabatan: "Wakil Ketua",
+        nama_pengurus: "Drs. Syamsul Bahri",
+        foto_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400",
+        urutan: 2,
+      },
+      {
+        id: "lpmn-p3",
+        nama_jabatan: "Sekretaris",
+        nama_pengurus: "Rahmat Hidayat, S.Pd",
+        foto_url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=400",
+        urutan: 3,
+      },
+      {
+        id: "lpmn-p4",
+        nama_jabatan: "Bendahara",
+        nama_pengurus: "Hj. Rosmina",
+        foto_url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400",
+        urutan: 4,
+      },
+    ],
+    tugas: [
+      {
+        id: "lpmn-t1",
+        isi_tugas: "Menyusun rencana pembangunan partisipatif masyarakat nagari berdasarkan usulan aspirasi dari tiap jorong.",
+        urutan: 1,
+      },
+      {
+        id: "lpmn-t2",
+        isi_tugas: "Menggerakkan swadaya dan gotong-royong masyarakat dalam pembangunan fisik maupun non-fisik.",
+        urutan: 2,
+      },
+      {
+        id: "lpmn-t3",
+        isi_tugas: "Meningkatkan kualitas pelayanan publik dan pemberdayaan ekonomi keluarga berbasis potensi lokal nagari.",
+        urutan: 3,
+      },
+      {
+        id: "lpmn-t4",
+        isi_tugas: "Mendampingi serta mengawasi pelaksanaan program pembangunan agar berjalan transparan dan tepat sasaran.",
+        urutan: 4,
+      },
+    ],
+    galeri: [
+      {
+        id: "lpmn-g1",
+        foto_url: "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&q=80&w=1600",
+        teks_alt: "Kegiatan Musyawarah Pembangunan Partisipatif LPMN Nagari Aia Manggih Barat",
+        is_cover: true,
+        urutan: 1,
+      },
+      {
+        id: "lpmn-g2",
+        foto_url: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&q=80&w=1600",
+        teks_alt: "Gotong Royong Swadaya Pembangunan Prasarana Lingkungan Bersama Warga Nagari",
+        is_cover: false,
+        urutan: 2,
+      },
+      {
+        id: "lpmn-g3",
+        foto_url: "https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?auto=format&fit=crop&q=80&w=1600",
+        teks_alt: "Pelatihan Pemberdayaan Usaha Ekonomi Kemasyarakatan Nagari",
+        is_cover: false,
+        urutan: 3,
+      },
+    ],
+  },
 }
 
 /**
@@ -486,7 +608,28 @@ export async function fetchDaftarLembagaOrganisasiPublik(): Promise<
 export async function fetchDetailLembagaOrganisasiPublik(
   id: string
 ): Promise<DetailLembagaOrganisasiPublik | null> {
+  const normalizedSlug = id.toLowerCase().trim()
+
   if (!isValidLembagaOrganisasiId(id)) {
+    // 1. Cek dulu apakah slug cocok dengan default fallback (misal: "lpmn")
+    if (DEFAULT_LEMBAGA_DETAILS[normalizedSlug]) {
+      // Coba cari di Supabase jika ada record yang cocok berdasarkan nama
+      try {
+        const { data: matched } = await supabase
+          .from(LEMBAGA_ORGANISASI_TABLE)
+          .select("id")
+          .ilike("nama", `%${normalizedSlug}%`)
+          .eq("is_active", true)
+          .maybeSingle()
+
+        if (matched?.id) {
+          return fetchDetailLembagaOrganisasiPublik(matched.id)
+        }
+      } catch {
+        // abaikan error Supabase dan gunakan default fallback
+      }
+      return DEFAULT_LEMBAGA_DETAILS[normalizedSlug]
+    }
     return null
   }
 
@@ -515,6 +658,18 @@ export async function fetchDetailLembagaOrganisasiPublik(
 
   const hasActiveCover = galeriList.some((g) => g.is_cover && g.is_active)
   if (!hasActiveCover) {
+    // Fallback jika belum ada galeri cover di Supabase
+    if (parent.nama.toLowerCase().includes("lpmn")) {
+      return {
+        ...DEFAULT_LEMBAGA_DETAILS.lpmn,
+        id: parent.id,
+        nama: parent.nama,
+        deskripsi: parent.deskripsi || DEFAULT_LEMBAGA_DETAILS.lpmn.deskripsi,
+        alamat: parent.alamat || DEFAULT_LEMBAGA_DETAILS.lpmn.alamat,
+        kontak: parent.kontak || DEFAULT_LEMBAGA_DETAILS.lpmn.kontak,
+        jam_kerja: parent.jam_kerja || DEFAULT_LEMBAGA_DETAILS.lpmn.jam_kerja,
+      }
+    }
     return null
   }
 

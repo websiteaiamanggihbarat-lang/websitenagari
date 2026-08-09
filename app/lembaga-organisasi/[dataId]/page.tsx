@@ -52,7 +52,7 @@ export default async function DetailLembagaOrganisasiPage({ params }: PageProps)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#fdfbf7] via-white to-[#f7f3eb]">
+    <div className="min-h-screen bg-white">
       <div className="pt-24 pb-32 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl">
           <DetailLembagaOrganisasiDinamis detail={detail} />

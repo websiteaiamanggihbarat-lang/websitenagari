@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { KartuLembagaOrganisasiPublik } from "@/lib/lembagaOrganisasi"
+import { KartuLembagaOrganisasiPublik, getTwoSentences } from "@/lib/lembagaOrganisasi"
 
 interface Props {
   daftar: KartuLembagaOrganisasiPublik[]
@@ -49,7 +49,7 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
 
   if (daftar.length === 0) {
     return (
-      <div className="mx-auto max-w-xl rounded-2xl border border-dashed border-gray-300 bg-white/80 p-10 text-center shadow-sm backdrop-blur-sm">
+      <div className="mx-auto max-w-xl rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-[#6b4b1d] shadow-inner mb-4">
           <svg className="h-8 w-8" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -76,9 +76,10 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
         const hasImageFailed = failedImageIds.has(item.id)
 
         return (
-          <div
+          <Link
             key={item.id}
-            className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#b6a587] hover:shadow-xl"
+            href={`/lembaga-organisasi/${item.id}`}
+            className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#b6a587] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-[#6b4b1d] cursor-pointer"
           >
             {/* Foto Cover */}
             <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
@@ -106,62 +107,17 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
 
             {/* Isi Kartu */}
             <div className="flex flex-1 flex-col p-6">
-              {/* Nama */}
-              <h2 className="text-xl font-bold text-gray-900 tracking-tight break-words line-clamp-2 min-h-[56px] group-hover:text-[#6b4b1d] transition-colors">
+              {/* Nama Lembaga / Organisasi */}
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight break-words group-hover:text-[#6b4b1d] transition-colors mb-3">
                 {item.nama}
               </h2>
 
-              {/* Detail Alamat & Kontak */}
-              <div className="mt-4 space-y-2.5 text-sm text-gray-600 flex-1">
-                {/* Alamat */}
-                <div className="flex items-start gap-2.5" title={item.alamat}>
-                  <svg className="h-5 w-5 flex-shrink-0 text-[#6b4b1d] mt-0.5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <span className="line-clamp-2 break-words text-xs leading-relaxed text-gray-700">{item.alamat}</span>
-                </div>
-
-                {/* Kontak */}
-                <div className="flex items-center gap-2.5">
-                  <svg className="h-4 w-4 flex-shrink-0 text-[#6b4b1d]" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                    />
-                  </svg>
-                  <span className="text-xs text-gray-600 break-words">
-                    {item.kontak || <span className="italic text-gray-400">Kontak belum tersedia</span>}
-                  </span>
-                </div>
-              </div>
-
-              {/* Tombol Lihat Rincian */}
-              <div className="mt-6 pt-4 border-t border-gray-100">
-                <Link
-                  href={`/lembaga-organisasi/${item.id}`}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#6b4b1d] px-4 py-2.5 text-xs font-semibold text-white shadow-md hover:opacity-90 active:scale-95 transition-all"
-                >
-                  <span>Lihat Rincian</span>
-                  <svg className="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              </div>
+              {/* Ringkasan Profil/Deskripsi Maksimal 2 Kalimat */}
+              <p className="text-sm text-gray-600 leading-relaxed break-words line-clamp-3">
+                {getTwoSentences(item.deskripsi)}
+              </p>
             </div>
-          </div>
+          </Link>
         )
       })}
     </div>
