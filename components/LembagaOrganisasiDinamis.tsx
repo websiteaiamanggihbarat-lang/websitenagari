@@ -73,7 +73,7 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
       {daftar.map((item) => {
-        const hasImageFailed = failedImageIds.has(item.id)
+        const hasImageFailed = failedImageIds.has(item.id) || !item.foto_url || !item.foto_url.trim()
 
         return (
           <Link

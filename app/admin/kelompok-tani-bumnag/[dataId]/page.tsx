@@ -13,6 +13,8 @@ import {
   ProdukUsahaKelompokTaniBumnag,
   getLabelJenisItem,
 } from "@/lib/kelompokTaniBumnag"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface PageProps {
   params: Promise<{ dataId: string }>
@@ -159,6 +161,9 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTargetFoto, setDeleteTargetFoto] = useState<GaleriKelompokTaniBumnag | null>(null)
+  const [deleteTargetProduk, setDeleteTargetProduk] = useState<ProdukUsahaKelompokTaniBumnag | null>(null)
 
   // Multi-upload queue & report state
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([])
@@ -503,10 +508,11 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
     }
   }
 
-  const handleHapusGaleri = async (item: GaleriKelompokTaniBumnag) => {
-    const konfirmasi = window.confirm("Apakah Anda yakin ingin menghapus foto ini?")
-    if (!konfirmasi) return
+  const handleHapusGaleri = (item: GaleriKelompokTaniBumnag) => {
+    setDeleteTargetFoto(item)
+  }
 
+  const executeHapusGaleri = async (item: GaleriKelompokTaniBumnag) => {
     const validAuth = await periksaUserAuth()
     if (!validAuth) return
 
@@ -515,7 +521,6 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
     setPesanError(null)
 
     try {
-      // Keamanan Cover Aktif Terakhir:
       if (item.is_cover && item.is_active && entitas?.is_active) {
         const otherActiveCovers = galeriList.filter(
           (g) => g.id !== item.id && g.is_cover && g.is_active
@@ -528,56 +533,49 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
             .eq("id", dataId)
 
           if (errParent) {
-            setPesanError(
-              formatSupabaseError(
-                errParent,
-                "Gagal menonaktifkan entitas induk sebelum menghapus foto cover terakhir"
-              )
-            )
+            const msg = formatSupabaseError(errParent, "Gagal menonaktifkan entitas induk sebelum menghapus foto cover terakhir")
+            setPesanError(msg)
+            showError(msg)
             setActionLoadingId(null)
             return
           }
         }
       }
 
-      // Step 1: Hapus file dari Storage berdasarkan storage_path
       if (item.storage_path) {
         const { error: errStorage } = await supabase.storage
           .from(BUCKET_KELOMPOK_TANI_BUMNAG)
           .remove([item.storage_path])
 
         if (errStorage) {
-          setPesanError(
-            formatSupabaseError(
-              errStorage,
-              "Gagal menghapus file dari Storage. Record galeri database tidak dihapus."
-            )
-          )
+          const msg = formatSupabaseError(errStorage, "Gagal menghapus file dari Storage.")
+          setPesanError(msg)
+          showError(msg)
           setActionLoadingId(null)
           return
         }
       }
 
-      // Step 2: Hapus record dari database galeri_kelompok_tani_bumnag
       const { error: errDeleteDB } = await supabase
         .from("galeri_kelompok_tani_bumnag")
         .delete()
         .eq("id", item.id)
 
       if (errDeleteDB) {
-        setPesanError(
-          formatSupabaseError(
-            errDeleteDB,
-            "PERINGATAN: File gambar di Storage telah terhapus, namun gagal menghapus record database galeri."
-          )
-        )
+        const msg = formatSupabaseError(errDeleteDB, "Gagal menghapus record database galeri.")
+        setPesanError(msg)
+        showError(msg)
       } else {
-        setPesanSukses("Foto berhasil dihapus.")
+        const msg = "Foto berhasil dihapus."
+        setPesanSukses(msg)
+        showSuccess(msg)
         await fetchEntitasDetail()
       }
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
-      setPesanError(formatSupabaseError(e, "Terjadi kesalahan hapus foto"))
+      const msg = formatSupabaseError(e, "Terjadi kesalahan hapus foto")
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setActionLoadingId(null)
     }
@@ -678,10 +676,11 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
     }
   }
 
-  const handleHapusProduk = async (item: ProdukUsahaKelompokTaniBumnag) => {
-    const konfirmasi = window.confirm(`Apakah Anda yakin ingin menghapus produk/unit usaha "${item.nama_produk_usaha}"?`)
-    if (!konfirmasi) return
+  const handleHapusProduk = (item: ProdukUsahaKelompokTaniBumnag) => {
+    setDeleteTargetProduk(item)
+  }
 
+  const executeHapusProduk = async (item: ProdukUsahaKelompokTaniBumnag) => {
     const validAuth = await periksaUserAuth()
     if (!validAuth) return
 
@@ -696,14 +695,20 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
         .eq("id", item.id)
 
       if (errDelete) {
-        setPesanError(formatSupabaseError(errDelete, "Gagal menghapus produk"))
+        const msg = formatSupabaseError(errDelete, "Gagal menghapus produk")
+        setPesanError(msg)
+        showError(msg)
       } else {
-        setPesanSukses("Produk berhasil dihapus.")
+        const msg = `Produk "${item.nama_produk_usaha}" berhasil dihapus.`
+        setPesanSukses(msg)
+        showSuccess(msg)
         await fetchEntitasDetail()
       }
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
-      setPesanError(formatSupabaseError(e, "Terjadi kesalahan hapus produk"))
+      const msg = formatSupabaseError(e, "Terjadi kesalahan hapus produk")
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setActionLoadingId(null)
     }
@@ -1224,6 +1229,49 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
           </div>
         </div>
       </div>
+
+      {/* Custom Confirmation Modals */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTargetFoto)}
+        title="⚠ Hapus Foto Galeri?"
+        message="Apakah Anda yakin ingin menghapus foto ini? File gambar di Storage dan database akan dihapus secara permanen."
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(actionLoadingId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTargetFoto) {
+            await executeHapusGaleri(deleteTargetFoto)
+            setDeleteTargetFoto(null)
+          }
+        }}
+        onCancel={() => setDeleteTargetFoto(null)}
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTargetProduk)}
+        title="⚠ Hapus Produk / Unit Usaha?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus <strong>&quot;{deleteTargetProduk?.nama_produk_usaha}&quot;</strong>?
+            <br />
+            Data produk/unit usaha akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(actionLoadingId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTargetProduk) {
+            await executeHapusProduk(deleteTargetProduk)
+            setDeleteTargetProduk(null)
+          }
+        }}
+        onCancel={() => setDeleteTargetProduk(null)}
+      />
     </div>
   )
 }

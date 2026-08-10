@@ -7,6 +7,45 @@ interface Props {
   detail: DetailLembagaOrganisasiPublik
 }
 
+function getContactLinkInfo(raw: string): { href: string; isExternal: boolean; label: string } {
+  const trimmed = raw.trim()
+  if (!trimmed) {
+    return { href: "#", isExternal: false, label: "Kontak belum tersedia" }
+  }
+
+  // Email check
+  if (trimmed.includes("@") && !trimmed.includes(" ")) {
+    return { href: `mailto:${trimmed}`, isExternal: false, label: trimmed }
+  }
+
+  const lower = trimmed.toLowerCase()
+  const digitsOnly = trimmed.replace(/[^0-9]/g, "")
+
+  // WhatsApp check
+  if (lower.includes("wa") || lower.includes("whatsapp")) {
+    let waNumber = digitsOnly
+    if (waNumber.startsWith("0")) {
+      waNumber = "62" + waNumber.slice(1)
+    }
+    return {
+      href: waNumber ? `https://wa.me/${waNumber}` : `tel:${trimmed.replace(/[^0-9+]/g, "")}`,
+      isExternal: Boolean(waNumber),
+      label: trimmed,
+    }
+  }
+
+  // Telephone / Phone check
+  let phoneNum = trimmed.replace(/[^0-9+]/g, "")
+  if (phoneNum) {
+    if (!phoneNum.startsWith("+") && phoneNum.startsWith("0")) {
+      phoneNum = "+62" + phoneNum.slice(1)
+    }
+    return { href: `tel:${phoneNum}`, isExternal: false, label: trimmed }
+  }
+
+  return { href: `tel:${trimmed}`, isExternal: false, label: trimmed }
+}
+
 export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [failedGaleriIds, setFailedGaleriIds] = useState<Set<string>>(new Set())
@@ -53,6 +92,17 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [handlePrevSlide, handleNextSlide])
+
+  // Evaluasi Alamat & Kontak
+  const alamatVal = detail.alamat?.trim() || ""
+  const hasAlamat = Boolean(alamatVal)
+  const googleMapsUrl = hasAlamat
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(alamatVal)}`
+    : ""
+
+  const kontakVal = detail.kontak?.trim() || ""
+  const hasKontak = Boolean(kontakVal)
+  const contactInfo = hasKontak ? getContactLinkInfo(kontakVal) : null
 
   return (
     <div className="bg-white text-gray-900 space-y-10 pb-16">
@@ -139,7 +189,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTION 1: PROFIL / DESKRIPSI (Header Krem/Cokelat + Body Putih)          */}
+      {/* SECTION 1: PROFIL / DESKRIPSI (Rata Kanan Kiri / Justify)                */}
       {/* ========================================================================= */}
       <section className="space-y-4">
         {/* Header Section Bertema Krem/Cokelat */}
@@ -155,8 +205,8 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
           </div>
         </div>
 
-        {/* Body Content Polos Putih dengan Border Krem Lembut */}
-        <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 sm:p-8 shadow-xs text-base sm:text-lg text-gray-700 leading-relaxed whitespace-pre-line font-normal">
+        {/* Body Content Polos Putih dengan Border Krem Lembut & Text Justify */}
+        <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 sm:p-8 shadow-xs text-base sm:text-lg text-gray-800 leading-relaxed sm:leading-loose whitespace-pre-line font-normal text-justify">
           {detail.deskripsi}
         </div>
       </section>
@@ -180,50 +230,88 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
 
         {/* SATU Body Besar Putih Gabungan dengan Border Krem Lembut */}
         <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 sm:p-8 shadow-xs space-y-8">
-          {/* 1. BAGIAN ATAS: 3 Item Sejajar Desktop (Alamat, Kontak, Jam Operasional) */}
+          {/* 1. BAGIAN ATAS: 3 Card Sejajar Desktop (Alamat, Kontak, Jam Operasional) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Alamat */}
-            <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs">
-              <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base font-bold text-gray-900 mb-1">Alamat</h3>
-                <p className="text-sm text-gray-700 font-medium whitespace-pre-line leading-relaxed break-words">
-                  {detail.alamat}
-                </p>
-              </div>
-            </div>
-
-            {/* Kontak */}
-            <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs">
-              <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base font-bold text-gray-900 mb-1">Kontak</h3>
-                {detail.kontak ? (
-                  <a
-                    href={`tel:${detail.kontak.replace(/[^0-9+]/g, "")}`}
-                    className="text-sm text-[#6b4b1d] font-bold whitespace-pre-line leading-relaxed break-words hover:underline block"
-                  >
-                    {detail.kontak}
-                  </a>
-                ) : (
-                  <p className="text-sm text-gray-400 italic">
-                    Kontak belum tersedia
+            {/* Card 1: Alamat */}
+            {hasAlamat ? (
+              <a
+                href={googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Buka alamat ${detail.nama} di Google Maps`}
+                className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-pointer hover:border-[#6b4b1d]/50 hover:bg-[#fcfaf7] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#6b4b1d]/30 group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#6b4b1d] transition-colors">Alamat</h3>
+                  <p className="text-sm text-gray-700 font-medium whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
+                    {alamatVal}
                   </p>
-                )}
+                </div>
+                <svg className="h-4 w-4 text-[#6b4b1d] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0 mt-1" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002 2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            ) : (
+              <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default opacity-90">
+                <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-bold text-gray-900 mb-1">Alamat</h3>
+                  <p className="text-sm text-gray-400 italic">Alamat belum tersedia</p>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Jam Operasional */}
-            <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs">
+            {/* Card 2: Kontak */}
+            {hasKontak && contactInfo ? (
+              <a
+                href={contactInfo.href}
+                target={contactInfo.isExternal ? "_blank" : undefined}
+                rel={contactInfo.isExternal ? "noopener noreferrer" : undefined}
+                aria-label={`Hubungi ${detail.nama}: ${contactInfo.label}`}
+                className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-pointer hover:border-[#6b4b1d]/50 hover:bg-[#fcfaf7] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#6b4b1d]/30 group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#6b4b1d] transition-colors">Kontak</h3>
+                  <p className="text-sm text-[#6b4b1d] font-bold whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
+                    {contactInfo.label}
+                  </p>
+                </div>
+                <svg className="h-4 w-4 text-[#6b4b1d] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0 mt-1" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002 2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            ) : (
+              <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default opacity-90">
+                <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-bold text-gray-900 mb-1">Kontak</h3>
+                  <p className="text-sm text-gray-400 italic">Kontak belum tersedia</p>
+                </div>
+              </div>
+            )}
+
+            {/* Card 3: Jam Operasional */}
+            <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default">
               <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
                 <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -231,8 +319,8 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="text-base font-bold text-gray-900 mb-1">Jam Operasional</h3>
-                <p className="text-sm text-gray-700 font-medium whitespace-pre-line leading-relaxed break-words">
-                  {detail.jam_kerja || "Senin - Jumat: 08:00 - 16:00 WIB"}
+                <p className="text-sm text-gray-700 font-medium whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
+                  {detail.jam_kerja?.trim() || "Senin - Jumat: 08:00 - 16:00 WIB"}
                 </p>
               </div>
             </div>
@@ -241,7 +329,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
           {/* Divider Tipis Krem */}
           <div className="border-t border-[#d1c2a0]/60" />
 
-          {/* 2. BAGIAN TENGAH: Struktur Pengurus (Di dalam Body Informasi Lembaga yang Sama) */}
+          {/* 2. BAGIAN TENGAH: Struktur Pengurus (List Format Vertikal / Row List) */}
           <div className="space-y-4 pt-2">
             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2.5">
               <svg className="h-5 w-5 text-[#2c1b01]" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,32 +340,49 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
             {detail.pengurus.length === 0 ? (
               <p className="text-sm text-gray-500 italic">Data struktur pengurus belum diisi.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {detail.pengurus.map((p) => {
-                  const hasFailed = p.id ? failedPengurusIds.has(p.id) : false
-                  return (
-                    <div key={p.id} className="flex flex-col items-center rounded-xl border border-[#d1c2a0]/60 bg-white p-5 text-center shadow-xs">
-                      {p.foto_url && !hasFailed ? (
-                        <img
-                          src={p.foto_url}
-                          alt={p.nama_pengurus || p.nama_jabatan}
-                          onError={() => p.id && handlePengurusError(p.id)}
-                          className="h-20 w-20 rounded-full object-cover ring-4 ring-[#2c1b01]/15 mb-3 shadow-xs"
-                        />
-                      ) : (
-                        <div className="h-20 w-20 rounded-full bg-amber-100/90 text-[#2c1b01] flex items-center justify-center ring-4 ring-[#2c1b01]/15 mb-3 shadow-xs">
-                          <svg className="h-10 w-10 opacity-70" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
+              <div className="rounded-xl border border-[#d1c2a0]/60 bg-white overflow-hidden shadow-xs">
+                <div className="divide-y divide-[#d1c2a0]/50">
+                  {detail.pengurus.map((p) => {
+                    const hasFailed = p.id ? failedPengurusIds.has(p.id) : false
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between gap-4 p-3.5 sm:p-4 hover:bg-[#fcfaf7] transition-colors"
+                      >
+                        {/* Left: Avatar + Jabatan */}
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                          {p.foto_url && !hasFailed ? (
+                            <img
+                              src={p.foto_url}
+                              alt={p.nama_pengurus || p.nama_jabatan}
+                              onError={() => p.id && handlePengurusError(p.id)}
+                              className="h-10 w-10 sm:h-11 sm:w-11 rounded-full object-cover ring-2 ring-[#2c1b01]/15 shadow-xs flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-amber-100/90 text-[#2c1b01] flex items-center justify-center ring-2 ring-[#2c1b01]/15 shadow-xs flex-shrink-0 font-bold text-xs">
+                              <svg className="h-5 w-5 opacity-75" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-bold text-gray-900 truncate">{p.nama_jabatan}</h4>
+                            <p className="text-xs text-gray-600 font-medium sm:hidden truncate mt-0.5">
+                              {p.nama_pengurus || <span className="italic text-gray-400">Belum diisi</span>}
+                            </p>
+                          </div>
                         </div>
-                      )}
-                      <h4 className="text-sm font-bold text-gray-900">{p.nama_jabatan}</h4>
-                      <p className="text-xs text-gray-600 mt-1 font-medium">
-                        {p.nama_pengurus || <span className="italic text-gray-400">Belum diisi</span>}
-                      </p>
-                    </div>
-                  )
-                })}
+
+                        {/* Right: Nama Pengurus (Desktop & Tablet) */}
+                        <div className="hidden sm:block text-right flex-shrink-0">
+                          <span className="text-sm font-semibold text-gray-800">
+                            {p.nama_pengurus || <span className="italic text-gray-400 font-normal">Belum diisi</span>}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </div>

@@ -320,68 +320,43 @@ export default function LayananInformasiDinamis() {
                 const formUrl = getSafeHttpsUrl(item.form_pendataan_url)
 
                 return (
-                  <div key={item.id} className="transition-colors hover:bg-gray-50/60">
-                    {/* Main Table Row Header with CTA & Chevron (No nested <a> inside <button>) */}
-                    <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 gap-3">
-                      {/* Left: Clickable Title Button */}
-                      <button
-                        type="button"
-                        onClick={() => toggleAccordion(item.id)}
-                        aria-expanded={isOpen}
-                        aria-controls={`panel-layanan-${item.id}`}
-                        className="text-left font-bold text-gray-900 text-base md:text-lg hover:text-[#6b4b1d] transition-colors focus:outline-none cursor-pointer flex-1"
+                  <div key={item.id} className="transition-colors">
+                    {/* Main Table Row Header - Clickable Accordion Bar */}
+                    <button
+                      type="button"
+                      onClick={() => toggleAccordion(item.id)}
+                      aria-expanded={isOpen}
+                      aria-controls={`panel-layanan-${item.id}`}
+                      className="w-full flex items-center justify-between px-6 py-4 gap-4 text-left font-bold text-gray-900 text-base md:text-lg hover:bg-[#fcfaf7] transition-colors focus:outline-none cursor-pointer group"
+                    >
+                      <span className="flex-1 group-hover:text-[#6b4b1d] transition-colors">{item.nama_layanan}</span>
+
+                      <span
+                        aria-label={isOpen ? `Tutup detail ${item.nama_layanan}` : `Buka detail ${item.nama_layanan}`}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f0e8db] text-[#2c1b01] font-bold group-hover:bg-[#ebdcc4] transition-all flex-shrink-0"
                       >
-                        {item.nama_layanan}
-                      </button>
-
-                      {/* Right: CTA Button + Accordion Chevron Button */}
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        {formUrl ? (
-                          <a
-                            href={formUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#1a1200] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:from-[#3a2604] hover:to-[#100b00] transition-all"
-                          >
-                            <span>Isi Form Pendataan ↗</span>
-                          </a>
-                        ) : (
-                          <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
-                            Form belum tersedia
-                          </span>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => toggleAccordion(item.id)}
-                          aria-expanded={isOpen}
-                          aria-controls={`panel-layanan-${item.id}`}
-                          aria-label={isOpen ? `Tutup detail ${item.nama_layanan}` : `Buka detail ${item.nama_layanan}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f0e8db] text-[#2c1b01] font-bold hover:bg-[#ebdcc4] transition-all cursor-pointer flex-shrink-0"
+                        <svg
+                          className={`h-5 w-5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                          aria-hidden="true"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          <svg
-                            className={`h-5 w-5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                            aria-hidden="true"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </span>
+                    </button>
 
                     {/* Expanded Detail Panel Row */}
                     {isOpen && (
                       <div
                         id={`panel-layanan-${item.id}`}
-                        className="px-6 pb-6 pt-3 border-t border-[#d1c2a0]/40 bg-gradient-to-br from-white to-[#f7f2e8]/40 space-y-5"
+                        className="px-6 pb-6 pt-4 border-t border-[#d1c2a0]/40 bg-gradient-to-br from-white to-[#f7f2e8]/40 text-left"
                       >
-                        {/* Horizontal 3-Column Grid on Desktop, Stacked on Mobile */}
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-1">
-                          {/* Column 1: Persyaratan Dokumen (col-span-7) */}
-                          <div className="md:col-span-7">
+                        {/* Horizontal Grid on Desktop / Tablet (Persyaratan, Estimasi, Biaya, Form Button) */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-y-6 md:gap-x-8 lg:gap-x-10 items-start pt-1">
+                          {/* Column 1: Persyaratan Dokumen (col-span-5) */}
+                          <div className="md:col-span-5">
                             <h4 className="font-bold text-gray-900 text-base mb-3">Persyaratan Dokumen</h4>
                             {item.persyaratan.length === 0 ? (
                               <p className="text-xs text-gray-500 italic">Persyaratan belum tersedia.</p>
@@ -407,6 +382,25 @@ export default function LayananInformasiDinamis() {
                           <div className="md:col-span-2">
                             <h4 className="font-bold text-gray-900 text-base mb-3">Biaya</h4>
                             <p className="text-sm text-gray-700 font-semibold">{item.biaya}</p>
+                          </div>
+
+                          {/* Column 4: Form Pendataan (col-span-2, No "Aksi" Label, Single-line whitespace-nowrap) */}
+                          <div className="md:col-span-2 md:flex md:justify-end md:items-start pt-1">
+                            {formUrl ? (
+                              <a
+                                href={formUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#1a1200] px-4.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:from-[#3a2604] hover:to-[#100b00] hover:shadow transition-all w-full sm:w-auto"
+                              >
+                                <span>Isi Form Pendataan</span>
+                                <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002 2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                            ) : (
+                              <span className="text-xs font-medium text-gray-400 italic">Form belum tersedia</span>
+                            )}
                           </div>
                         </div>
                       </div>

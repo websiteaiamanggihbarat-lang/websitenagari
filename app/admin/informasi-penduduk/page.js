@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const FORM_AWAL = {
   tanggal_data: "",
@@ -106,6 +108,8 @@ export default function InformasiPendudukAdmin() {
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState("")
   const [pesanSukses, setPesanSukses] = useState(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [processingToggleId, setProcessingToggleId] = useState(null)
 
   const [jenisFilter, setJenisFilter] = useState("terbaru")
@@ -200,7 +204,7 @@ export default function InformasiPendudukAdmin() {
     } = await supabase.auth.getSession()
 
     if (sessionError || !session) {
-      alert("Sesi admin tidak terbaca. Silakan login ulang.")
+      showError("Sesi admin tidak terbaca. Silakan login ulang.")
       window.location.href = "/login"
       return false
     }
@@ -511,21 +515,13 @@ export default function InformasiPendudukAdmin() {
     }
   }
 
-  const hapusData = async (item) => {
+  const hapusData = (item) => {
+    setDeleteTarget(item)
+  }
+
+  const executeHapus = async (item) => {
     const session = await periksaSesi()
     if (!session) return
-
-    const tambahanPeringatan = item.is_active
-      ? "\n\nData ini sedang aktif di Beranda."
-      : ""
-
-    const yakin = window.confirm(
-      `Yakin ingin menghapus informasi penduduk tanggal ${formatTanggal(
-        item.tanggal_data
-      )}?${tambahanPeringatan}`
-    )
-
-    if (!yakin) return
 
     setLoading(true)
     setError("")
@@ -539,14 +535,18 @@ export default function InformasiPendudukAdmin() {
 
       if (hapusError) throw hapusError
 
-      setPesanSukses("Informasi penduduk berhasil dihapus.")
+      const msg = "Informasi penduduk berhasil dihapus."
+      setPesanSukses(msg)
+      showSuccess(msg)
       if (editingId === item.id) {
         handleBatalForm()
       }
       await fetchDataPenduduk()
     } catch (err) {
       console.error("hapusData error:", err)
-      setError(err?.message || "Gagal menghapus data.")
+      const msg = err?.message || "Gagal menghapus data."
+      setError(msg)
+      showError(msg)
     } finally {
       setLoading(false)
     }
@@ -1133,6 +1133,35 @@ export default function InformasiPendudukAdmin() {
           )}
         </div>
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Informasi Penduduk?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus data informasi penduduk tanggal <strong>{deleteTarget?.tanggal_data}</strong>?
+            {deleteTarget?.is_active && (
+              <>
+                <br />
+                <span className="font-semibold text-amber-600">Peringatan: Data ini saat ini sedang aktif di Beranda.</span>
+              </>
+            )}
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={loading}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeHapus(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

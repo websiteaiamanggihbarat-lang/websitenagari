@@ -10,6 +10,8 @@ import {
   KesenianTradisional,
   getLabelKategoriKesenian,
 } from "@/lib/kesenian"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface PageProps {
   params: Promise<{ kesenianId: string }>
@@ -97,6 +99,8 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState<GaleriKesenianTradisional | null>(null)
 
   // Multi-upload queue & report state
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([])
@@ -516,10 +520,11 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
   }
 
   // --- Handler Hapus Foto (Safe Delete Workflow) ---
-  const handleHapusFoto = async (item: GaleriKesenianTradisional) => {
-    const konfirmasi = window.confirm(`Apakah Anda yakin ingin menghapus foto "${item.teks_alt}" ini?`)
-    if (!konfirmasi) return
+  const handleHapusFoto = (item: GaleriKesenianTradisional) => {
+    setDeleteTarget(item)
+  }
 
+  const executeHapusFoto = async (item: GaleriKesenianTradisional) => {
     setActionLoadingId(item.id)
     setPesanSukses(null)
     setPesanError(null)
@@ -545,10 +550,9 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
         .remove([item.storage_path])
 
       if (errStorage) {
-        // Step 4: Storage gagal -> biarkan record tetap nonaktif, jangan hapus record DB
-        setPesanError(
-          `Gagal menghapus file dari Storage: ${errStorage.message}. Foto telah dinonaktifkan di database. Silakan klik tombol 'Coba Hapus Kembali' untuk mengulangi.`
-        )
+        const msg = `Gagal menghapus file dari Storage: ${errStorage.message}.`
+        setPesanError(msg)
+        showError(msg)
         await fetchKesenianDanGaleri()
         setActionLoadingId(null)
         return
@@ -561,22 +565,22 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
         .eq("id", item.id)
 
       if (errDeleteDb) {
-        // Step 6: DB delete gagal setelah file terhapus -> record tetap nonaktif & beri pesan jujur
-        setPesanError(
-          `File foto di Storage telah terhapus, namun gagal menghapus baris di database: ${errDeleteDb.message}. Record tetap berstatus nonaktif sehingga tidak muncul di publik. Klik 'Retry Hapus Record DB' untuk mencoba menghapus baris database lagi.`
-        )
+        const msg = `File foto di Storage terhapus, namun gagal menghapus baris database: ${errDeleteDb.message}.`
+        setPesanError(msg)
+        showError(msg)
       } else {
-        setPesanSukses(
-          item.is_cover && item.is_active
-            ? "Foto utama berhasil dihapus. Kesenian induk telah dinonaktifkan karena tidak lagi memiliki foto utama."
-            : "Foto galeri berhasil dihapus secara permanen."
-        )
+        const msg = item.is_cover && item.is_active
+          ? "Foto utama berhasil dihapus. Kesenian induk telah dinonaktifkan karena tidak lagi memiliki foto utama."
+          : "Foto galeri berhasil dihapus secara permanen."
+        setPesanSukses(msg)
+        showSuccess(msg)
       }
 
       await fetchKesenianDanGaleri()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setPesanError(`Terjadi kesalahan saat menghapus foto: ${msg}`)
+      showError(`Terjadi kesalahan saat menghapus foto: ${msg}`)
     } finally {
       setActionLoadingId(null)
     }
@@ -1096,6 +1100,31 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
           )}
         </div>
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Foto Galeri?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus foto <strong>&quot;{deleteTarget?.teks_alt}&quot;</strong>?
+            <br />
+            File foto di Storage dan data database akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(actionLoadingId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeHapusFoto(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

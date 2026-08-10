@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const BUCKET_FOTO = "foto-sarana-pendidikan"
 
@@ -183,6 +185,8 @@ export default function KelolaSaranaDetailAdmin() {
 
   const [pesanSukses, setPesanSukses] = useState(null)
   const [pesanError, setPesanError] = useState(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const periksaSesi = async () => {
     const {
@@ -851,16 +855,14 @@ export default function KelolaSaranaDetailAdmin() {
     }
   }
 
-  const hapusSekolah = async (item) => {
+  const hapusSekolah = (item) => {
     if (loading) return
+    setDeleteTarget(item)
+  }
 
+  const executeHapusSekolah = async (item) => {
     const session = await periksaSesi()
     if (!session) return
-
-    const yakin = window.confirm(
-      `Yakin ingin menghapus sarana pendidikan "${item.nama_sarana}"?\n\nSeluruh rincian fasilitas dan kegiatan terkait juga akan terhapus!`
-    )
-    if (!yakin) return
 
     setPesanSukses(null)
     setPesanError(null)
@@ -884,7 +886,9 @@ export default function KelolaSaranaDetailAdmin() {
 
       if (hapusErr) throw hapusErr
 
-      setPesanSukses("Sarana pendidikan berhasil dihapus.")
+      const msg = `Sarana pendidikan "${item.nama_sarana}" berhasil dihapus.`
+      setPesanSukses(msg)
+      showSuccess(msg)
 
       if (editingSaranaId === item.id) {
         handleBatalForm()
@@ -893,7 +897,9 @@ export default function KelolaSaranaDetailAdmin() {
       await fetchSarana(pendataanId)
     } catch (hapusErr) {
       console.error("hapus sekolah error:", hapusErr)
-      setPesanError(`Gagal menghapus sarana pendidikan: ${hapusErr?.message || "Terjadi kesalahan."}`)
+      const msg = `Gagal menghapus sarana pendidikan: ${hapusErr?.message || "Terjadi kesalahan."}`
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setLoading(false)
     }
@@ -1606,6 +1612,31 @@ export default function KelolaSaranaDetailAdmin() {
           </>
         )}
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Sarana Pendidikan?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus <strong>&quot;{deleteTarget?.nama_sarana}&quot;</strong>?
+            <br />
+            Seluruh rincian fasilitas, kegiatan, dan foto terkait akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={loading}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeHapusSekolah(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

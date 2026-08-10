@@ -16,6 +16,8 @@ import {
   HariPelayananKey,
   HARI_PELAYANAN_LABEL,
 } from "@/lib/layananInformasi"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormState {
   whatsapp_pelayanan: string
@@ -164,6 +166,8 @@ export default function AdminLayananInformasiPage() {
   // Global Toast Messages
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
+  const { showSuccess, showError, showWarning } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState<LayananSuratDenganPersyaratan | null>(null)
 
   const handleLogout = async () => {
     try {
@@ -696,7 +700,7 @@ export default function AdminLayananInformasiPage() {
 
   const handleRemovePersyaratanRow = (localId: string) => {
     if (persyaratanRows.length <= 1) {
-      alert("Layanan surat wajib memiliki minimal 1 persyaratan.")
+      showWarning("Layanan surat wajib memiliki minimal 1 persyaratan.")
       return
     }
     setPersyaratanRows((prev) => prev.filter((r) => r.localId !== localId))
@@ -954,19 +958,14 @@ export default function AdminLayananInformasiPage() {
     }
   }
 
-  const handleDeleteLayanan = async (item: LayananSuratDenganPersyaratan) => {
+  const handleDeleteLayanan = (item: LayananSuratDenganPersyaratan) => {
+    if (deletingLayananId) return
+    setDeleteTarget(item)
+  }
+
+  const executeDeleteLayanan = async (item: LayananSuratDenganPersyaratan) => {
     setPesanSukses(null)
     setPesanError(null)
-
-    if (deletingLayananId) return
-
-    const confirmed = window.confirm(
-      `Apakah Anda yakin ingin menghapus layanan '${item.nama_layanan}'?\n\n` +
-        `Seluruh poin persyaratannya (${item.persyaratan.length} poin) akan ikut terhapus secara permanen. Tindakan ini tidak dapat dibatalkan.`
-    )
-
-    if (!confirmed) return
-
     setDeletingLayananId(item.id)
 
     try {
@@ -976,7 +975,9 @@ export default function AdminLayananInformasiPage() {
       } = await supabase.auth.getSession()
 
       if (sessionError || !session) {
-        setPesanError("Sesi admin tidak tersedia. Silakan masuk kembali.")
+        const msg = "Sesi admin tidak tersedia. Silakan masuk kembali."
+        setPesanError(msg)
+        showError(msg)
         return
       }
 
@@ -990,7 +991,9 @@ export default function AdminLayananInformasiPage() {
       if (deleteError) throw deleteError
 
       if (!deletedRow) {
-        setPesanError("Gagal menghapus layanan surat: data tidak ditemukan.")
+        const msg = "Gagal menghapus layanan surat: data tidak ditemukan."
+        setPesanError(msg)
+        showError(msg)
         return
       }
 
@@ -999,10 +1002,14 @@ export default function AdminLayananInformasiPage() {
       }
 
       await loadAllData()
-      setPesanSukses(`Layanan surat '${item.nama_layanan}' berhasil dihapus.`)
+      const msg = `Layanan surat '${item.nama_layanan}' berhasil dihapus.`
+      setPesanSukses(msg)
+      showSuccess(msg)
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Gagal menghapus layanan surat."))
+      const msg = parseErrorMessage(e, "Gagal menghapus layanan surat.")
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setDeletingLayananId(null)
     }
@@ -1919,6 +1926,31 @@ export default function AdminLayananInformasiPage() {
           )}
         </div>
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Layanan Surat?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus layanan <strong>&quot;{deleteTarget?.nama_layanan}&quot;</strong>?
+            <br />
+            Seluruh poin persyaratannya ({deleteTarget?.persyaratan.length || 0} poin) akan ikut terhapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(deletingLayananId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeDeleteLayanan(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

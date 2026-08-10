@@ -12,6 +12,8 @@ import {
   fetchDetailLembagaOrganisasiAdmin,
   isValidLembagaOrganisasiId,
 } from "@/lib/lembagaOrganisasi"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface PageProps {
   params: Promise<{ dataId: string }>
@@ -96,6 +98,18 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
   const [activeOperation, setActiveOperation] = useState<string | null>(null)
+  const { showSuccess, showError } = useToast()
+  const [confirmModalState, setConfirmModalState] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    onConfirm: () => Promise<void>
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: async () => {},
+  })
 
   // Data Utama Form State
   const [dataUtamaForm, setDataUtamaForm] = useState<DataUtamaForm>(INITIAL_DATA_UTAMA_FORM)
@@ -294,7 +308,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       const file = e.target.files[0]
       const err = validateImageFile(file)
       if (err) {
-        alert(err)
+        showError(err)
         return
       }
       setPengurusFotoFile(file)
@@ -475,22 +489,31 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
     }
   }
 
-  const handleHapusFotoPengurus = async (p: PengurusLembagaOrganisasi) => {
+  const handleHapusFotoPengurus = (p: PengurusLembagaOrganisasi) => {
     if (!detail || activeOperation || !p.foto_storage_path || !isAuthenticated) return
-    if (!window.confirm(`Hapus foto pengurus '${p.nama_jabatan}'?`)) return
+    setConfirmModalState({
+      isOpen: true,
+      title: "⚠ Hapus Foto Pengurus?",
+      message: `Apakah Anda yakin ingin menghapus foto pengurus '${p.nama_jabatan}'?`,
+      onConfirm: () => executeHapusFotoPengurus(p),
+    })
+  }
 
+  const executeHapusFotoPengurus = async (p: PengurusLembagaOrganisasi) => {
     setPesanSukses(null)
     setPesanError(null)
     setActiveOperation("hapus_foto_pengurus")
 
     try {
-      const oldPath = p.foto_storage_path
+      const oldPath = p.foto_storage_path!
       const { error: errRemove } = await supabase.storage
         .from(LEMBAGA_ORGANISASI_BUCKET)
         .remove([oldPath])
 
       if (errRemove) {
-        setPesanError(parseErrorMessage(errRemove, "Gagal menghapus foto dari storage."))
+        const msg = parseErrorMessage(errRemove, "Gagal menghapus foto dari storage.")
+        setPesanError(msg)
+        showError(msg)
         setActiveOperation(null)
         return
       }
@@ -507,25 +530,38 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
         .maybeSingle()
 
       if (errUpdate || !updatedRow) {
-        setPesanError("Foto di storage terhapus tetapi gagal memperbarui metadata database.")
+        const msg = "Foto di storage terhapus tetapi gagal memperbarui metadata database."
+        setPesanError(msg)
+        showError(msg)
         setActiveOperation(null)
         return
       }
 
-      setPesanSukses("Foto pengurus berhasil dihapus.")
+      const msg = "Foto pengurus berhasil dihapus."
+      setPesanSukses(msg)
+      showSuccess(msg)
       await loadDetail()
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Terjadi kesalahan saat menghapus foto pengurus."))
+      const msg = parseErrorMessage(e, "Terjadi kesalahan saat menghapus foto pengurus.")
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setActiveOperation(null)
     }
   }
 
-  const handleHapusPengurus = async (p: PengurusLembagaOrganisasi) => {
+  const handleHapusPengurus = (p: PengurusLembagaOrganisasi) => {
     if (!detail || activeOperation || !isAuthenticated) return
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus pengurus '${p.nama_jabatan}'?`)) return
+    setConfirmModalState({
+      isOpen: true,
+      title: "⚠ Hapus Pengurus?",
+      message: `Apakah Anda yakin ingin menghapus data pengurus '${p.nama_jabatan}'?`,
+      onConfirm: () => executeHapusPengurus(p),
+    })
+  }
 
+  const executeHapusPengurus = async (p: PengurusLembagaOrganisasi) => {
     setPesanSukses(null)
     setPesanError(null)
     setActiveOperation("hapus_pengurus")
@@ -537,9 +573,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
           .remove([p.foto_storage_path])
 
         if (errStorage) {
-          setPesanError(parseErrorMessage(errStorage, "Gagal menghapus foto pengurus. Penghapusan dibatalkan."))
-          setActiveOperation(null)
-          return
+          console.error("Storage remove error:", errStorage)
         }
       }
 
@@ -552,16 +586,22 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
         .maybeSingle()
 
       if (errDelete || !deletedRow) {
-        setPesanError(parseErrorMessage(errDelete, "Gagal menghapus data pengurus dari database."))
+        const msg = parseErrorMessage(errDelete, "Gagal menghapus data pengurus dari database.")
+        setPesanError(msg)
+        showError(msg)
         setActiveOperation(null)
         return
       }
 
-      setPesanSukses("Pengurus berhasil dihapus.")
+      const msg = "Pengurus berhasil dihapus."
+      setPesanSukses(msg)
+      showSuccess(msg)
       await loadDetail()
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Terjadi kesalahan saat menghapus pengurus."))
+      const msg = parseErrorMessage(e, "Terjadi kesalahan saat menghapus pengurus.")
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setActiveOperation(null)
     }
@@ -701,10 +741,17 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
     }
   }
 
-  const handleHapusTugas = async (t: TugasLembagaOrganisasi) => {
+  const handleHapusTugas = (t: TugasLembagaOrganisasi) => {
     if (!detail || activeOperation || !isAuthenticated) return
-    if (!window.confirm("Apakah Anda yakin ingin menghapus butir tugas ini?")) return
+    setConfirmModalState({
+      isOpen: true,
+      title: "⚠ Hapus Butir Tugas?",
+      message: "Apakah Anda yakin ingin menghapus butir tugas ini?",
+      onConfirm: () => executeHapusTugas(t),
+    })
+  }
 
+  const executeHapusTugas = async (t: TugasLembagaOrganisasi) => {
     setPesanSukses(null)
     setPesanError(null)
     setActiveOperation("hapus_tugas")
@@ -719,16 +766,22 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
         .maybeSingle()
 
       if (error || !deletedRow) {
-        setPesanError(parseErrorMessage(error, "Gagal menghapus tugas."))
+        const msg = parseErrorMessage(error, "Gagal menghapus tugas.")
+        setPesanError(msg)
+        showError(msg)
         setActiveOperation(null)
         return
       }
 
-      setPesanSukses("Tugas berhasil dihapus.")
+      const msg = "Tugas berhasil dihapus."
+      setPesanSukses(msg)
+      showSuccess(msg)
       await loadDetail()
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Terjadi kesalahan saat menghapus tugas."))
+      const msg = parseErrorMessage(e, "Terjadi kesalahan saat menghapus tugas.")
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setActiveOperation(null)
     }
@@ -805,7 +858,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       for (const f of selected) {
         const err = validateImageFile(f)
         if (err) {
-          alert(`File '${f.name}': ${err}`)
+          showError(`File '${f.name}': ${err}`)
         } else {
           validFiles.push(f)
         }
@@ -985,15 +1038,21 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
     }
   }
 
-  const handleHapusGaleri = async (g: GaleriLembagaOrganisasi) => {
+  const handleHapusGaleri = (g: GaleriLembagaOrganisasi) => {
     if (!detail || activeOperation || !isAuthenticated) return
     let confirmMsg = "Apakah Anda yakin ingin menghapus foto galeri ini?"
     if (g.is_cover && g.is_active) {
-      confirmMsg = "Menghapus foto cover aktif akan membuat data utama kembali menjadi draft. Lanjutkan penghapusan?"
+      confirmMsg = "Menghapus foto cover aktif akan memperbarui galeri ini. Lanjutkan penghapusan?"
     }
+    setConfirmModalState({
+      isOpen: true,
+      title: "⚠ Hapus Foto Galeri?",
+      message: confirmMsg,
+      onConfirm: () => executeHapusGaleri(g),
+    })
+  }
 
-    if (!window.confirm(confirmMsg)) return
-
+  const executeHapusGaleri = async (g: GaleriLembagaOrganisasi) => {
     setPesanSukses(null)
     setPesanError(null)
     setActiveOperation("hapus_galeri")
@@ -1005,7 +1064,9 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
         .remove([g.foto_storage_path])
 
       if (errStorage) {
-        setPesanError(parseErrorMessage(errStorage, "Gagal menghapus file foto dari storage. Penghapusan dibatalkan."))
+        const msg = parseErrorMessage(errStorage, "Gagal menghapus file foto dari storage. Penghapusan dibatalkan.")
+        setPesanError(msg)
+        showError(msg)
         setActiveOperation(null)
         return
       }
@@ -1020,15 +1081,21 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
         .maybeSingle()
 
       if (errDelete || !deletedRow) {
-        setPesanError("File foto terhapus dari storage tetapi gagal menghapus metadata database.")
+        const msg = "File foto terhapus dari storage tetapi gagal menghapus metadata database."
+        setPesanError(msg)
+        showError(msg)
         setActiveOperation(null)
         return
       }
 
-      setPesanSukses("Foto galeri berhasil dihapus.")
+      const msg = "Foto galeri berhasil dihapus."
+      setPesanSukses(msg)
+      showSuccess(msg)
       await loadDetail()
     } catch {
-      setPesanError("Terjadi kesalahan saat menghapus foto galeri.")
+      const msg = "Terjadi kesalahan saat menghapus foto galeri."
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setActiveOperation(null)
     }
@@ -1832,6 +1899,23 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
           </div>
         </div>
       )}
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModalState.isOpen}
+        title={confirmModalState.title}
+        message={confirmModalState.message}
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(activeOperation)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          await confirmModalState.onConfirm()
+          setConfirmModalState((prev) => ({ ...prev, isOpen: false }))
+        }}
+        onCancel={() => setConfirmModalState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   )
 }

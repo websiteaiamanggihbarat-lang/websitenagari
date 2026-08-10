@@ -12,6 +12,8 @@ import {
   SaranaKesehatan,
   getLabelJenisSarana,
 } from "@/lib/kesehatan"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const SARAN_FASILITAS = [
   "Ruang Periksa",
@@ -145,6 +147,8 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState<SaranaKesehatan | null>(null)
 
   const periksaSesi = async () => {
     const {
@@ -956,16 +960,14 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     }
   }
 
-  const hapusSarana = async (item: SaranaKesehatan) => {
+  const hapusSarana = (item: SaranaKesehatan) => {
     if (loading) return
+    setDeleteTarget(item)
+  }
 
+  const executeHapusSarana = async (item: SaranaKesehatan) => {
     const session = await periksaSesi()
     if (!session) return
-
-    const yakin = window.confirm(
-      `Yakin ingin menghapus sarana kesehatan "${item.nama_sarana}"?\n\nSeluruh rincian fasilitas dan tenaga kesehatan terkait juga akan terhapus!`
-    )
-    if (!yakin) return
 
     setPesanSukses(null)
     setPesanError(null)
@@ -991,9 +993,13 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
         .eq("pendataan_id", pendataanId)
 
       if (hapusError) {
-        setPesanError(`Gagal menghapus sarana kesehatan: ${hapusError.message}`)
+        const msg = `Gagal menghapus sarana kesehatan: ${hapusError.message}`
+        setPesanError(msg)
+        showError(msg)
       } else {
-        setPesanSukses("Sarana kesehatan berhasil dihapus.")
+        const msg = `Sarana kesehatan "${item.nama_sarana}" berhasil dihapus.`
+        setPesanSukses(msg)
+        showSuccess(msg)
       }
 
       if (editingSaranaId === item.id) {
@@ -1003,7 +1009,9 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
       await fetchSarana(pendataanId)
     } catch (hapusError: any) {
       console.error("hapus sarana error:", hapusError)
-      setPesanError(`Gagal menghapus sarana kesehatan: ${hapusError?.message || "Terjadi kesalahan."}`)
+      const msg = `Gagal menghapus sarana kesehatan: ${hapusError?.message || "Terjadi kesalahan."}`
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setLoading(false)
     }
@@ -1713,6 +1721,31 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
           </>
         )}
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Sarana Kesehatan?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus sarana kesehatan <strong>&quot;{deleteTarget?.nama_sarana}&quot;</strong>?
+            <br />
+            Seluruh rincian fasilitas dan tenaga kesehatan terkait juga akan terhapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={loading}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeHapusSarana(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

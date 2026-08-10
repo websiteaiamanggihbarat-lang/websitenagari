@@ -483,31 +483,16 @@ export async function fetchDaftarLembagaOrganisasiPublik(): Promise<
   const hasil: KartuLembagaOrganisasiPublik[] = []
   for (const parent of parentList) {
     const cover = coverMap.get(parent.id)
-    if (cover) {
-      hasil.push({
-        id: parent.id,
-        jenis: parent.jenis,
-        nama: parent.nama,
-        deskripsi: parent.deskripsi,
-        alamat: parent.alamat,
-        kontak: parent.kontak,
-        foto_url: cover.foto_url,
-        teks_alt: cover.teks_alt,
-      })
-    }
-  }
-
-  if (hasil.length === 0) {
-    return Object.values(DEFAULT_LEMBAGA_DETAILS).map((d) => ({
-      id: d.id,
-      jenis: d.jenis,
-      nama: d.nama,
-      deskripsi: d.deskripsi,
-      alamat: d.alamat,
-      kontak: d.kontak,
-      foto_url: d.galeri[0]?.foto_url || "",
-      teks_alt: d.galeri[0]?.teks_alt || null,
-    }))
+    hasil.push({
+      id: parent.id,
+      jenis: parent.jenis,
+      nama: parent.nama,
+      deskripsi: parent.deskripsi,
+      alamat: parent.alamat,
+      kontak: parent.kontak,
+      foto_url: cover ? cover.foto_url : "",
+      teks_alt: cover ? cover.teks_alt : null,
+    })
   }
 
   return hasil
@@ -656,22 +641,7 @@ export async function fetchDetailLembagaOrganisasiPublik(
     fetchGaleriLembagaOrganisasi(parent.id, { includeInactive: false }),
   ])
 
-  const hasActiveCover = galeriList.some((g) => g.is_cover && g.is_active)
-  if (!hasActiveCover) {
-    // Fallback jika belum ada galeri cover di Supabase
-    if (parent.nama.toLowerCase().includes("lpmn")) {
-      return {
-        ...DEFAULT_LEMBAGA_DETAILS.lpmn,
-        id: parent.id,
-        nama: parent.nama,
-        deskripsi: parent.deskripsi || DEFAULT_LEMBAGA_DETAILS.lpmn.deskripsi,
-        alamat: parent.alamat || DEFAULT_LEMBAGA_DETAILS.lpmn.alamat,
-        kontak: parent.kontak || DEFAULT_LEMBAGA_DETAILS.lpmn.kontak,
-        jam_kerja: parent.jam_kerja || DEFAULT_LEMBAGA_DETAILS.lpmn.jam_kerja,
-      }
-    }
-    return null
-  }
+
 
   const pengurusPublik: PengurusLembagaOrganisasiPublik[] = pengurusList.map(
     (p) => ({

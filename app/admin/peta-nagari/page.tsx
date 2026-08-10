@@ -17,6 +17,8 @@ import {
   getLabelJenisPeta,
   isJenisPeta,
 } from "@/lib/petaNagari"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormPetaState {
   judul_peta: string
@@ -132,6 +134,8 @@ export default function AdminPetaNagariPage() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState<PetaNagari | null>(null)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -706,15 +710,11 @@ export default function AdminPetaNagariPage() {
     }
   }
 
-  // Safe Delete Completer
-  const handleHapusRecord = async (item: PetaNagari) => {
-    const isRetryMode = retryDeleteIds.includes(item.id)
-    const pesanKonfirmasi = isRetryMode
-      ? `Coba hapus kembali record database untuk peta "${item.judul_peta}"?`
-      : `Apakah Anda yakin ingin menghapus peta "${item.judul_peta}"?\n\nFile gambar utama dan dokumen PDF (jika ada) di Storage juga akan dihapus. Tindakan ini tidak dapat dibatalkan.`
+  const handleHapusRecord = (item: PetaNagari) => {
+    setDeleteTarget(item)
+  }
 
-    if (!window.confirm(pesanKonfirmasi)) return
-
+  const executeHapusRecord = async (item: PetaNagari) => {
     setPesanSukses(null)
     setPesanError(null)
     setProcessingDeleteId(item.id)
@@ -731,7 +731,9 @@ export default function AdminPetaNagariPage() {
           .eq("id", petaId)
 
         if (errNonaktif) {
-          setPesanError(`Gagal menonaktifkan peta sebelum dihapus: ${errNonaktif.message}`)
+          const msg = `Gagal menonaktifkan peta sebelum dihapus: ${errNonaktif.message}`
+          setPesanError(msg)
+          showError(msg)
           setProcessingDeleteId(null)
           return
         }
@@ -744,7 +746,9 @@ export default function AdminPetaNagariPage() {
           .eq("id", petaId)
 
         if (errNullPdf) {
-          setPesanError(`Gagal memperbarui database pasangan PDF: ${errNullPdf.message}. Hapus dibatalkan.`)
+          const msg = `Gagal memperbarui database pasangan PDF: ${errNullPdf.message}. Hapus dibatalkan.`
+          setPesanError(msg)
+          showError(msg)
           setProcessingDeleteId(null)
           return
         }
@@ -767,7 +771,9 @@ export default function AdminPetaNagariPage() {
         .eq("id", petaId)
 
       if (errNullGambar) {
-        setPesanError(`Gagal memperbarui database pasangan gambar: ${errNullGambar.message}. Hapus dibatalkan.`)
+        const msg = `Gagal memperbarui database pasangan gambar: ${errNullGambar.message}. Hapus dibatalkan.`
+        setPesanError(msg)
+        showError(msg)
         setProcessingDeleteId(null)
         return
       }
@@ -792,13 +798,17 @@ export default function AdminPetaNagariPage() {
         if (!retryDeleteIds.includes(petaId)) {
           setRetryDeleteIds((prev) => [...prev, petaId])
         }
-        setPesanError(`Storage file berhasil dibersihkan, tetapi gagal menghapus record database: ${errDeleteDb.message}. Tombol 'Retry Hapus' telah diaktifkan.`)
+        const msg = `Storage file berhasil dibersihkan, tetapi gagal menghapus record database: ${errDeleteDb.message}. Tombol 'Retry Hapus' telah diaktifkan.`
+        setPesanError(msg)
+        showError(msg)
         setProcessingDeleteId(null)
         return
       }
 
       setRetryDeleteIds((prev) => prev.filter((id) => id !== petaId))
-      setPesanSukses(`Peta Nagari "${item.judul_peta}" beserta seluruh file Storage berhasil dihapus.`)
+      const msg = `Peta Nagari "${item.judul_peta}" berhasil dihapus.`
+      setPesanSukses(msg)
+      showSuccess(msg)
 
       if (editingId === petaId) {
         handleBatalForm()
@@ -806,8 +816,10 @@ export default function AdminPetaNagariPage() {
 
       await muatDataPeta()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setPesanError(`Terjadi kesalahan saat menghapus peta: ${msg}`)
+      const e = err as Error
+      const msg = `Terjadi kesalahan saat menghapus peta: ${e?.message || "Kesalahan tidak diketahui"}`
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setProcessingDeleteId(null)
     }
@@ -1403,6 +1415,31 @@ export default function AdminPetaNagariPage() {
           )}
         </div>
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title={retryDeleteIds.includes(deleteTarget?.id || "") ? "⚠ Retry Hapus Peta?" : "⚠ Hapus Peta Nagari?"}
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus peta <strong>&quot;{deleteTarget?.judul_peta}&quot;</strong>?
+            <br />
+            File gambar utama dan dokumen PDF (jika ada) di Storage juga akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(processingDeleteId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeHapusRecord(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

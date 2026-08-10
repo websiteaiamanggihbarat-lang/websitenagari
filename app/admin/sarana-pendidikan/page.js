@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const BUCKET_FOTO = "foto-sarana-pendidikan"
 
@@ -78,6 +80,8 @@ export default function SaranaPendidikanAdminIndex() {
 
   const [pesanSukses, setPesanSukses] = useState(null)
   const [pesanError, setPesanError] = useState(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const periksaSesi = async () => {
     const {
@@ -339,24 +343,14 @@ export default function SaranaPendidikanAdminIndex() {
     }
   }
 
-  const hapusPendataan = async (item) => {
-    if (loading) {
-      return
-    }
+  const hapusPendataan = (item) => {
+    if (loading) return
+    setDeleteTarget(item)
+  }
 
+  const executeHapusPendataan = async (item) => {
     const session = await periksaSesi()
-
-    if (!session) {
-      return
-    }
-
-    const yakin = window.confirm(
-      `Yakin ingin menghapus pendataan tahun ${item.tahun_pendataan}?\n\nSeluruh sekolah pada tahun tersebut juga akan terhapus.`
-    )
-
-    if (!yakin) {
-      return
-    }
+    if (!session) return
 
     setPesanSukses(null)
     setPesanError(null)
@@ -395,7 +389,9 @@ export default function SaranaPendidikanAdminIndex() {
         }
       }
 
-      setPesanSukses("Periode pendataan sarana pendidikan berhasil dihapus.")
+      const msg = `Pendataan tahun ${item.tahun_pendataan} berhasil dihapus.`
+      setPesanSukses(msg)
+      showSuccess(msg)
 
       if (editingPendataanId === item.id) {
         handleBatalForm()
@@ -404,12 +400,9 @@ export default function SaranaPendidikanAdminIndex() {
       await fetchPendataan()
     } catch (hapusError) {
       console.error("hapus pendataan error:", hapusError)
-
-      setPesanError(
-        `Gagal menghapus pendataan: ${
-          hapusError?.message || "Terjadi kesalahan."
-        }`
-      )
+      const msg = `Gagal menghapus pendataan: ${hapusError?.message || "Terjadi kesalahan."}`
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setLoading(false)
     }
@@ -776,6 +769,31 @@ export default function SaranaPendidikanAdminIndex() {
           )}
         </div>
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Periode Pendataan?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus pendataan tahun <strong>{deleteTarget?.tahun_pendataan}</strong>?
+            <br />
+            Seluruh data sekolah dan foto terkait pada tahun tersebut juga akan terhapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={loading}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeHapusPendataan(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

@@ -15,6 +15,8 @@ import {
   getObjectPositionHero,
   isPosisiGambarHero,
 } from "@/lib/heroBeranda"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 export type CleanupHeroTertunda = {
   id: string
@@ -212,6 +214,8 @@ export default function AdminHeroBerandaPage() {
   const [daftarHero, setDaftarHero] = useState<HeroBeranda[]>([])
   const [loadingData, setLoadingData] = useState<boolean>(true)
   const [errorData, setErrorData] = useState<string | null>(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState<HeroBeranda | null>(null)
 
   // State Form Admin
   const [formTerbuka, setFormTerbuka] = useState<boolean>(false)
@@ -774,19 +778,12 @@ export default function AdminHeroBerandaPage() {
     }
   }
 
-  // Safe Delete Flow (Tahap 05B)
-  const handleSafeDelete = async (item: HeroBeranda) => {
+  const handleSafeDelete = (item: HeroBeranda) => {
     if (processingDeleteId || processingToggleId || loadingForm) return
+    setDeleteTarget(item)
+  }
 
-    const isRetry = retryDeleteIds.includes(item.id)
-    const confirmMessage = isRetry
-      ? `Coba lagi menghapus gambar hero '${item.nama_internal}'? File Storage dan record database akan dibersihkan ulang.`
-      : `Hapus gambar hero '${item.nama_internal}'? Gambar akan dinonaktifkan terlebih dahulu, kemudian file Storage dan record database akan dihapus.`
-
-    if (!window.confirm(confirmMessage)) {
-      return
-    }
-
+  const executeSafeDelete = async (item: HeroBeranda) => {
     setProcessingDeleteId(item.id)
     setErrorData(null)
     setPesanSuksesForm(null)
@@ -801,7 +798,9 @@ export default function AdminHeroBerandaPage() {
         .eq("id", heroId)
 
       if (deactivateError) {
-        setErrorData(`Gagal menonaktifkan gambar sebelum penghapusan: ${deactivateError.message}`)
+        const msg = `Gagal menonaktifkan gambar sebelum penghapusan: ${deactivateError.message}`
+        setErrorData(msg)
+        showError(msg)
         return
       }
 
@@ -812,9 +811,9 @@ export default function AdminHeroBerandaPage() {
         if (!retryDeleteIds.includes(heroId)) {
           setRetryDeleteIds((prev) => [...prev, heroId])
         }
-        setErrorData(
-          `Gambar telah dinonaktifkan, tetapi file Storage belum berhasil dibersihkan (${hasilFolder.pesan ?? "Error Storage"}). Gunakan tombol Retry Hapus.`
-        )
+        const msg = `Gambar telah dinonaktifkan, tetapi file Storage belum berhasil dibersihkan (${hasilFolder.pesan ?? "Error Storage"}). Gunakan tombol Retry Hapus.`
+        setErrorData(msg)
+        showError(msg)
         await muatDaftarHero()
         return
       }
@@ -829,20 +828,23 @@ export default function AdminHeroBerandaPage() {
         if (!retryDeleteIds.includes(heroId)) {
           setRetryDeleteIds((prev) => [...prev, heroId])
         }
-        setErrorData(
-          `File Storage sudah dibersihkan, tetapi record database belum berhasil dihapus (${dbDeleteError.message}). Gunakan tombol Retry Hapus.`
-        )
+        const msg = `File Storage sudah dibersihkan, tetapi record database belum berhasil dihapus (${dbDeleteError.message}). Gunakan tombol Retry Hapus.`
+        setErrorData(msg)
+        showError(msg)
         await muatDaftarHero()
         return
       }
 
       // Sukses Safe Delete Penuh
       setRetryDeleteIds((prev) => prev.filter((id) => id !== heroId))
-      setPesanSuksesForm(`Gambar hero '${item.nama_internal}' berhasil dihapus secara permanen.`)
+      const msg = `Gambar hero '${item.nama_internal}' berhasil dihapus secara permanen.`
+      setPesanSuksesForm(msg)
+      showSuccess(msg)
       await muatDaftarHero()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setErrorData(`Terjadi kesalahan saat menghapus gambar hero: ${msg}`)
+      showError(`Terjadi kesalahan saat menghapus gambar hero: ${msg}`)
     } finally {
       setProcessingDeleteId(null)
     }
@@ -1415,6 +1417,31 @@ export default function AdminHeroBerandaPage() {
           )}
         </div>
       </main>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title={retryDeleteIds.includes(deleteTarget?.id || "") ? "⚠ Retry Hapus Gambar Hero?" : "⚠ Hapus Gambar Hero?"}
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus gambar hero <strong>&quot;{deleteTarget?.nama_internal}&quot;</strong>?
+            <br />
+            Gambar akan dinonaktifkan terlebih dahulu, kemudian file Storage dan record database akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(processingDeleteId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeSafeDelete(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 function formatTanggal(nilai) {
   if (!nilai) {
@@ -73,6 +75,8 @@ export default function TambahBerita() {
 
   const [pesanSukses, setPesanSukses] = useState(null)
   const [pesanError, setPesanError] = useState(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const periksaSesi = async () => {
     const {
@@ -370,24 +374,14 @@ export default function TambahBerita() {
     }, 50)
   }
 
-  const handleDelete = async (item) => {
-    if (loading) {
-      return
-    }
+  const handleDelete = (item) => {
+    if (loading) return
+    setDeleteTarget(item)
+  }
 
+  const executeDelete = async (item) => {
     const session = await periksaSesi()
-
-    if (!session) {
-      return
-    }
-
-    const konfirmasi = window.confirm(
-      `Yakin ingin menghapus berita "${item.judul}"?`
-    )
-
-    if (!konfirmasi) {
-      return
-    }
+    if (!session) return
 
     setPesanSukses(null)
     setPesanError(null)
@@ -400,12 +394,16 @@ export default function TambahBerita() {
 
     if (deleteError) {
       console.error("hapus berita error:", deleteError)
-      setPesanError(`Gagal menghapus berita: ${deleteError.message}`)
+      const msg = `Gagal menghapus berita: ${deleteError.message}`
+      setPesanError(msg)
+      showError(msg)
       setLoading(false)
       return
     }
 
-    setPesanSukses("Berita berhasil dihapus.")
+    const msg = `Berita "${item.judul}" berhasil dihapus.`
+    setPesanSukses(msg)
+    showSuccess(msg)
 
     if (editingId === item.id) {
       handleBatalForm()
@@ -793,6 +791,31 @@ export default function TambahBerita() {
           </div>
         </div>
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Berita?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus berita <strong>&quot;{deleteTarget?.judul}&quot;</strong>?
+            <br />
+            Data berita akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={loading}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeDelete(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

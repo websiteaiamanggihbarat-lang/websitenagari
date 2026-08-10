@@ -14,6 +14,8 @@ import {
   fetchSemuaGaleriFotoAdmin,
   type GaleriFoto,
 } from "@/lib/galeri"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 export default function AdminGaleriPage() {
   const router = useRouter()
@@ -38,6 +40,8 @@ export default function AdminGaleriPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState<GaleriFoto | null>(null)
 
   // State cleanup upload tertunda (jika upload Storage berhasil tetapi insert DB gagal)
   const [cleanupPath, setCleanupPath] = useState<string | null>(null)
@@ -308,15 +312,12 @@ export default function AdminGaleriPage() {
     return path.startsWith(expectedPrefix)
   }
 
-  // Safe Delete Handler (Hapus Permanen File Storage & Database Record)
-  const handleHapus = async (item: GaleriFoto) => {
+  const handleHapus = (item: GaleriFoto) => {
     if (deletingId) return
+    setDeleteTarget(item)
+  }
 
-    const confirmHapus = window.confirm(
-      `Yakin ingin menghapus foto galeri ini secara permanen?\n\nFile di Storage dan data pada database akan dihapus.`
-    )
-    if (!confirmHapus) return
-
+  const executeHapus = async (item: GaleriFoto) => {
     setPesanSukses(null)
     setPesanError(null)
 
@@ -356,11 +357,14 @@ export default function AdminGaleriPage() {
       }
 
       // Sukses Hapus
-      setPesanSukses("Foto galeri berhasil dihapus.")
+      const msg = "Foto galeri berhasil dihapus."
+      setPesanSukses(msg)
+      showSuccess(msg)
       await loadData()
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus foto."
       setPesanError(msg)
+      showError(msg)
       await loadData()
     } finally {
       setDeletingId(null)
@@ -834,6 +838,31 @@ export default function AdminGaleriPage() {
           </div>
         </div>
       </main>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Foto Galeri?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus foto galeri ini secara permanen?
+            <br />
+            File di Storage dan data pada database akan dihapus.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(deletingId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeHapus(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

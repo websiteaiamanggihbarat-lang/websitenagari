@@ -6,12 +6,16 @@ import { supabase } from "@/lib/supabase"
 import {
   DaftarLembagaOrganisasiAdmin,
   GaleriLembagaOrganisasi,
+  JenisLembagaOrganisasi,
   LEMBAGA_ORGANISASI_BUCKET,
   fetchDaftarLembagaOrganisasiAdmin,
   fetchDetailLembagaOrganisasiAdmin,
 } from "@/lib/lembagaOrganisasi"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormDataUtama {
+  jenis: JenisLembagaOrganisasi
   nama: string
   deskripsi: string
   alamat: string
@@ -38,6 +42,7 @@ interface LocalGaleriItem {
 }
 
 const INITIAL_DATA_UTAMA: FormDataUtama = {
+  jenis: "lembaga",
   nama: "",
   deskripsi: "",
   alamat: "",
@@ -48,27 +53,30 @@ const INITIAL_DATA_UTAMA: FormDataUtama = {
 interface SupabaseErrorLike {
   code?: string
   message?: string
+  details?: string
+  hint?: string
 }
 
 function parseErrorMessage(err: SupabaseErrorLike | null | undefined, defaultMsg: string): string {
   if (!err) return defaultMsg
   const code = err.code || ""
+  const msg = err.message || ""
   if (code === "23505") {
     return "Nama tersebut sudah digunakan."
   }
   if (code === "23514") {
-    return "Data tidak memenuhi aturan validasi database."
+    return `Data tidak memenuhi aturan validasi database.${msg ? ` (${msg})` : ""}`
   }
   if (code === "23503") {
     return "Relasi data tidak valid."
   }
   if (code === "P0001") {
-    return "Operasi ditolak oleh aturan bisnis database."
+    return `Operasi ditolak oleh aturan bisnis database.${msg ? ` (${msg})` : ""}`
   }
   if (code === "42501") {
     return "Sesi tidak valid atau akses ditolak."
   }
-  return defaultMsg
+  return msg ? `${defaultMsg} (${msg})` : defaultMsg
 }
 
 function generateSafeFilename(file: File): string {
@@ -101,10 +109,14 @@ export default function AdminLembagaOrganisasiPage() {
   const [checkingSession, setCheckingSession] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
+  const { showSuccess, showError } = useToast()
+
   const [listData, setListData] = useState<DaftarLembagaOrganisasiAdmin[]>([])
   const [loadingList, setLoadingList] = useState(false)
   const [submittingForm, setSubmittingForm] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; nama: string } | null>(null)
+  const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false)
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
@@ -257,6 +269,7 @@ export default function AdminLembagaOrganisasiPage() {
       }
 
       setDataUtama({
+        jenis: detail.data.jenis || "lembaga",
         nama: detail.data.nama || "",
         deskripsi: detail.data.deskripsi || "",
         alamat: detail.data.alamat || "",
@@ -302,12 +315,14 @@ export default function AdminLembagaOrganisasiPage() {
       pendingDeleteGaleriIds.length > 0
 
     if (isDirty) {
-      const confirmClose = window.confirm(
-        "Apakah Anda yakin ingin membatalkan? Perubahan yang belum disimpan akan hilang."
-      )
-      if (!confirmClose) return
+      setIsCloseConfirmOpen(true)
+      return
     }
 
+    resetFormState()
+  }
+
+  const resetFormState = () => {
     clearLocalGaleriPreviews()
     setIsFormOpen(false)
     setFormMode(null)
@@ -445,14 +460,29 @@ export default function AdminLembagaOrganisasiPage() {
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
 
-    if (!dataUtama.nama.trim()) {
-      errors.nama = "Nama lembaga / organisasi wajib diisi."
+    const namaTrim = dataUtama.nama.trim()
+    if (namaTrim.length < 2 || namaTrim.length > 200) {
+      errors.nama = "Nama harus diisi 2 sampai 200 karakter."
     }
-    if (!dataUtama.deskripsi.trim()) {
-      errors.deskripsi = "Deskripsi / profil wajib diisi."
+
+    const deskripsiTrim = dataUtama.deskripsi.trim()
+    if (deskripsiTrim.length < 10 || deskripsiTrim.length > 5000) {
+      errors.deskripsi = "Deskripsi harus diisi 10 sampai 5000 karakter."
     }
-    if (!dataUtama.alamat.trim()) {
-      errors.alamat = "Alamat kantor / sekelompok wajib diisi."
+
+    const alamatTrim = dataUtama.alamat.trim()
+    if (alamatTrim.length < 3 || alamatTrim.length > 500) {
+      errors.alamat = "Alamat harus diisi 3 sampai 500 karakter."
+    }
+
+    const kontakTrim = dataUtama.kontak.trim()
+    if (kontakTrim.length > 0 && kontakTrim.length > 100) {
+      errors.kontak = "Nomor kontak maksimal 100 karakter."
+    }
+
+    const jamKerjaTrim = dataUtama.jam_kerja.trim()
+    if (jamKerjaTrim.length > 0 && jamKerjaTrim.length > 300) {
+      errors.jam_kerja = "Jam operasional maksimal 300 karakter."
     }
 
     draftPengurus.forEach((p, idx) => {
@@ -484,21 +514,34 @@ export default function AdminLembagaOrganisasiPage() {
 
     try {
       if (formMode === "create") {
-        // Step 1: Insert Parent Row as is_active = false
+        // Step 1: Build Payload & Insert Parent Row as is_active = true (Auto-Active)
+        const payload = {
+          jenis: dataUtama.jenis === "organisasi" ? "organisasi" : "lembaga",
+          nama: dataUtama.nama.trim(),
+          deskripsi: dataUtama.deskripsi.trim(),
+          alamat: dataUtama.alamat.trim(),
+          kontak: dataUtama.kontak.trim() === "" ? null : dataUtama.kontak.trim(),
+          jam_kerja: dataUtama.jam_kerja.trim() === "" ? null : dataUtama.jam_kerja.trim(),
+          is_active: true,
+        }
+
+        console.log("CREATE LEMBAGA PAYLOAD:", payload)
+
         const { data: parentData, error: parentErr } = await supabase
           .from("lembaga_organisasi")
-          .insert({
-            nama: dataUtama.nama.trim(),
-            deskripsi: dataUtama.deskripsi.trim(),
-            alamat: dataUtama.alamat.trim(),
-            kontak: dataUtama.kontak.trim() || null,
-            jam_kerja: dataUtama.jam_kerja.trim() || null,
-            is_active: false,
-          })
+          .insert(payload)
           .select("id, nama")
           .single()
 
         if (parentErr || !parentData) {
+          if (parentErr) {
+            console.error("SUPABASE CREATE LEMBAGA ERROR:", {
+              code: parentErr.code,
+              message: parentErr.message,
+              details: parentErr.details,
+              hint: parentErr.hint,
+            })
+          }
           setPesanError(parseErrorMessage(parentErr, "Gagal menyimpan data utama lembaga."))
           return
         }
@@ -518,8 +561,7 @@ export default function AdminLembagaOrganisasiPage() {
             .insert(pengurusPayload)
 
           if (pErr) {
-            setPesanError(`Data tersimpan, namun gagal menyimpan pengurus: ${parseErrorMessage(pErr, "")}`)
-            return
+            console.error("Error inserting pengurus:", pErr)
           }
         }
 
@@ -535,72 +577,96 @@ export default function AdminLembagaOrganisasiPage() {
             .insert(tugasPayload)
 
           if (tErr) {
-            setPesanError(`Data tersimpan, namun gagal menyimpan tugas: ${parseErrorMessage(tErr, "")}`)
-            return
+            console.error("Error inserting tugas:", tErr)
           }
         }
 
-        // Step 4: Upload & Insert Local Galeri Files
+        // Step 4: Upload & Insert Local Galeri Files (Optional Cover)
+        let galeriUploadErrorMsg: string | null = null
+
         if (localGaleriFiles.length > 0) {
           for (let i = 0; i < localGaleriFiles.length; i++) {
             const item = localGaleriFiles[i]
+            const galleryRowId = crypto.randomUUID()
             const filename = generateSafeFilename(item.file)
-            const storagePath = `${newId}/${filename}`
+            const storagePath = `lembaga-organisasi/${newId}/galeri/${galleryRowId}/${filename}`
 
             const { error: uploadErr } = await supabase.storage
               .from(LEMBAGA_ORGANISASI_BUCKET)
               .upload(storagePath, item.file, { contentType: item.file.type })
 
-            if (!uploadErr) {
-              const { data: pubData } = supabase.storage
-                .from(LEMBAGA_ORGANISASI_BUCKET)
-                .getPublicUrl(storagePath)
+            if (uploadErr) {
+              console.error(`Upload error '${item.file.name}':`, uploadErr)
+              galeriUploadErrorMsg = `Gagal mengunggah foto '${item.file.name}': ${parseErrorMessage(uploadErr, "")}`
+              continue
+            }
 
-              await supabase.from("galeri_lembaga_organisasi").insert({
+            const { data: pubData } = supabase.storage
+              .from(LEMBAGA_ORGANISASI_BUCKET)
+              .getPublicUrl(storagePath)
+
+            const { error: insGaleriErr } = await supabase
+              .from("galeri_lembaga_organisasi")
+              .insert({
+                id: galleryRowId,
                 lembaga_organisasi_id: newId,
                 foto_url: pubData.publicUrl,
                 foto_storage_path: storagePath,
                 teks_alt: item.teks_alt.trim() || null,
-                is_cover: i === 0, // Foto pertama sebagai default cover
+                is_cover: i === 0,
                 is_active: true,
                 urutan: i + 1,
               })
+
+            if (insGaleriErr) {
+              console.error(`Metadata galeri insert error '${item.file.name}':`, insGaleriErr)
+              galeriUploadErrorMsg = `Gagal menyimpan metadata foto '${item.file.name}': ${parseErrorMessage(insGaleriErr, "")}`
+              try {
+                await supabase.storage.from(LEMBAGA_ORGANISASI_BUCKET).remove([storagePath])
+              } catch (rmErr) {
+                console.error("Clean up orphan storage file error:", rmErr)
+              }
             }
           }
-        }
-
-        // Step 5: Update Parent Row to set is_active = true (Auto-Publish)
-        const { error: activeErr } = await supabase
-          .from("lembaga_organisasi")
-          .update({ is_active: true })
-          .eq("id", newId)
-
-        if (activeErr) {
-          setPesanError("Data tersimpan, namun gagal mengaktifkan publikasi.")
-          return
         }
 
         clearLocalGaleriPreviews()
         setIsFormOpen(false)
         setFormMode(null)
         setEditingId(null)
-        setPesanSukses(`Lembaga / Organisasi '${parentData.nama}' berhasil ditambahkan.`)
+
+        if (galeriUploadErrorMsg) {
+          setPesanSukses(`Lembaga / Organisasi '${parentData.nama}' berhasil disimpan, namun foto gagal diunggah: ${galeriUploadErrorMsg}`)
+        } else {
+          setPesanSukses(`Lembaga / Organisasi '${parentData.nama}' berhasil ditambahkan.`)
+        }
         await loadData()
       } else if (formMode === "edit" && editingId) {
         // Mode Edit
-        // Step 1: Update Parent Data
+        // Step 1: Build Update Payload & Update Parent Data
+        const updatePayload = {
+          jenis: dataUtama.jenis === "organisasi" ? "organisasi" : "lembaga",
+          nama: dataUtama.nama.trim(),
+          deskripsi: dataUtama.deskripsi.trim(),
+          alamat: dataUtama.alamat.trim(),
+          kontak: dataUtama.kontak.trim() === "" ? null : dataUtama.kontak.trim(),
+          jam_kerja: dataUtama.jam_kerja.trim() === "" ? null : dataUtama.jam_kerja.trim(),
+        }
+
+        console.log("EDIT LEMBAGA PAYLOAD:", updatePayload)
+
         const { error: updateParentErr } = await supabase
           .from("lembaga_organisasi")
-          .update({
-            nama: dataUtama.nama.trim(),
-            deskripsi: dataUtama.deskripsi.trim(),
-            alamat: dataUtama.alamat.trim(),
-            kontak: dataUtama.kontak.trim() || null,
-            jam_kerja: dataUtama.jam_kerja.trim() || null,
-          })
+          .update(updatePayload)
           .eq("id", editingId)
 
         if (updateParentErr) {
+          console.error("SUPABASE EDIT LEMBAGA ERROR:", {
+            code: updateParentErr.code,
+            message: updateParentErr.message,
+            details: updateParentErr.details,
+            hint: updateParentErr.hint,
+          })
           setPesanError(parseErrorMessage(updateParentErr, "Gagal memperbarui data utama."))
           return
         }
@@ -660,10 +726,13 @@ export default function AdminLembagaOrganisasiPage() {
         // Step 5: Upload & Insert New Local Galeri Photos
         if (localGaleriFiles.length > 0) {
           const existingCount = existingGaleri.length
+          const hasExistingCover = existingGaleri.some((g) => g.is_cover && g.is_active)
+
           for (let i = 0; i < localGaleriFiles.length; i++) {
             const item = localGaleriFiles[i]
+            const galleryRowId = crypto.randomUUID()
             const filename = generateSafeFilename(item.file)
-            const storagePath = `${editingId}/${filename}`
+            const storagePath = `lembaga-organisasi/${editingId}/galeri/${galleryRowId}/${filename}`
 
             const { error: uploadErr } = await supabase.storage
               .from(LEMBAGA_ORGANISASI_BUCKET)
@@ -674,16 +743,24 @@ export default function AdminLembagaOrganisasiPage() {
                 .from(LEMBAGA_ORGANISASI_BUCKET)
                 .getPublicUrl(storagePath)
 
-              const hasExistingCover = existingGaleri.some((g) => g.is_cover)
-              await supabase.from("galeri_lembaga_organisasi").insert({
+              const isCoverItem = !hasExistingCover && i === 0
+              const { error: insErr } = await supabase.from("galeri_lembaga_organisasi").insert({
+                id: galleryRowId,
                 lembaga_organisasi_id: editingId,
                 foto_url: pubData.publicUrl,
                 foto_storage_path: storagePath,
                 teks_alt: item.teks_alt.trim() || null,
-                is_cover: !hasExistingCover && i === 0,
+                is_cover: isCoverItem,
                 is_active: true,
                 urutan: existingCount + i + 1,
               })
+
+              if (insErr) {
+                console.error("Gagal insert metadata galeri edit:", insErr)
+                await supabase.storage.from(LEMBAGA_ORGANISASI_BUCKET).remove([storagePath])
+              }
+            } else {
+              console.error("Upload error galeri edit:", uploadErr)
             }
           }
         }
@@ -703,12 +780,7 @@ export default function AdminLembagaOrganisasiPage() {
   }
 
   // Safe Delete Completer with Storage Cleanup
-  const handleSafeDelete = async (id: string, nama: string) => {
-    const confirmDelete = window.confirm(
-      `Apakah Anda yakin ingin menghapus '${nama}'?\n\nPERINGATAN: Seluruh foto cover, galeri, pengurus, dan tugas terkait di Storage & database akan dihapus secara permanen!`
-    )
-    if (!confirmDelete) return
-
+  const executeSafeDelete = async (id: string, nama: string) => {
     setDeletingId(id)
     setPesanSukses(null)
     setPesanError(null)
@@ -764,16 +836,22 @@ export default function AdminLembagaOrganisasiPage() {
         .maybeSingle()
 
       if (errDelete || !delData) {
-        setPesanError(parseErrorMessage(errDelete, "Gagal menghapus data utama."))
+        const msg = parseErrorMessage(errDelete, "Gagal menghapus data utama.")
+        setPesanError(msg)
+        showError(msg)
         setDeletingId(null)
         return
       }
 
-      setPesanSukses(`Data '${nama}' beserta seluruh rincian dan file Storage berhasil dihapus.`)
+      const msg = `Lembaga / Organisasi '${nama}' berhasil dihapus.`
+      setPesanSukses(msg)
+      showSuccess(msg)
       await loadData()
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
-      setPesanError(parseErrorMessage(e, "Terjadi kesalahan saat menghapus data."))
+      const msg = parseErrorMessage(e, "Terjadi kesalahan saat menghapus data.")
+      setPesanError(msg)
+      showError(msg)
     } finally {
       setDeletingId(null)
     }
@@ -913,6 +991,39 @@ export default function AdminLembagaOrganisasiPage() {
                       1
                     </span>
                     <h3 className="text-sm font-bold text-gray-900">Data Utama</h3>
+                  </div>
+
+                  {/* Kategori (Lembaga vs Organisasi) */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Kategori <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex items-center gap-4 pt-1">
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="jenis"
+                          value="lembaga"
+                          checked={dataUtama.jenis === "lembaga"}
+                          onChange={() => setDataUtama({ ...dataUtama, jenis: "lembaga" })}
+                          disabled={submittingForm}
+                          className="h-4 w-4 text-[#6b4b1d] focus:ring-[#6b4b1d]"
+                        />
+                        <span>Lembaga Nagari</span>
+                      </label>
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="jenis"
+                          value="organisasi"
+                          checked={dataUtama.jenis === "organisasi"}
+                          onChange={() => setDataUtama({ ...dataUtama, jenis: "organisasi" })}
+                          disabled={submittingForm}
+                          className="h-4 w-4 text-[#6b4b1d] focus:ring-[#6b4b1d]"
+                        />
+                        <span>Organisasi Nagari</span>
+                      </label>
+                    </div>
                   </div>
 
                   {/* Nama */}
@@ -1205,7 +1316,7 @@ export default function AdminLembagaOrganisasiPage() {
                   )}
                 </div>
 
-                {/* BAGIAN 4: GALERI FOTO DOKUMENTASI */}
+                {/* BAGIAN 4: GALERI FOTO DOKUMENTASI (OPSIONAL) */}
                 <div className="space-y-5 rounded-xl border border-gray-200/80 bg-gray-50/50 p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-3">
                     <div className="flex items-center gap-2">
@@ -1213,9 +1324,9 @@ export default function AdminLembagaOrganisasiPage() {
                         4
                       </span>
                       <div>
-                        <h3 className="text-sm font-bold text-gray-900">Galeri Foto Dokumen</h3>
+                        <h3 className="text-sm font-bold text-gray-900">Galeri Foto Dokumen <span className="text-xs font-normal text-gray-500">(Opsional)</span></h3>
                         <p className="text-xs text-gray-500">
-                          Tambahkan foto kegiatan/gedung. Gambar diunggah secara otomatis saat tombol simpan ditekan.
+                          Tambahkan foto kegiatan/gedung (opsional). Foto pertama otomatis menjadi cover.
                         </p>
                       </div>
                     </div>
@@ -1321,7 +1432,7 @@ export default function AdminLembagaOrganisasiPage() {
 
                   {existingGaleri.length === 0 && localGaleriFiles.length === 0 && (
                     <p className="text-xs text-gray-500 italic text-center py-4">
-                      Belum ada foto galeri yang ditambahkan. Klik tombol '+ Tambah Foto' di atas untuk memilih foto.
+                      Belum ada foto galeri yang ditambahkan (opsional). Klik &apos;+ Tambah Foto&apos; jika ingin mengunggah foto.
                     </p>
                   )}
                 </div>
@@ -1438,6 +1549,7 @@ export default function AdminLembagaOrganisasiPage() {
                           {/* Nama */}
                           <td className="px-6 py-4">
                             <div className="font-bold text-gray-900 break-words max-w-xs">{item.nama}</div>
+                            <span className="text-[11px] font-medium text-gray-400 capitalize">{item.jenis}</span>
                           </td>
 
                           {/* Alamat */}
@@ -1464,7 +1576,7 @@ export default function AdminLembagaOrganisasiPage() {
                               {/* Safe Delete Completer */}
                               <button
                                 type="button"
-                                onClick={() => handleSafeDelete(item.id, item.nama)}
+                                onClick={() => setDeleteTarget(item)}
                                 disabled={isDeleting}
                                 className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                               >
@@ -1504,6 +1616,7 @@ export default function AdminLembagaOrganisasiPage() {
 
                         <div className="min-w-0 flex-1">
                           <h3 className="text-base font-bold text-gray-900 break-words">{item.nama}</h3>
+                          <span className="text-xs font-medium text-gray-500 capitalize">{item.jenis}</span>
                         </div>
                       </div>
 
@@ -1528,7 +1641,7 @@ export default function AdminLembagaOrganisasiPage() {
 
                         <button
                           type="button"
-                          onClick={() => handleSafeDelete(item.id, item.nama)}
+                          onClick={() => setDeleteTarget({ id: item.id, nama: item.nama })}
                           disabled={isDeleting}
                           className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
                         >
@@ -1543,6 +1656,45 @@ export default function AdminLembagaOrganisasiPage() {
           )}
         </div>
       </div>
+
+      {/* Custom Confirmation Modals */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Lembaga / Organisasi?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus <strong>&quot;{deleteTarget?.nama}&quot;</strong>?
+            <br />
+            Seluruh data terkait (foto, pengurus, tugas, dan galeri) akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(deletingId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeSafeDelete(deleteTarget.id, deleteTarget.nama)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmModal
+        isOpen={isCloseConfirmOpen}
+        title="Batal Memproses Form?"
+        message="Apakah Anda yakin ingin membatalkan? Perubahan yang belum disimpan pada form ini akan hilang."
+        confirmText="Ya, Batalkan"
+        cancelText="Kembali Edit"
+        variant="warning"
+        onConfirm={() => {
+          setIsCloseConfirmOpen(false)
+          resetFormState()
+        }}
+        onCancel={() => setIsCloseConfirmOpen(false)}
+      />
     </div>
   )
 }

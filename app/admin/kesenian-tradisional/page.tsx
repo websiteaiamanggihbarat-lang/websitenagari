@@ -12,6 +12,8 @@ import {
   buatSlugJenisKesenian,
   getLabelKategoriKesenian,
 } from "@/lib/kesenian"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormKesenianState {
   nama_kesenian: string
@@ -92,6 +94,8 @@ export default function AdminKesenianTradisionalPage() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState<KesenianTradisional | null>(null)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -273,12 +277,12 @@ export default function AdminKesenianTradisionalPage() {
       const extValid = ["jpg", "jpeg", "png", "webp"].includes(ext)
 
       if (!mimeValid && !extValid) {
-        alert(`Format file "${file.name}" tidak didukung. Harap pilih gambar JPG, PNG, atau WebP.`)
+        showError(`Format file "${file.name}" tidak didukung. Harap pilih gambar JPG, PNG, atau WebP.`)
         return
       }
 
       if (file.size > 2 * 1024 * 1024) {
-        alert(`Ukuran file "${file.name}" melebihi batas 2 MB.`)
+        showError(`Ukuran file "${file.name}" melebihi batas 2 MB.`)
         return
       }
 
@@ -533,12 +537,11 @@ export default function AdminKesenianTradisionalPage() {
     }
   }
 
-  const handleHapus = async (item: KesenianTradisional) => {
-    const konfirmasi = window.confirm(
-      `Apakah Anda yakin ingin menghapus kesenian "${item.nama_kesenian}" beserta seluruh galeri dan foto terkait?`
-    )
-    if (!konfirmasi) return
+  const handleHapus = (item: KesenianTradisional) => {
+    setDeleteTarget(item)
+  }
 
+  const executeHapus = async (item: KesenianTradisional) => {
     setPesanSukses(null)
     setPesanError(null)
     setActionLoadingId(item.id)
@@ -568,14 +571,19 @@ export default function AdminKesenianTradisionalPage() {
         .eq("id", item.id)
 
       if (errDeleteMain) {
-        setPesanError(`Gagal menghapus record database kesenian: ${errDeleteMain.message}`)
+        const msg = `Gagal menghapus record database kesenian: ${errDeleteMain.message}`
+        setPesanError(msg)
+        showError(msg)
       } else {
-        setPesanSukses(`Kesenian "${item.nama_kesenian}" berhasil dihapus.`)
+        const msg = `Kesenian "${item.nama_kesenian}" berhasil dihapus.`
+        setPesanSukses(msg)
+        showSuccess(msg)
       }
       await fetchData()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setPesanError(`Terjadi kesalahan saat menghapus data: ${msg}`)
+      showError(`Terjadi kesalahan saat menghapus data: ${msg}`)
     } finally {
       setActionLoadingId(null)
     }
@@ -1127,6 +1135,31 @@ export default function AdminKesenianTradisionalPage() {
           )}
         </div>
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Kesenian Tradisional?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus kesenian <strong>&quot;{deleteTarget?.nama_kesenian}&quot;</strong>?
+            <br />
+            Seluruh galeri dan foto terkait akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(actionLoadingId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeHapus(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

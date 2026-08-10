@@ -12,6 +12,8 @@ import {
   getLabelJenisEntitas,
   getLabelPimpinan,
 } from "@/lib/kelompokTaniBumnag"
+import { useToast } from "@/components/ui/Toast"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormState {
   nama_entitas: string
@@ -120,6 +122,8 @@ export default function AdminKelompokTaniBumnagPage() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
+  const { showSuccess, showError } = useToast()
+  const [deleteTarget, setDeleteTarget] = useState<KelompokTaniBumnag | null>(null)
   const [newCreatedId, setNewCreatedId] = useState<string | null>(null)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -354,12 +358,11 @@ export default function AdminKelompokTaniBumnagPage() {
     }
   }
 
-  const handleHapus = async (item: KelompokTaniBumnag) => {
-    const konfirmasi = window.confirm(
-      `Apakah Anda yakin ingin menghapus data "${item.nama_entitas}"?\n\nPERINGATAN: Seluruh foto galeri dan daftar produk/unit usaha terkait juga akan dihapus secara permanen!`
-    )
-    if (!konfirmasi) return
+  const handleHapus = (item: KelompokTaniBumnag) => {
+    setDeleteTarget(item)
+  }
 
+  const executeHapus = async (item: KelompokTaniBumnag) => {
     setPesanSukses(null)
     setPesanError(null)
     setActionLoadingId(item.id)
@@ -389,14 +392,19 @@ export default function AdminKelompokTaniBumnagPage() {
         .eq("id", item.id)
 
       if (errDelete) {
-        setPesanError(formatSupabaseError(errDelete, `Gagal menghapus data "${item.nama_entitas}"`))
+        const msg = formatSupabaseError(errDelete, `Gagal menghapus data "${item.nama_entitas}"`)
+        setPesanError(msg)
+        showError(msg)
       } else {
-        setPesanSukses(`Data "${item.nama_entitas}" beserta rincian galeri & produk berhasil dihapus.`)
+        const msg = `Data "${item.nama_entitas}" berhasil dihapus.`
+        setPesanSukses(msg)
+        showSuccess(msg)
         await fetchData()
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setPesanError(`Terjadi kesalahan saat menghapus data: ${msg}`)
+      showError(`Terjadi kesalahan saat menghapus data: ${msg}`)
     } finally {
       setActionLoadingId(null)
     }
@@ -900,6 +908,31 @@ export default function AdminKelompokTaniBumnagPage() {
           )}
         </div>
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="⚠ Hapus Kelompok Tani / BUMNag?"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus data <strong>&quot;{deleteTarget?.nama_entitas}&quot;</strong>?
+            <br />
+            Seluruh foto galeri dan daftar produk/unit usaha terkait juga akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        isLoading={Boolean(actionLoadingId)}
+        loadingText="Menghapus..."
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await executeHapus(deleteTarget)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }
