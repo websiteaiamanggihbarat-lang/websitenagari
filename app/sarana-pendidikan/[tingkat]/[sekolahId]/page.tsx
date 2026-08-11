@@ -57,7 +57,7 @@ export default async function RincianSekolahPage({ params }: PageProps) {
   const jumlahStaf = Number(sekolah.jumlah_staf || 0)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-transparent text-[#1F2937]">
       <div className="pt-24 pb-32 px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Breadcrumb Navigasi */}
@@ -78,19 +78,20 @@ export default async function RincianSekolahPage({ params }: PageProps) {
             </span>
           </nav>
 
-          {/* 1. Nama Sekolah dan Alamat */}
-          <div className="mb-8 border-b border-gray-200 pb-8 scroll-slide-left">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-4">
+          {/* 1. Nama Sekolah dan Alamat Header Card */}
+          <div className="rounded-2xl border border-[#d1c2a0]/70 bg-gradient-to-br from-[#fbfaf7] via-white to-[#f7f2ea]/80 p-6 sm:p-8 lg:p-10 shadow-xs mb-8 sm:mb-10 scroll-slide-left">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-4">
               {sekolah.nama_sarana}
             </h1>
 
-            <p className="text-base md:text-lg text-gray-600 leading-relaxed flex items-start gap-2">
+            <p className="text-base md:text-lg text-gray-700 leading-relaxed flex items-start gap-2">
               <svg className="w-5 h-5 text-[#5a3b0d] flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span>{sekolah.alamat}</span>
             </p>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] via-[#b6a587] to-transparent rounded-full mt-5" />
           </div>
 
           {/* 2. Foto Utama Sekolah */}

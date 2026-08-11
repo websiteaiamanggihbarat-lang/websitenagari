@@ -80,7 +80,7 @@ export default async function DetailKelompokTaniBumnagPage({ params }: PageProps
     : null
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#fdfbf7] via-white to-[#f7f3eb]">
+    <div className="min-h-screen bg-public-warm text-[#1F2937]">
       <div className="pt-24 pb-32 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           {/* Navigasi Breadcrumb */}
@@ -107,14 +107,14 @@ export default async function DetailKelompokTaniBumnagPage({ params }: PageProps
           </div>
 
           {/* Main Layout Grid (2 Columns) */}
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-8 sm:gap-10 lg:grid-cols-3">
             {/* Left Main Content Area (2 Cols) */}
-            <div className="lg:col-span-2 space-y-10">
+            <div className="lg:col-span-2 space-y-8 sm:space-y-10">
               {/* Header Entitas */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
+              <div className="rounded-2xl border border-[#d1c2a0]/70 bg-gradient-to-br from-[#fbfaf7] via-white to-[#f7f2ea]/80 p-6 sm:p-8 shadow-xs">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
                   <span
-                    className={`inline-block px-3 py-1 text-xs font-bold rounded-lg text-white shadow-sm ${
+                    className={`inline-block px-3 py-1 text-xs font-bold rounded-lg text-white shadow-xs ${
                       detail.jenis_entitas === "kelompok_tani"
                         ? "bg-emerald-700"
                         : "bg-blue-700"
@@ -122,62 +122,81 @@ export default async function DetailKelompokTaniBumnagPage({ params }: PageProps
                   >
                     {getLabelJenisEntitas(detail.jenis_entitas)}
                   </span>
-                  <span className="text-xs font-semibold text-amber-800 bg-amber-100 px-3 py-1 rounded-lg">
+                  <span className="text-xs font-semibold text-[#5a3b0d] bg-[#f0e8db] border border-[#d1c2a0]/60 px-3 py-1 rounded-lg">
                     {getLabelBidang(detail.jenis_entitas)}: {detail.bidang_utama}
                   </span>
                 </div>
 
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
                   {detail.nama_entitas}
                 </h1>
+                <div className="w-20 h-1 bg-gradient-to-r from-[#2c1b01] via-[#b6a587] to-transparent rounded-full mt-4" />
               </div>
 
               {/* Seksi Deskripsi Lengkap */}
-              <div className="rounded-2xl border border-gray-200/80 bg-white p-6 sm:p-8 shadow-md">
-                <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-100 pb-3">
-                  Profil & Deskripsi
-                </h2>
-                <div className="prose prose-stone max-w-none text-gray-700 leading-relaxed whitespace-pre-line text-sm sm:text-base">
-                  {detail.deskripsi}
+              <section className="space-y-5 sm:space-y-6">
+                <div className="flex items-center p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#f0e8db] via-[#f7f2ea] to-[#fffdf9] border border-[#d1c2a0] shadow-xs">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-md mr-3.5 flex-shrink-0 text-white">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">Profil & Deskripsi</h2>
+                    <p className="text-xs text-[#6b4b1d] font-medium mt-0.5">Penjelasan lengkap seputar kegiatan entitas</p>
+                  </div>
                 </div>
-              </div>
+
+                <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 sm:p-8 shadow-xs">
+                  <div className="prose prose-stone max-w-none text-gray-800 leading-relaxed sm:leading-loose whitespace-pre-line text-sm sm:text-base text-justify">
+                    {detail.deskripsi}
+                  </div>
+                </div>
+              </section>
 
               {/* Seksi Produk, Unit Usaha, & Jasa */}
-              <div className="rounded-2xl border border-gray-200/80 bg-white p-6 sm:p-8 shadow-md">
-                <h2 className="text-xl font-bold text-gray-900 mb-2 border-b border-gray-100 pb-3">
-                  Produk, Unit Usaha, & Jasa
-                </h2>
-                <p className="text-xs text-gray-500 mb-6">
-                  Daftar hasil kegiatan, produk panen, unit bisnis, atau jasa yang dikelola oleh {detail.nama_entitas}.
-                </p>
+              <section className="space-y-5 sm:space-y-6">
+                <div className="flex items-center p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#f0e8db] via-[#f7f2ea] to-[#fffdf9] border border-[#d1c2a0] shadow-xs">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-md mr-3.5 flex-shrink-0 text-white">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">Produk, Unit Usaha, & Jasa</h2>
+                    <p className="text-xs text-[#6b4b1d] font-medium mt-0.5">Daftar hasil kegiatan, produk panen, unit bisnis, atau jasa</p>
+                  </div>
+                </div>
 
-                {detail.produk_usaha.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500 bg-gray-50 rounded-xl border border-gray-200">
-                    <p className="text-sm font-medium">Belum ada daftar produk / unit usaha yang dipublikasikan.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {detail.produk_usaha.map((prod) => (
-                      <div
-                        key={prod.id}
-                        className="p-4 rounded-xl border border-gray-200/80 bg-gray-50/60 hover:bg-gray-50 transition shadow-sm space-y-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900">
-                            {getLabelJenisItem(prod.jenis_item)}
-                          </span>
+                <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 sm:p-8 shadow-xs">
+                  {detail.produk_usaha.length === 0 ? (
+                    <div className="p-6 text-center text-gray-500 bg-[#fbfaf7] rounded-xl border border-[#d1c2a0]/60">
+                      <p className="text-sm font-medium">Belum ada daftar produk / unit usaha yang dipublikasikan.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      {detail.produk_usaha.map((prod) => (
+                        <div
+                          key={prod.id}
+                          className="p-5 rounded-xl border border-[#d1c2a0]/60 bg-[#fbfaf7] hover:bg-white transition shadow-2xs space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#f0e8db] text-[#2c1b01] border border-[#d1c2a0]/50">
+                              {getLabelJenisItem(prod.jenis_item)}
+                            </span>
+                          </div>
+                          <h3 className="text-base font-bold text-gray-900">{prod.nama_produk_usaha}</h3>
+                          {prod.deskripsi && (
+                            <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
+                              {prod.deskripsi}
+                            </p>
+                          )}
                         </div>
-                        <h3 className="text-base font-bold text-gray-900">{prod.nama_produk_usaha}</h3>
-                        {prod.deskripsi && (
-                          <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
-                            {prod.deskripsi}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
 
             {/* Right Sidebar (1 Col) */}

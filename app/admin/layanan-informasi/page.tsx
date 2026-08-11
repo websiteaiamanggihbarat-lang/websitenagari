@@ -1904,13 +1904,13 @@ export default function AdminLayananInformasiPage() {
                           <td className="px-6 py-4 text-gray-600 text-xs">
                             {formatTanggalIndo(item.updated_at)}
                           </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="px-6 py-4 text-right align-middle whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-2 flex-nowrap">
                               <button
                                 type="button"
                                 onClick={() => handleStartEdit(item)}
                                 disabled={submittingLayanan || isDeleting}
-                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+                                className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               >
                                 Edit
                               </button>
@@ -1919,7 +1919,7 @@ export default function AdminLayananInformasiPage() {
                                 type="button"
                                 onClick={() => handleDeleteLayanan(item)}
                                 disabled={isDeleting}
-                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                                className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               >
                                 {isDeleting ? "Menghapus..." : "Hapus"}
                               </button>

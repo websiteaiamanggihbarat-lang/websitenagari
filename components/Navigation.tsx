@@ -73,9 +73,6 @@ export default function Navigation() {
                 <h1 className="text-base sm:text-lg font-extrabold text-[#1F2937] tracking-tight group-hover:text-[#2C1B01] transition-colors">
                   Nagari Aia Manggih Barat
                 </h1>
-                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#B6A587]/20 text-[#2C1B01] border border-[#B6A587]/30">
-                  Resmi
-                </span>
               </div>
               <p className="text-xs text-[#6B7280] font-medium flex items-center gap-1.5">
                 <span>Pemerintahan Nagari</span>

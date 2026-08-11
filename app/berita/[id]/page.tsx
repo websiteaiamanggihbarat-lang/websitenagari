@@ -48,7 +48,7 @@ export default function BeritaDetail() {
   }, [id])
 
   return (
-    <div className="min-h-screen bg-public-warm text-[#1F2937]">
+    <div className="min-h-screen bg-transparent text-[#1F2937]">
       <div className="pt-16 pb-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Loading State */}

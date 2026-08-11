@@ -872,12 +872,12 @@ export default function AdminKelompokTaniBumnagPage() {
                         <td className="py-4 px-6 font-medium text-gray-700">
                           {item.bidang_utama}
                         </td>
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="py-4 px-6 text-right align-middle whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2 flex-nowrap">
                             {/* Tombol Kelola Galeri & Produk */}
                             <Link
                               href={`/admin/kelompok-tani-bumnag/${item.id}`}
-                              className="rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4] cursor-pointer"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4] cursor-pointer whitespace-nowrap flex-shrink-0"
                               title="Kelola foto galeri & produk"
                             >
                               Galeri & Produk
@@ -888,7 +888,7 @@ export default function AdminKelompokTaniBumnagPage() {
                               type="button"
                               onClick={() => handleOpenEdit(item)}
                               disabled={isBusy}
-                              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
                               Edit
                             </button>
@@ -898,7 +898,7 @@ export default function AdminKelompokTaniBumnagPage() {
                               type="button"
                               onClick={() => handleHapus(item)}
                               disabled={isBusy}
-                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
                               Hapus
                             </button>

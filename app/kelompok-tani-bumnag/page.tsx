@@ -43,7 +43,7 @@ export default async function KelompokTaniBumnagIndexPage({
   const listValid = listEntitas.filter((item) => item.cover !== null)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#fdfbf7] via-white to-[#f7f3eb]">
+    <div className="min-h-screen bg-public-warm text-[#1F2937]">
       <div className="pt-24 pb-32 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           {/* Header Section */}

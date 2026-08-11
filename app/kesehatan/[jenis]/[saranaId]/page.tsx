@@ -125,7 +125,7 @@ export default async function DetailSaranaKesehatanPage({ params }: PageProps) {
   const nomorTelepon = String(sarana.nomor_kontak || "").replace(/[^0-9+]/g, "")
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-public-warm text-[#1F2937]">
       <div className="pt-24 pb-32 px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* C1. Breadcrumb Navigasi */}
@@ -149,14 +149,14 @@ export default async function DetailSaranaKesehatanPage({ params }: PageProps) {
           </nav>
 
           {/* Header Sarana Kesehatan */}
-          <div className="mb-8 border-b border-gray-200 pb-8 scroll-slide-left">
+          <div className="rounded-2xl border border-[#d1c2a0]/70 bg-gradient-to-br from-[#fbfaf7] via-white to-[#f7f2ea]/80 p-6 sm:p-8 lg:p-10 shadow-xs mb-8 sm:mb-10 scroll-slide-left">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
               <div>
                 <span className={`inline-block rounded-md border px-3 py-1 text-xs font-semibold mb-3 ${getWarnaStatusOperasional(sarana.status_operasional)}`}>
                   {getLabelStatusOperasional(sarana.status_operasional)}
                 </span>
 
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight">
                   {sarana.nama_sarana}
                 </h1>
               </div>
@@ -164,22 +164,23 @@ export default async function DetailSaranaKesehatanPage({ params }: PageProps) {
               {/* C2. Tombol Kembali ke Kategori */}
               <Link
                 href={`/kesehatan/${jenisSlug}`}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-[#f7f2e8] hover:border-[#b6a587] shrink-0"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d1c2a0] bg-white px-4 py-2.5 text-sm font-bold text-[#2c1b01] shadow-2xs transition-all hover:bg-[#f7f2e8] hover:border-[#b6a587] shrink-0"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-[#5a3b0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
                 <span>Kembali ke {labelJenis}</span>
               </Link>
             </div>
 
-            <p className="text-base md:text-lg text-gray-600 leading-relaxed flex items-start gap-2">
+            <p className="text-base md:text-lg text-gray-700 leading-relaxed flex items-start gap-2 mt-3">
               <svg className="w-5 h-5 text-[#5a3b0d] flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span>{sarana.alamat}</span>
             </p>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] via-[#b6a587] to-transparent rounded-full mt-5" />
           </div>
 
           {/* C3. Foto Utama atau Fallback Foto UI */}

@@ -142,10 +142,10 @@ export default function LayananInformasiDinamis() {
                         <span>Telepon Pelayanan</span>
                       </span>
 
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold text-sm sm:text-base text-[#6b4b1d]">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold text-sm sm:text-base text-[#291a01]">
                         {pengaturan.telepon_pelayanan && (
                           telUtamaUrl ? (
-                            <a href={telUtamaUrl} className="hover:underline">
+                            <a href={telUtamaUrl} className="hover:text-[#4a3210] hover:underline">
                               {pengaturan.telepon_pelayanan}
                             </a>
                           ) : (
@@ -159,7 +159,7 @@ export default function LayananInformasiDinamis() {
 
                         {pengaturan.telepon_pelayanan_alternatif && (
                           telAltUrl ? (
-                            <a href={telAltUrl} className="hover:underline">
+                            <a href={telAltUrl} className="hover:text-[#4a3210] hover:underline">
                               {pengaturan.telepon_pelayanan_alternatif}
                             </a>
                           ) : (
@@ -174,7 +174,7 @@ export default function LayananInformasiDinamis() {
                   {pengaturan.whatsapp_pelayanan && (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white/80 gap-2 shadow-xs">
                       <span className="font-bold text-gray-900 text-sm sm:text-base flex items-center gap-2">
-                        <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-[#291a01] flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
                         </svg>
                         <span>WhatsApp Pelayanan</span>
@@ -184,7 +184,7 @@ export default function LayananInformasiDinamis() {
                           href={waPelayananUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-bold text-sm sm:text-base text-green-700 hover:underline"
+                          className="font-bold text-sm sm:text-base text-[#291a01] hover:text-[#4a3210] hover:underline"
                         >
                           {pengaturan.whatsapp_pelayanan} ↗
                         </a>
@@ -198,7 +198,7 @@ export default function LayananInformasiDinamis() {
                   {pengaturan.email_pelayanan && (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white/80 gap-2 shadow-xs">
                       <span className="font-bold text-gray-900 text-sm sm:text-base flex items-center gap-2">
-                        <svg className="w-4 h-4 text-[#2c1b01] flex-shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-[#291a01] flex-shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                         <span>Email Pelayanan</span>
@@ -208,7 +208,7 @@ export default function LayananInformasiDinamis() {
                           href={emailPelayananUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-bold text-sm sm:text-base text-teal-700 hover:underline break-all"
+                          className="font-bold text-sm sm:text-base text-[#291a01] hover:text-[#4a3210] hover:underline break-all"
                         >
                           {pengaturan.email_pelayanan} ↗
                         </a>
@@ -222,7 +222,7 @@ export default function LayananInformasiDinamis() {
                   {pengaturan.alamat_pelayanan && (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white/80 gap-2 shadow-xs">
                       <span className="font-bold text-gray-900 text-sm sm:text-base flex items-center gap-2">
-                        <svg className="w-4 h-4 text-[#2c1b01] flex-shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-[#291a01] flex-shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
@@ -233,7 +233,7 @@ export default function LayananInformasiDinamis() {
                           href={mapsUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-bold text-sm sm:text-base text-[#6b4b1d] hover:underline"
+                          className="font-bold text-sm sm:text-base text-[#291a01] hover:text-[#4a3210] hover:underline"
                         >
                           {pengaturan.alamat_pelayanan} (Maps ↗)
                         </a>
@@ -246,7 +246,7 @@ export default function LayananInformasiDinamis() {
               </div>
             </div>
 
-            {/* Kartu Waktu Pelayanan (Structure Jadwal Terstruktur) */}
+            {/* Kartu Waktu Pelayanan (Acuan Style Persas dari Kontak Pelayanan) */}
             <div className="bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] shadow-lg flex flex-col justify-between">
               <div>
                 <div className="flex items-center mb-6">
@@ -385,20 +385,22 @@ export default function LayananInformasiDinamis() {
                             <p className="text-sm text-gray-700 font-semibold">{item.biaya}</p>
                           </div>
 
-                          {/* Column 4: Action Buttons (col-span-3, Secondary "Lihat Contoh Surat" + Primary "Isi Form Pendataan") */}
+                          {/* Column 4: Action Buttons (col-span-3, Equal Width & Height Buttons) */}
                           <div className="md:col-span-3 flex flex-col sm:flex-row md:flex-col items-stretch sm:items-center md:items-end justify-start md:justify-end gap-2.5 pt-1">
                             {contohSuratUrl && (
                               <a
                                 href={contohSuratUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#d1c2a0] bg-[#f0e8db] px-4 py-2 text-xs sm:text-sm font-semibold text-[#2c1b01] shadow-xs hover:bg-[#ebdcc4] hover:border-[#b6a587] transition-all w-full sm:w-auto"
+                                className="inline-flex items-center justify-between gap-2.5 h-10 w-full sm:w-[210px] md:w-[210px] whitespace-nowrap rounded-xl border border-[#d1c2a0] bg-[#f0e8db] px-4 text-xs sm:text-sm font-semibold text-[#2c1b01] shadow-xs hover:bg-[#ebdcc4] hover:border-[#b6a587] transition-all flex-shrink-0"
                               >
-                                <svg className="h-4 w-4 text-[#6b4b1d] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <span>Lihat Contoh Surat</span>
-                                <svg className="h-3.5 w-3.5 opacity-70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <span className="flex items-center gap-2 truncate">
+                                  <svg className="h-4 w-4 text-[#6b4b1d] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                  <span>Lihat Contoh Surat</span>
+                                </span>
+                                <svg className="h-4 w-4 opacity-70 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002 2v-4M14 4h6m0 0v6m0-6L10 14" />
                                 </svg>
                               </a>
@@ -409,10 +411,15 @@ export default function LayananInformasiDinamis() {
                                 href={formUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#1a1200] px-4.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-xs hover:from-[#3a2604] hover:to-[#100b00] hover:shadow-md transition-all w-full sm:w-auto"
+                                className="inline-flex items-center justify-between gap-2.5 h-10 w-full sm:w-[210px] md:w-[210px] whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#1a1200] px-4 text-xs sm:text-sm font-semibold text-white shadow-xs hover:from-[#3a2604] hover:to-[#100b00] hover:shadow-md transition-all flex-shrink-0"
                               >
-                                <span>Isi Form Pendataan</span>
-                                <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <span className="flex items-center gap-2 truncate">
+                                  <svg className="h-4 w-4 text-amber-200/90 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                  </svg>
+                                  <span>Isi Form Pendataan</span>
+                                </span>
+                                <svg className="h-4 w-4 opacity-80 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002 2v-4M14 4h6m0 0v6m0-6L10 14" />
                                 </svg>
                               </a>
@@ -448,11 +455,11 @@ export default function LayananInformasiDinamis() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-8">
-            {/* WhatsApp Pengaduan */}
+            {/* WhatsApp Pengaduan (Acuan Style Persas dari Kontak Pelayanan) */}
             {waPengaduanUrl && (
-              <div className="bg-gradient-to-br from-emerald-50/70 to-white rounded-2xl p-8 border border-emerald-200/80 shadow-lg">
+              <div className="bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] shadow-lg">
                 <div className="flex items-center mb-6">
-                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/20 mr-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 flex-shrink-0">
                     <svg className="w-7 h-7 text-white" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
                     </svg>
@@ -466,7 +473,7 @@ export default function LayananInformasiDinamis() {
                   href={waPengaduanUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-all text-sm font-semibold shadow-md"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c1b01] to-[#1a1200] text-white rounded-full hover:from-[#3a2604] hover:to-[#100b00] transition-all text-sm font-semibold shadow-md"
                 >
                   <span>Hubungi WhatsApp Pengaduan</span>
                   <svg className="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -476,12 +483,12 @@ export default function LayananInformasiDinamis() {
               </div>
             )}
 
-            {/* Form Pengaduan URL */}
+            {/* Form Pengaduan URL (Acuan Style Persas dari Kontak Pelayanan) */}
             {formPengaduanUrl && (
               <div className="bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] shadow-lg">
                 <div className="flex items-center mb-6">
                   <div className="w-14 h-14 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4">
-                    <svg className="w-7 h-7 text-white" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-7 h-7 text-white" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>

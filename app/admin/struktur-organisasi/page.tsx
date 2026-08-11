@@ -820,7 +820,7 @@ export default function AdminStrukturOrganisasiPage() {
                         </td>
 
                         {/* 4. Aksi (Right-Aligned Fixed Position Buttons) */}
-                        <td className="px-6 py-4 align-middle text-right">
+                        <td className="px-6 py-4 align-middle text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2 flex-nowrap">
                             {isEditing ? (
                               <>
@@ -828,7 +828,7 @@ export default function AdminStrukturOrganisasiPage() {
                                   type="button"
                                   onClick={handleBatal}
                                   disabled={isSaving}
-                                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                                  className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                                 >
                                   Batal
                                 </button>
@@ -836,7 +836,7 @@ export default function AdminStrukturOrganisasiPage() {
                                   type="button"
                                   onClick={(e) => handleSimpan(e as unknown as FormEvent, item)}
                                   disabled={isSaving}
-                                  className="inline-flex items-center justify-center rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-3.5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                                  className="inline-flex min-h-[34px] items-center justify-center rounded-lg bg-[#2c1b01] hover:bg-[#6b4b1d] px-3.5 py-1.5 text-xs font-semibold text-white shadow-md transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                                 >
                                   {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
                                 </button>
@@ -846,7 +846,7 @@ export default function AdminStrukturOrganisasiPage() {
                                 type="button"
                                 onClick={() => handleEdit(item)}
                                 disabled={isSaving || isCleaning}
-                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                                className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               >
                                 Edit
                               </button>
@@ -857,7 +857,7 @@ export default function AdminStrukturOrganisasiPage() {
                                 type="button"
                                 onClick={() => handleRetryCleanup(item)}
                                 disabled={isCleaning || isSaving}
-                                className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-900 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                                className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-900 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               >
                                 {isCleaning ? "Membersihkan..." : "Bersihkan File Lama"}
                               </button>

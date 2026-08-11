@@ -1096,7 +1096,7 @@ export default function InformasiPendudukAdmin() {
                               type="button"
                               onClick={() => mulaiEdit(item)}
                               disabled={loading || isToggleLoading}
-                              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
                               Edit
                             </button>
@@ -1107,7 +1107,7 @@ export default function InformasiPendudukAdmin() {
                               onClick={() => handleQuickToggleActive(item)}
                               disabled={loading || isToggleLoading}
                               aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} data tanggal ${item.tanggal_data}`}
-                              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap ${
+                              className={`inline-flex min-h-[34px] items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0 ${
                                 item.is_active
                                   ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
                                   : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
@@ -1127,7 +1127,7 @@ export default function InformasiPendudukAdmin() {
                               type="button"
                               onClick={() => hapusData(item)}
                               disabled={loading || isToggleLoading}
-                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
                               Hapus
                             </button>

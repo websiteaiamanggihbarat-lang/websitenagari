@@ -1251,11 +1251,10 @@ export default function AdminPetaNagariPage() {
               <table className="w-full text-left text-sm border-collapse">
                 <thead className="bg-[#f7f2e8] text-xs uppercase tracking-wider text-[#2c1b01]">
                   <tr>
-                    <th scope="col" className="px-6 py-4 font-bold w-24">Preview</th>
-                    <th scope="col" className="px-6 py-4 font-bold">Judul & Jenis</th>
-                    <th scope="col" className="px-6 py-4 font-bold">Tahun & Sumber</th>
-                    <th scope="col" className="px-6 py-4 font-bold">Dokumen PDF</th>
-                    <th scope="col" className="px-6 py-4 text-right font-bold w-64">Aksi</th>
+                    <th scope="col" className="px-6 py-4 font-bold w-24 sm:w-28">Preview</th>
+                    <th scope="col" className="px-6 py-4 font-bold w-auto min-w-[200px]">Judul &amp; Jenis</th>
+                    <th scope="col" className="px-6 py-4 font-bold w-48 sm:w-56 whitespace-nowrap">Tahun &amp; Sumber</th>
+                    <th scope="col" className="px-6 py-4 text-right font-bold w-64 sm:w-72 whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
@@ -1273,7 +1272,7 @@ export default function AdminPetaNagariPage() {
                         className="hover:bg-gray-50/80 transition-colors"
                       >
                         {/* Preview */}
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 align-middle">
                           <div className="relative aspect-video w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 p-0.5">
                             <img
                               src={item.gambar_url}
@@ -1284,8 +1283,8 @@ export default function AdminPetaNagariPage() {
                         </td>
 
                         {/* Judul & Jenis */}
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-gray-900">
+                        <td className="px-6 py-4 align-middle min-w-0">
+                          <div className="font-bold text-gray-900 break-words">
                             {item.judul_peta}
                           </div>
                           <div className="mt-1">
@@ -1301,7 +1300,7 @@ export default function AdminPetaNagariPage() {
                         </td>
 
                         {/* Tahun & Sumber */}
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 align-middle whitespace-nowrap">
                           <div className="text-xs font-semibold text-gray-900">
                             Tahun: {item.tahun_peta}
                           </div>
@@ -1310,48 +1309,16 @@ export default function AdminPetaNagariPage() {
                           </div>
                         </td>
 
-                        {/* Dokumen PDF */}
-                        <td className="px-6 py-4">
-                          {item.file_url ? (
-                            <a
-                              href={item.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label={`Buka dokumen PDF untuk ${item.judul_peta}`}
-                              className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 border border-red-200 hover:bg-red-100 transition"
-                            >
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                                />
-                              </svg>
-                              <span>PDF Tersedia ↗</span>
-                            </a>
-                          ) : (
-                            <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">
-                              Tidak ada PDF
-                            </span>
-                          )}
-                        </td>
-
                         {/* Aksi (Edit, Aktifkan/Nonaktifkan, Hapus/Retry) */}
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-6 py-4 text-right align-middle whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2 flex-nowrap">
                             {/* Tombol Edit */}
                             <button
                               type="button"
                               onClick={() => handleOpenEdit(item)}
                               disabled={isProcessing}
                               aria-label={`Edit ${item.judul_peta}`}
-                              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
                               Edit
                             </button>
@@ -1362,7 +1329,7 @@ export default function AdminPetaNagariPage() {
                               onClick={() => handleToggleStatus(item)}
                               disabled={isProcessing}
                               aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.judul_peta}`}
-                              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all disabled:opacity-50 cursor-pointer ${
+                              className={`inline-flex min-h-[34px] items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0 ${
                                 item.is_active
                                   ? "border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200"
                                   : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
@@ -1381,7 +1348,7 @@ export default function AdminPetaNagariPage() {
                               onClick={() => handleHapusRecord(item)}
                               disabled={isProcessing}
                               aria-label={`${isRetryMode ? "Retry Hapus" : "Hapus"} ${item.judul_peta}`}
-                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
                               {processingDeleteId === item.id
                                 ? "..."

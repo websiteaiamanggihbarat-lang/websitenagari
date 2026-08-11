@@ -256,10 +256,10 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
   )
 
   return (
-    <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-left">
+    <div className="group bg-gradient-to-br from-[#f0e8db] to-white rounded-2xl p-8 border border-[#d1c2a0] shadow-lg hover:border-[#b6a587] transition-all duration-300 scroll-slide-left">
       {/* Judul kartu */}
       <div className="flex items-center mb-6">
-        <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
+        <div className="w-12 h-12 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-md shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
           <svg
             className="w-6 h-6 text-white"
             fill="none"
@@ -303,7 +303,7 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
         {/* Tiga Kotak Statistik Ringkasan */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 my-4">
           {/* 1. Jumlah Penduduk */}
-          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#d1c2a0]/60 bg-white p-4 text-center shadow-xs hover:border-[#6b4b1d]/50 transition-colors">
             <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
               Jumlah Penduduk
             </div>
@@ -320,7 +320,7 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
           </div>
 
           {/* 2. Laki-laki */}
-          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#d1c2a0]/60 bg-white p-4 text-center shadow-xs hover:border-[#6b4b1d]/50 transition-colors">
             <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
               Laki-laki
             </div>
@@ -337,7 +337,7 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
           </div>
 
           {/* 3. Perempuan */}
-          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#e6ddcf] bg-gradient-to-b from-[#fdfbf7] to-[#f7f2e8] p-4 text-center shadow-sm hover:border-[#b6a587] transition-colors">
+          <div className="flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-[#d1c2a0]/60 bg-white p-4 text-center shadow-xs hover:border-[#6b4b1d]/50 transition-colors">
             <div className="flex items-center justify-center min-h-[24px] text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
               Perempuan
             </div>

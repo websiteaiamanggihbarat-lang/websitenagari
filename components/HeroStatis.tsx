@@ -1,6 +1,6 @@
 export default function HeroStatis() {
   return (
-    <section className="relative h-screen min-h-[620px] px-6 lg:px-8 overflow-hidden flex items-center justify-center bg-[#1A1200]">
+    <section className="relative h-screen min-h-[620px] px-6 lg:px-8 overflow-hidden flex items-center justify-center bg-gray-950">
       {/* Background Image Existing */}
       <div className="absolute inset-0">
         <div
@@ -10,8 +10,8 @@ export default function HeroStatis() {
           }}
         ></div>
 
-        {/* Warm Dark Mahogany Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1A1200]/80 via-[#2C1B01]/70 to-[#1A1200]/85 z-[1]"></div>
+        {/* Stronger Neutral Dark Gradient Overlay for Readability & Premium Contrast */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 z-[1]"></div>
       </div>
 
       {/* Hero Content Panel */}

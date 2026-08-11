@@ -734,12 +734,12 @@ export default function KesehatanAdminIndex() {
                           {item.status_publikasi === "dipublikasikan" ? "Dipublikasikan" : "Draft"}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                      <td className="py-4 px-6 text-right align-middle whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2 flex-nowrap">
                           {/* Tombol 1: Kelola Sarana Kesehatan */}
                           <Link
                             href={`/admin/kesehatan/${item.id}`}
-                            className="rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4] cursor-pointer"
+                            className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-[#6b4b1d] bg-[#f7f2e8] px-3 py-1.5 text-xs font-semibold text-[#6b4b1d] shadow-sm hover:bg-[#ebdcc4] cursor-pointer whitespace-nowrap flex-shrink-0"
                             title="Kelola sarana, fasilitas & tenaga kesehatan"
                           >
                             Kelola Sarana Kesehatan
@@ -750,7 +750,7 @@ export default function KesehatanAdminIndex() {
                             type="button"
                             onClick={() => mulaiEditPendataan(item)}
                             disabled={loading}
-                            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+                            className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                           >
                             Edit
                           </button>
@@ -761,7 +761,7 @@ export default function KesehatanAdminIndex() {
                               type="button"
                               onClick={() => handleToggleActive(item)}
                               disabled={loading}
-                              className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               title="Nonaktifkan periode pendataan dari website publik"
                             >
                               Nonaktifkan
@@ -771,7 +771,7 @@ export default function KesehatanAdminIndex() {
                               type="button"
                               onClick={() => handleToggleActive(item)}
                               disabled={loading}
-                              className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100 disabled:opacity-50 cursor-pointer"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               title="Aktifkan periode pendataan untuk website publik"
                             >
                               Aktifkan
@@ -783,7 +783,7 @@ export default function KesehatanAdminIndex() {
                             type="button"
                             onClick={() => hapusPendataan(item)}
                             disabled={loading}
-                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                            className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                           >
                             Hapus
                           </button>

@@ -1198,13 +1198,13 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
                           <td className="py-3.5 px-6 text-xs text-gray-600 max-w-xs truncate">
                             {item.deskripsi || "-"}
                           </td>
-                          <td className="py-3.5 px-6 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="py-3.5 px-6 text-right align-middle whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-2 flex-nowrap">
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditProduk(item)}
                                 disabled={isBusy}
-                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+                                className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               >
                                 Edit
                               </button>
@@ -1212,7 +1212,7 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
                                 type="button"
                                 onClick={() => handleHapusProduk(item)}
                                 disabled={isBusy}
-                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                                className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               >
                                 Hapus
                               </button>

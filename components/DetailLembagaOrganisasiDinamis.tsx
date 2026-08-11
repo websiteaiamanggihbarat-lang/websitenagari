@@ -105,7 +105,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
   const contactInfo = hasKontak ? getContactLinkInfo(kontakVal) : null
 
   return (
-    <div className="bg-white text-gray-900 space-y-10 pb-16">
+    <div className="bg-transparent text-gray-900 space-y-6 sm:space-y-8 pb-16">
       {/* ========================================================================= */}
       {/* 1. SLIDER FOTO BESAR UTAMA (Clean, Tanpa Border, Frame, atau Outer Card)   */}
       {/* ========================================================================= */}
@@ -176,9 +176,9 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
       )}
 
       {/* ========================================================================= */}
-      {/* 2. JUDUL IDENTITAS LEMBAGA (Header Container Roomy & Soft Cream Accent)    */}
+      {/* 2. JUDUL IDENTITAS LEMBAGA (Header Standalone Card)                        */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-[#d1c2a0]/70 bg-gradient-to-br from-[#fbfaf7] via-white to-[#f7f2ea]/80 p-6 sm:p-8 lg:p-10 shadow-xs mb-8">
+      <div className="rounded-2xl border border-[#d1c2a0]/70 bg-gradient-to-br from-[#fbfaf7] via-white to-[#f7f2ea]/80 p-6 sm:p-8 lg:p-10 shadow-xs">
         <div className="inline-block rounded-lg bg-[#f0e8db] border border-[#d1c2a0] px-3.5 py-1.5 text-xs font-bold text-[#2c1b01] tracking-wider uppercase mb-4 shadow-2xs">
           {detail.jenis === "lembaga" ? "Lembaga Nagari" : "Organisasi Nagari"}
         </div>
@@ -189,12 +189,12 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTION 1: PROFIL / DESKRIPSI (Rata Kanan Kiri / Justify)                */}
+      {/* CARD 2: PROFIL / DESKRIPSI (Header + Content dalam Satu Card/Container)     */}
       {/* ========================================================================= */}
-      <section className="space-y-4">
-        {/* Header Section Bertema Krem/Cokelat */}
-        <div className="flex items-center p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#f0e8db] via-[#f7f2ea] to-[#fffdf9] border border-[#d1c2a0] shadow-sm">
-          <div className="w-11 h-11 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-md shadow-[rgba(44,27,1,0.25)] mr-4 flex-shrink-0">
+      <section className="rounded-2xl border border-[#d1c2a0]/70 bg-white shadow-xs overflow-hidden">
+        {/* Header Area di dalam Outer Card */}
+        <div className="flex items-center p-4 sm:p-5 bg-gradient-to-r from-[#f0e8db] via-[#f7f2ea] to-[#fffdf9] border-b border-[#d1c2a0]/70">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-md shadow-[rgba(44,27,1,0.25)] mr-4 flex-shrink-0">
             <svg className="w-5 h-5 text-white" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
             </svg>
@@ -205,19 +205,19 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
           </div>
         </div>
 
-        {/* Body Content Polos Putih dengan Border Krem Lembut & Text Justify */}
-        <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 sm:p-8 shadow-xs text-base sm:text-lg text-gray-800 leading-relaxed sm:leading-loose whitespace-pre-line font-normal text-justify">
+        {/* Content Area di dalam Outer Card yang Sama */}
+        <div className="p-6 sm:p-8 text-base sm:text-lg text-gray-800 leading-relaxed sm:leading-loose whitespace-pre-line font-normal text-justify">
           {detail.deskripsi}
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 2: INFORMASI LEMBAGA (SATU Section Besar Gabungan)                */}
+      {/* CARD 3: INFORMASI LEMBAGA (Header + Content dalam Satu Card/Container)      */}
       {/* ========================================================================= */}
-      <section className="space-y-4">
-        {/* Header Section Bertema Krem/Cokelat */}
-        <div className="flex items-center p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#f0e8db] via-[#f7f2ea] to-[#fffdf9] border border-[#d1c2a0] shadow-sm">
-          <div className="w-11 h-11 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-md shadow-[rgba(44,27,1,0.25)] mr-4 flex-shrink-0">
+      <section className="rounded-2xl border border-[#d1c2a0]/70 bg-white shadow-xs overflow-hidden">
+        {/* Header Area di dalam Outer Card */}
+        <div className="flex items-center p-4 sm:p-5 bg-gradient-to-r from-[#f0e8db] via-[#f7f2ea] to-[#fffdf9] border-b border-[#d1c2a0]/70">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-[#2c1b01] to-[#1a1200] rounded-xl flex items-center justify-center shadow-md shadow-[rgba(44,27,1,0.25)] mr-4 flex-shrink-0">
             <svg className="w-5 h-5 text-white" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
@@ -228,8 +228,8 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
           </div>
         </div>
 
-        {/* SATU Body Besar Putih Gabungan dengan Border Krem Lembut */}
-        <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 sm:p-8 shadow-xs space-y-8">
+        {/* Content Area di dalam Outer Card yang Sama */}
+        <div className="p-6 sm:p-8 space-y-8">
           {/* 1. BAGIAN ATAS: 3 Card Sejajar Desktop (Alamat, Kontak, Jam Operasional) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1: Alamat */}

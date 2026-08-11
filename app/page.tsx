@@ -8,12 +8,12 @@ import KelompokTaniBumnagDinamis from "@/components/KelompokTaniBumnagDinamis";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-public-warm text-[#1F2937]">
+    <div className="min-h-screen bg-transparent text-[#1F2937]">
       {/* Hero Beranda Dinamis */}
       <HeroBerandaDinamis />
 
       {/* Visi Misi Pelayanan Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-white border-b border-[#E6DDCF]/50">
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-transparent border-b border-[#E6DDCF]/50">
         <div className="relative max-w-6xl mx-auto scroll-slide-bottom">
           <div className="text-center mb-12">
             <span className="inline-block px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-[0.2em] bg-[#B6A587]/20 text-[#2C1B01] border border-[#B6A587]/30 mb-3">
@@ -88,7 +88,7 @@ export default function Home() {
       </section>
 
       {/* Peta Section */}
-      <section id="peta" className="py-20 px-4 sm:px-6 lg:px-8 bg-public-warm">
+      <section id="peta" className="py-20 px-4 sm:px-6 lg:px-8 bg-transparent">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 scroll-slide-left">
             <span className="inline-block px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-[0.2em] bg-[#B6A587]/20 text-[#2C1B01] border border-[#B6A587]/30 mb-3">
@@ -110,7 +110,7 @@ export default function Home() {
       </section>
 
       {/* Profil Nagari Section */}
-      <section id="profil" className="py-20 px-4 sm:px-6 lg:px-8 bg-white border-t border-[#E6DDCF]/50">
+      <section id="profil" className="py-20 px-4 sm:px-6 lg:px-8 bg-transparent border-t border-[#E6DDCF]/50">
         <div className="max-w-6xl mx-auto space-y-14">
           <div className="text-center scroll-slide-left">
             <span className="inline-block px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-[0.2em] bg-[#B6A587]/20 text-[#2C1B01] border border-[#B6A587]/30 mb-3">

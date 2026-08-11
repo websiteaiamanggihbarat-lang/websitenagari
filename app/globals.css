@@ -58,6 +58,11 @@ p, h1, h2, h3, h4, h5, h6, span, a, div {
   word-break: break-word;
 }
 
+/* Explicit font inheritance for all form controls, buttons, dropdowns, and tables */
+input, button, select, textarea, option, table, th, td {
+  font-family: inherit;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 9px;
@@ -289,14 +294,16 @@ p, h1, h2, h3, h4, h5, h6, span, a, div {
   border-radius: 4px;
 }
 
-/* Warm Modern Government Dashboard Utility Design Tokens */
+/* Warm Modern Government Dashboard Utility Design Tokens with Visible Geometric Minangkabau Pattern */
 .bg-admin-warm {
-  background-color: #fcfaf7;
+  background-color: #f8f5ef;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(230, 221, 207, 0.3) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(240, 232, 219, 0.4) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.6) 0px, transparent 100%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cpath d='M48 0 L96 48 L48 96 L0 48 Z' fill='none' stroke='%232c1b01' stroke-width='1.2' stroke-opacity='0.06'/%3E%3Cpath d='M48 16 L80 48 L48 80 L16 48 Z' fill='none' stroke='%23b6a587' stroke-width='1' stroke-opacity='0.08'/%3E%3Cpath d='M0 0 L96 96 M96 0 L0 96' fill='none' stroke='%232c1b01' stroke-width='0.75' stroke-opacity='0.03'/%3E%3C/svg%3E"),
+    radial-gradient(circle at 10% 20%, rgba(230, 221, 207, 0.4) 0px, transparent 40%),
+    radial-gradient(circle at 90% 70%, rgba(240, 232, 219, 0.5) 0px, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.5) 0px, transparent 100%);
   background-attachment: fixed;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
 }
 
 /* Decorative subtle gold line divider */
@@ -352,30 +359,43 @@ p, h1, h2, h3, h4, h5, h6, span, a, div {
   box-shadow: 0 0 0 3px rgba(44, 27, 1, 0.12);
 }
 
-/* Public Site Warm Modern Government Design Utilities */
+/* Public Site Warm Modern Government Design Utilities with Multi-Layer Pucuk Rebung Flow & Woven Geometry */
+.public-pattern-overlay {
+  background-image: 
+    /* Layer 1: Main Pucuk Rebung Flow & Woven Geometry (140px) */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cpath d='M70 10 L125 65 L70 120 L15 65 Z' fill='none' stroke='%232c1b01' stroke-width='1.2' stroke-opacity='0.14'/%3E%3Cpath d='M70 28 L102 65 L70 102 L38 65 Z' fill='none' stroke='%23b6a587' stroke-width='1.0' stroke-opacity='0.18'/%3E%3Cpath d='M70 45 L85 65 L70 85 L55 65 Z' fill='none' stroke='%235a3b0d' stroke-width='0.8' stroke-opacity='0.14'/%3E%3Cpath d='M0 25 L45 70 M95 70 L140 25 M0 115 L45 70 M95 70 L140 115' fill='none' stroke='%235a3b0d' stroke-width='0.8' stroke-opacity='0.12'/%3E%3Cpath d='M25 0 L70 45 L115 0 M25 140 L70 95 L115 140' fill='none' stroke='%232c1b01' stroke-width='1.0' stroke-opacity='0.10'/%3E%3C/svg%3E"),
+    /* Layer 2: Secondary Large-Scale Ornaments (480px) */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='480' viewBox='0 0 480 480'%3E%3Cpath d='M240 20 L440 220 L240 420 L40 220 Z' fill='none' stroke='%232c1b01' stroke-width='1.5' stroke-opacity='0.08'/%3E%3Cpath d='M240 60 L400 220 L240 380 L80 220 Z' fill='none' stroke='%23b6a587' stroke-width='1.2' stroke-opacity='0.10'/%3E%3Cpath d='M240 120 L320 200 L240 280 L160 200 Z' fill='none' stroke='%235a3b0d' stroke-width='1.0' stroke-opacity='0.08'/%3E%3Cpath d='M0 0 L120 120 M480 0 L360 120 M480 480 L360 360 M0 480 L120 360' fill='none' stroke='%232c1b01' stroke-width='1.0' stroke-opacity='0.07'/%3E%3C/svg%3E"),
+    /* Layer 3: Warm Radial Depth Glows */
+    radial-gradient(circle at 10% 15%, rgba(182, 165, 135, 0.18) 0px, transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba(90, 59, 13, 0.10) 0px, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(251, 250, 247, 0.4) 0px, transparent 100%);
+  background-attachment: fixed;
+  background-repeat: repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-position: 0 0, 0 0, center, center, center;
+  background-size: 140px 140px, 480px 480px, auto, auto, auto;
+}
+
 .bg-public-warm {
   background-color: #fbfaf7;
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(182, 165, 135, 0.08) 0%, transparent 65%),
-    radial-gradient(circle at 100% 100%, rgba(90, 59, 13, 0.04) 0%, transparent 50%);
 }
 
 .public-card {
-  background-color: #ffffff;
-  border: 1px solid #e6ddcf;
-  border-radius: 1.25rem;
-  box-shadow: 0 4px 20px -2px rgba(44, 27, 1, 0.04), 0 2px 6px -1px rgba(44, 27, 1, 0.02);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(145deg, #f0e8db 0%, #ffffff 100%);
+  border: 1px solid #d1c2a0;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px -2px rgba(44, 27, 1, 0.05), 0 2px 6px -1px rgba(44, 27, 1, 0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 0;
   overflow: hidden;
 }
 
 .public-card-hover {
-  background-color: #ffffff;
-  border: 1px solid #e6ddcf;
-  border-radius: 1.25rem;
-  box-shadow: 0 4px 20px -2px rgba(44, 27, 1, 0.04), 0 2px 6px -1px rgba(44, 27, 1, 0.02);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(145deg, #f0e8db 0%, #ffffff 100%);
+  border: 1px solid #d1c2a0;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px -2px rgba(44, 27, 1, 0.05), 0 2px 6px -1px rgba(44, 27, 1, 0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 0;
   overflow: hidden;
 }
@@ -384,6 +404,20 @@ p, h1, h2, h3, h4, h5, h6, span, a, div {
   transform: translateY(-3px);
   border-color: #b6a587;
   box-shadow: 0 16px 32px -6px rgba(44, 27, 1, 0.08), 0 8px 16px -4px rgba(44, 27, 1, 0.04);
+}
+
+.public-inner-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(209, 194, 160, 0.6);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(44, 27, 1, 0.03);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.public-inner-card-hover:hover {
+  background-color: #fcfaf7;
+  border-color: rgba(107, 75, 29, 0.5);
+  box-shadow: 0 6px 16px -3px rgba(44, 27, 1, 0.08);
 }
 
 .gonjong-line {

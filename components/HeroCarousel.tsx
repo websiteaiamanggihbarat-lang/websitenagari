@@ -235,8 +235,8 @@ export default function HeroCarousel({ slides }: HeroCarouselProps) {
         })}
       </div>
 
-      {/* LAYER 2: Warm Dark Mahogany Gradient Overlay (z-[1]) */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#1A1200]/80 via-[#2C1B01]/70 to-[#1A1200]/85 z-[1]" />
+      {/* LAYER 2: Stronger Neutral Dark Gradient Overlay for Readability & Premium Contrast (z-[1]) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 z-[1]" />
 
       {/* LAYER 3: Static Hero Text (z-10, Tidak Ikut Fade/Loop) */}
       <div className="relative max-w-5xl mx-auto text-center animate-fade-in z-10 space-y-5">

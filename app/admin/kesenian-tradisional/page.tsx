@@ -1108,14 +1108,14 @@ export default function AdminKesenianTradisionalPage() {
                         <td className="py-4 px-6 font-medium text-gray-700">
                           {item.alamat || "-"}
                         </td>
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="py-4 px-6 text-right align-middle whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2 flex-nowrap">
                             {/* Tombol Edit */}
                             <button
                               type="button"
                               onClick={() => handleOpenEdit(item)}
                               disabled={isBusy}
-                              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
                               Edit
                             </button>
@@ -1125,7 +1125,7 @@ export default function AdminKesenianTradisionalPage() {
                               type="button"
                               onClick={() => handleHapus(item)}
                               disabled={isBusy}
-                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
                               Hapus
                             </button>

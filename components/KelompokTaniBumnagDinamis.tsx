@@ -80,11 +80,10 @@ export default async function KelompokTaniBumnagDinamis() {
                   />
                   <div className="absolute top-2 left-2">
                     <span
-                      className={`inline-block px-2.5 py-0.5 text-[11px] font-semibold rounded-md text-white shadow-sm backdrop-blur-md ${
-                        item.jenis_entitas === "kelompok_tani"
+                      className={`inline-block px-2.5 py-0.5 text-[11px] font-semibold rounded-md text-white shadow-sm backdrop-blur-md ${item.jenis_entitas === "kelompok_tani"
                           ? "bg-emerald-800/85"
                           : "bg-blue-800/85"
-                      }`}
+                        }`}
                     >
                       {getLabelJenisEntitas(item.jenis_entitas)}
                     </span>

@@ -784,14 +784,14 @@ export default function AdminGaleriPage() {
                         </td>
 
                         {/* Aksi (Hapus / Retry Hapus) */}
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="py-4 px-6 text-right align-middle whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2 flex-nowrap">
                             {item.is_active ? (
                               <button
                                 type="button"
                                 onClick={() => handleHapus(item)}
                                 disabled={isDeleting}
-                                className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                                className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               >
                                 {isDeleting ? "Menghapus..." : "Hapus"}
                               </button>
@@ -800,9 +800,9 @@ export default function AdminGaleriPage() {
                                 type="button"
                                 onClick={() => handleRetryHapus(item)}
                                 disabled={isDeleting}
-                                className="rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-800 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer"
+                                className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-800 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                               >
-                                {isDeleting ? "Memproses..." : "Retry Hapus"}
+                                {isDeleting ? "Proses..." : "Coba Hapus Lagi"}
                               </button>
                             )}
                           </div>

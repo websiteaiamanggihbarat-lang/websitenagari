@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function Footer() {
   return (
-    <footer className="bg-gradient-to-br from-[#1A1200] via-[#2C1B01] to-[#3D2605] text-white mt-auto border-t border-[#B6A587]/30">
+    <footer className="relative z-10 isolation-isolate bg-[#2C1B01] opacity-100 text-white mt-auto border-t border-[#B6A587]/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Column 1: Brand & About */}
@@ -167,11 +167,20 @@ export default function Footer() {
         </div>
 
         {/* Footer Bottom Bar */}
-        <div className="border-t border-[#5A3B0D]/80 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#E6DDCF]">
-          <p>© {new Date().getFullYear()} Kuliah Kerja Nyata Reguler 1 Universitas Andalas — All Rights Reserved.</p>
-          <div className="flex items-center space-x-4">
-            <Link href="/login" className="hover:text-[#B6A587] transition-colors text-[11px] font-semibold">
-              Portal Admin
+        <div className="border-t border-[#B6A587]/20 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#E6DDCF]">
+          <p>© {new Date().getFullYear()} Kuliah Kerja Nyata Reguler II Universitas Andalas — All Rights Reserved.</p>
+          <div className="flex items-center">
+            <Link
+              href="/admin"
+              className="inline-flex min-h-[38px] items-center gap-2 px-4 py-2 rounded-xl bg-[#F7F2E8] hover:bg-white text-[#2C1B01] text-xs font-extrabold shadow-xs hover:shadow-md border border-[#B6A587]/40 hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-[#5A3B0D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span>Portal Admin</span>
+              <svg className="w-3.5 h-3.5 text-[#2C1B01]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
             </Link>
           </div>
         </div>

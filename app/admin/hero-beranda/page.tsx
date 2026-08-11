@@ -1347,7 +1347,7 @@ export default function AdminHeroBerandaPage() {
                               onClick={() => bukaFormEdit(item)}
                               disabled={loadingForm || isToggleLoading || isDeleteLoading}
                               aria-label={`Edit metadata ${item.nama_internal}`}
-                              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                              className="inline-flex min-h-[34px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0"
                             >
                               Edit
                             </button>
@@ -1358,7 +1358,7 @@ export default function AdminHeroBerandaPage() {
                               onClick={() => handleQuickToggle(item)}
                               disabled={loadingForm || isToggleLoading || isDeleteLoading}
                               aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.nama_internal}`}
-                              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap ${
+                              className={`inline-flex min-h-[34px] items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0 ${
                                 item.is_active
                                   ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
                                   : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
@@ -1378,8 +1378,8 @@ export default function AdminHeroBerandaPage() {
                               type="button"
                               onClick={() => handleSafeDelete(item)}
                               disabled={loadingForm || isToggleLoading || isDeleteLoading}
-                              aria-label={`${isRetry ? "Retry hapus" : "Hapus"} ${item.nama_internal}`}
-                              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap ${
+                              aria-label={`${isRetry ? "Retry Hapus" : "Hapus"} ${item.nama_internal}`}
+                              className={`inline-flex min-h-[34px] items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap flex-shrink-0 ${
                                 isRetry
                                   ? "border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200"
                                   : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
