@@ -275,3 +275,114 @@ body {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* Warm Modern Government Dashboard Utility Design Tokens */
+.bg-admin-warm {
+  background-color: #fcfaf7;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(230, 221, 207, 0.3) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(240, 232, 219, 0.4) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.6) 0px, transparent 100%);
+  background-attachment: fixed;
+}
+
+/* Decorative subtle gold line divider */
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(182, 165, 135, 0.4) 50%, transparent 100%);
+}
+
+/* Elevated White Admin Card with micro-interactions */
+.admin-card {
+  background-color: #ffffff;
+  border: 1px solid #e6ddcf;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(44, 27, 1, 0.04), 0 1px 2px 0 rgba(44, 27, 1, 0.02);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-card-hover {
+  background-color: #ffffff;
+  border: 1px solid #e6ddcf;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(44, 27, 1, 0.04), 0 1px 2px 0 rgba(44, 27, 1, 0.02);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: #b6a587;
+  box-shadow: 0 10px 25px -5px rgba(44, 27, 1, 0.08), 0 8px 10px -6px rgba(44, 27, 1, 0.04);
+}
+
+/* Admin Input Styling */
+.admin-input {
+  background-color: #faf8f5;
+  border: 1px solid #e6ddcf;
+  border-radius: 0.75rem;
+  color: #1f2937;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.admin-input:hover {
+  border-color: #b6a587;
+}
+
+.admin-input:focus {
+  background-color: #ffffff;
+  border-color: #2c1b01;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(44, 27, 1, 0.12);
+}
+
+/* Public Site Warm Modern Government Design Utilities */
+.bg-public-warm {
+  background-color: #fbfaf7;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(182, 165, 135, 0.08) 0%, transparent 65%),
+    radial-gradient(circle at 100% 100%, rgba(90, 59, 13, 0.04) 0%, transparent 50%);
+}
+
+.public-card {
+  background-color: #ffffff;
+  border: 1px solid #e6ddcf;
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 20px -2px rgba(44, 27, 1, 0.04), 0 2px 6px -1px rgba(44, 27, 1, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.public-card-hover {
+  background-color: #ffffff;
+  border: 1px solid #e6ddcf;
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 20px -2px rgba(44, 27, 1, 0.04), 0 2px 6px -1px rgba(44, 27, 1, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.public-card-hover:hover {
+  transform: translateY(-3px);
+  border-color: #b6a587;
+  box-shadow: 0 16px 32px -6px rgba(44, 27, 1, 0.08), 0 8px 16px -4px rgba(44, 27, 1, 0.04);
+}
+
+.gonjong-line {
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #b6a587 35%, #2c1b01 50%, #b6a587 65%, transparent 100%);
+  opacity: 0.6;
+}
+
+.gonjong-accent-badge {
+  position: relative;
+}
+.gonjong-accent-badge::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background-color: #b6a587;
+  border-radius: 1px;
+}
+

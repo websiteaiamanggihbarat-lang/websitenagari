@@ -406,14 +406,14 @@ export default function KesehatanAdminIndex() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
-      {/* Top Header Navigation (Samakan dengan Kelola Layanan Informasi) */}
-      <div className="bg-[#2c1b01] text-white shadow-md mb-8">
+    <div className="min-h-screen bg-admin-warm pb-20 text-[#1F2937]">
+      {/* Top Header Panel - Warm Modern Government Theme */}
+      <header className="bg-gradient-to-r from-[#1A1200] via-[#2C1B01] to-[#3D2605] border-b border-[#B6A587]/30 shadow-lg text-white mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3.5">
             <Link
               href="/admin"
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
+              className="inline-flex items-center justify-center p-2.5 rounded-xl bg-[#B6A587]/15 hover:bg-[#B6A587]/30 text-[#B6A587] hover:text-white border border-[#B6A587]/30 transition-all transform hover:-translate-x-1 cursor-pointer"
               title="Kembali ke Dashboard Admin"
               aria-label="Kembali ke Dashboard Admin"
             >
@@ -422,11 +422,16 @@ export default function KesehatanAdminIndex() {
               </svg>
             </Link>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                Kelola Periode Pendataan Kesehatan
-              </h1>
-              <p className="text-xs sm:text-sm text-amber-200/80">
-                Kelola periode tahun pendataan, indikator sanitasi lingkungan, dan sarana kesehatan Nagari.
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                  Kelola Kesehatan
+                </h1>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#B6A587]/20 text-[#B6A587] border border-[#B6A587]/30">
+                  Kesehatan Warga
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-[#E6DDCF] font-medium mt-0.5">
+                Kelola periode tahun pendataan, indikator sanitasi &amp; posyandu Nagari Aia Manggih Barat.
               </p>
             </div>
           </div>
@@ -436,19 +441,19 @@ export default function KesehatanAdminIndex() {
               <button
                 type="button"
                 onClick={handleOpenTambah}
-                className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#B6A587] hover:bg-[#c9b99b] text-[#1A1200] font-bold px-4 py-2.5 text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-[#1A1200]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Tambah Periode Kesehatan
+                <span>Tambah Periode Kesehatan</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={handleLogout}
-              className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500/15 hover:bg-red-600 text-red-200 hover:text-white font-semibold px-4 py-2.5 text-xs sm:text-sm border border-red-500/30 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
             >
               <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -462,7 +467,7 @@ export default function KesehatanAdminIndex() {
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Global Toast Notifications */}

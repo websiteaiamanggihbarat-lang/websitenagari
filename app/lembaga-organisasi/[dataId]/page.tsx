@@ -52,8 +52,8 @@ export default async function DetailLembagaOrganisasiPage({ params }: PageProps)
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="pt-24 pb-32 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-public-warm text-[#1F2937]">
+      <div className="pt-12 pb-24 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl">
           <DetailLembagaOrganisasiDinamis detail={detail} />
         </div>

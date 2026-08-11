@@ -235,21 +235,27 @@ export default function HeroCarousel({ slides }: HeroCarouselProps) {
         })}
       </div>
 
-      {/* LAYER 2: Static Dark Gradient Overlay (z-[1]) */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/70 z-[1]" />
+      {/* LAYER 2: Warm Dark Mahogany Gradient Overlay (z-[1]) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#1A1200]/80 via-[#2C1B01]/70 to-[#1A1200]/85 z-[1]" />
 
       {/* LAYER 3: Static Hero Text (z-10, Tidak Ikut Fade/Loop) */}
-      <div className="relative max-w-5xl mx-auto text-center animate-fade-in z-10">
-        <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight mb-6 leading-tight drop-shadow-lg">
+      <div className="relative max-w-5xl mx-auto text-center animate-fade-in z-10 space-y-5">
+        {/* Official Motto Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#B6A587]/20 border border-[#B6A587]/40 backdrop-blur-md shadow-lg">
+          <span className="w-2 h-2 rounded-full bg-[#B6A587] animate-pulse"></span>
+          <span className="text-xs sm:text-sm font-extrabold uppercase tracking-[0.25em] text-[#E6DDCF]">
+            RANCAK BANA
+          </span>
+        </div>
+
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
           Nagari Aia Manggih Barat
         </h1>
 
-        <p className="text-3xl uppercase tracking-[0.3em] text-[#f0e8db] mb-3 drop-shadow-md">
-          RANCAK BANA
-        </p>
+        <div className="w-24 h-1 bg-gradient-to-r from-transparent via-[#B6A587] to-transparent mx-auto rounded-full"></div>
 
-        <p className="text-base md:text-lg text-white/95 max-w-3xl mx-auto leading-relaxed drop-shadow-md">
-          "Ramah, Amanah, Normatif, Cepat, Akurat, Kreatif, Bebas Biaya, Aman, Nyaman, dan Adil"
+        <p className="text-base sm:text-lg md:text-xl text-[#F7F2E8]/95 max-w-3xl mx-auto leading-relaxed drop-shadow-md font-medium">
+          &ldquo;Ramah, Amanah, Normatif, Cepat, Akurat, Kreatif, Bebas Biaya, Aman, Nyaman, dan Adil&rdquo;
         </p>
       </div>
 

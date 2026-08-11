@@ -28,18 +28,21 @@ export default async function LembagaOrganisasiIndexPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="pt-24 pb-32 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-public-warm text-[#1F2937]">
+      <div className="pt-16 pb-24 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           {/* Header Halaman Publik */}
-          <div className="text-center mb-12 scroll-slide-left">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
+          <div className="text-center mb-14 scroll-slide-left">
+            <span className="inline-block px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-[0.2em] bg-[#B6A587]/20 text-[#2C1B01] border border-[#B6A587]/30 mb-3">
+              Kelembagaan
+            </span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#1F2937] tracking-tight">
               Lembaga dan Organisasi Nagari
             </h1>
-            <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] mx-auto rounded-full mb-6" />
-            <p className="text-lg md:text-xl text-gray-600 font-normal max-w-3xl mx-auto leading-relaxed">
-              Lembaga dan organisasi yang ada di Nagari Aia Manggih Barat.
+            <p className="text-sm sm:text-base text-gray-600 font-medium max-w-2xl mx-auto mt-2">
+              Profil, struktur pengurus, dan informasi lembaga kemasyarakatan yang aktif di Nagari Aia Manggih Barat
             </p>
+            <div className="gonjong-line max-w-xs mx-auto mt-4" />
           </div>
 
           {/* Daftar Kartu Publik Dinamis */}

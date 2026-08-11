@@ -34,7 +34,7 @@ export async function middleware(req: NextRequest) {
       } = await supabase.auth.getSession();
       // Pastikan session valid dengan access_token yang tidak kosong
       isLoggedIn = Boolean(session && session.access_token && session.access_token.length > 0);
-    } catch (error) {
+    } catch {
       // Jika ada error saat cek session, anggap tidak login
       isLoggedIn = false;
     }

@@ -184,7 +184,7 @@ export async function getAktifPendataanDanSarana(): Promise<{
       return { pendataan, sarana: [], error: saranaError.message }
     }
 
-    const saranaMapped = (dataSarana || []).map((item: any) => ({
+    const saranaMapped = ((dataSarana || []) as SaranaPendidikan[]).map((item) => ({
       ...item,
       jumlah_siswa: Number(item.jumlah_siswa || 0),
       jumlah_guru: Number(item.jumlah_guru || 0),
@@ -196,7 +196,7 @@ export async function getAktifPendataanDanSarana(): Promise<{
       sarana: saranaMapped,
       error: null,
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Kesalahan membaca data sarana pendidikan:", err)
     return {
       pendataan: null,
@@ -252,7 +252,7 @@ export async function getFasilitasBySaranaId(
       fasilitas: (data as FasilitasSaranaPendidikan[]) || [],
       error: null,
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Kesalahan membaca data fasilitas sarana pendidikan:", err)
     return {
       fasilitas: [],

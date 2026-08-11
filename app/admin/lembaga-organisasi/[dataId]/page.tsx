@@ -1210,43 +1210,45 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
   const { data: parent } = detail
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12 space-y-8">
-        {/* HEADER & NAVIGASI */}
-        <div>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/admin/lembaga-organisasi"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 shadow-sm hover:bg-gray-50"
-                title="Kembali ke Daftar"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </Link>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {parent.is_active ? (
-                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
-                      Aktif (Publik)
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-600/20">
-                      Draft
-                    </span>
-                  )}
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl break-words">{parent.nama}</h1>
+    <div className="min-h-screen bg-admin-warm pb-20 text-[#1F2937]">
+      {/* Top Header Panel - Warm Modern Government Theme */}
+      <header className="bg-gradient-to-r from-[#1A1200] via-[#2C1B01] to-[#3D2605] border-b border-[#B6A587]/30 shadow-lg text-white mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3.5">
+            <Link
+              href="/admin/lembaga-organisasi"
+              className="inline-flex items-center justify-center p-2.5 rounded-xl bg-[#B6A587]/15 hover:bg-[#B6A587]/30 text-[#B6A587] hover:text-white border border-[#B6A587]/30 transition-all transform hover:-translate-x-1 cursor-pointer"
+              title="Kembali ke Daftar Lembaga / Organisasi"
+              aria-label="Kembali ke Daftar Lembaga / Organisasi"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                  Rincian: {parent.nama}
+                </h1>
+                {parent.is_active ? (
+                  <span className="inline-flex items-center rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-300 border border-emerald-500/30">
+                    Aktif (Publik)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-300 border border-amber-500/30">
+                    Draft
+                  </span>
+                )}
               </div>
-            </div>
-
-            <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500">
-              <span>Status publikasi dikelola dari halaman daftar lembaga dan organisasi.</span>
+              <p className="text-xs sm:text-sm text-[#E6DDCF] font-medium mt-0.5">
+                Kelola data pengurus, tugas, serta galeri foto lembaga.
+              </p>
             </div>
           </div>
-          <div className="mt-4 h-1 w-24 rounded-full bg-gradient-to-r from-[#2c1b01] to-[#b6a587]" />
         </div>
+      </header>
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
 
         {/* NOTIFIKASI GLOBAL */}
         {pesanSukses && (

@@ -7,18 +7,21 @@ export const metadata = {
 
 export default function LayananInformasiPage() {
   return (
-    <div className="min-h-screen bg-white">
-      <div className="pt-24 pb-32 px-6 lg:px-8">
+    <div className="min-h-screen bg-public-warm text-[#1F2937]">
+      <div className="pt-16 pb-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Header Section */}
-          <div className="text-center mb-16 scroll-slide-left">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
+          <div className="text-center mb-14 scroll-slide-left">
+            <span className="inline-block px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-[0.2em] bg-[#B6A587]/20 text-[#2C1B01] border border-[#B6A587]/30 mb-3">
+              Pelayanan Publik
+            </span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#1F2937] tracking-tight">
               Layanan Informasi
             </h1>
-            <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] mx-auto rounded-full mb-6"></div>
-            <p className="text-xl text-gray-600 font-normal">
-              Informasi layanan dan persyaratan dokumen di Nagari Aia Manggih Barat
+            <p className="text-sm sm:text-base text-gray-600 font-medium max-w-2xl mx-auto mt-2">
+              Informasi persyaratan dokumen administrasi, jadwal operasional kantor, serta saluran resmi pengaduan masyarakat Nagari Aia Manggih Barat
             </p>
+            <div className="gonjong-line max-w-xs mx-auto mt-4"></div>
           </div>
 
           {/* Dynamic Component */}

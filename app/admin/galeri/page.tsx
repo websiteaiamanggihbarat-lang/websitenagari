@@ -446,88 +446,66 @@ export default function AdminGaleriPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
-      {/* Header Admin */}
-      <header className="bg-[#2c1b01] text-white shadow-md mb-8">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center space-x-3">
-              <Link
-                href="/admin"
-                className="rounded-lg bg-white/10 p-2 text-amber-200 transition-colors hover:bg-white/20"
-                title="Kembali ke Dashboard Admin"
-                aria-label="Kembali ke dashboard admin"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-                  Kelola Galeri
+    <div className="min-h-screen bg-admin-warm pb-20 text-[#1F2937]">
+      {/* Top Header Panel - Warm Modern Government Theme */}
+      <header className="bg-gradient-to-r from-[#1A1200] via-[#2C1B01] to-[#3D2605] border-b border-[#B6A587]/30 shadow-lg text-white mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3.5">
+            <Link
+              href="/admin"
+              className="inline-flex items-center justify-center p-2.5 rounded-xl bg-[#B6A587]/15 hover:bg-[#B6A587]/30 text-[#B6A587] hover:text-white border border-[#B6A587]/30 transition-all transform hover:-translate-x-1 cursor-pointer"
+              title="Kembali ke Dashboard Admin"
+              aria-label="Kembali ke Dashboard Admin"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                  Kelola Galeri Foto
                 </h1>
-                <p className="text-xs text-amber-200/80 sm:text-sm">
-                  Tambah dan hapus foto yang ditampilkan pada halaman galeri.
-                </p>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#B6A587]/20 text-[#B6A587] border border-[#B6A587]/30">
+                  Dokumentasi
+                </span>
               </div>
+              <p className="text-xs sm:text-sm text-[#E6DDCF] font-medium mt-0.5">
+                Kelola foto dokumentasi &amp; kegiatan Nagari Aia Manggih Barat.
+              </p>
             </div>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              {!isFormOpen && (
-                <button
-                  type="button"
-                  onClick={handleOpenTambah}
-                  className="inline-flex cursor-pointer items-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-gray-950 shadow-md transition-all duration-200 hover:bg-amber-400"
-                >
-                  <svg
-                    className="mr-2 h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  <span>Tambah Foto</span>
-                </button>
-              )}
-
+          <div className="flex flex-wrap items-center gap-3">
+            {!isFormOpen && (
               <button
                 type="button"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-red-700 disabled:opacity-60"
+                onClick={handleOpenTambah}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#B6A587] hover:bg-[#c9b99b] text-[#1A1200] font-bold px-4 py-2.5 text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
               >
-                <svg
-                  className="h-4 w-4 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
+                <svg className="w-4 h-4 text-[#1A1200]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                <span>{isLoggingOut ? "Proses..." : "Logout"}</span>
+                <span>Tambah Foto Baru</span>
               </button>
-            </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500/15 hover:bg-red-600 text-red-200 hover:text-white font-semibold px-4 py-2.5 text-xs sm:text-sm border border-red-500/30 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer disabled:opacity-60"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              <span>{isLoggingOut ? "Proses..." : "Logout"}</span>
+            </button>
           </div>
         </div>
       </header>

@@ -72,17 +72,23 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-      {daftar.map((item) => {
+      {daftar.map((item, index) => {
         const hasImageFailed = failedImageIds.has(item.id) || !item.foto_url || !item.foto_url.trim()
 
         return (
           <Link
             key={item.id}
             href={`/lembaga-organisasi/${item.id}`}
-            className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#b6a587] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-[#6b4b1d] cursor-pointer"
+            className={`group public-card-hover flex h-full flex-col overflow-hidden cursor-pointer ${
+              index % 3 === 0
+                ? "scroll-slide-left"
+                : index % 3 === 1
+                ? "scroll-slide-bottom"
+                : "scroll-slide-right"
+            }`}
           >
             {/* Foto Cover */}
-            <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+            <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#F0E8DB]/60 border-b border-[#E6DDCF]">
               {!hasImageFailed ? (
                 <img
                   src={item.foto_url}
@@ -91,8 +97,8 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100/50 p-4 text-center">
-                  <svg className="h-10 w-10 text-[#6b4b1d]/40 mb-2" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-[#2C1B01] via-[#3D2605] to-[#1A1200] p-4 text-center">
+                  <svg className="h-12 w-12 text-[#B6A587]/40 mb-2" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -100,22 +106,31 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                     />
                   </svg>
-                  <span className="text-xs font-medium text-gray-500 break-words max-w-xs">{item.nama}</span>
+                  <span className="text-xs font-bold text-[#E6DDCF] break-words max-w-xs">{item.nama}</span>
                 </div>
               )}
             </div>
 
             {/* Isi Kartu */}
-            <div className="flex flex-1 flex-col p-6">
-              {/* Nama Lembaga / Organisasi */}
-              <h2 className="text-xl font-bold text-gray-900 tracking-tight break-words group-hover:text-[#6b4b1d] transition-colors mb-3">
-                {item.nama}
-              </h2>
+            <div className="flex flex-1 flex-col p-6 bg-white justify-between">
+              <div>
+                {/* Nama Lembaga / Organisasi */}
+                <h2 className="text-xl font-extrabold text-[#1F2937] tracking-tight break-words group-hover:text-[#2C1B01] transition-colors mb-3 leading-snug">
+                  {item.nama}
+                </h2>
 
-              {/* Ringkasan Profil/Deskripsi Maksimal 2 Kalimat */}
-              <p className="text-sm text-gray-600 leading-relaxed break-words line-clamp-3">
-                {getTwoSentences(item.deskripsi)}
-              </p>
+                {/* Ringkasan Profil/Deskripsi Maksimal 2 Kalimat */}
+                <p className="text-sm text-gray-600 leading-relaxed break-words line-clamp-3">
+                  {getTwoSentences(item.deskripsi)}
+                </p>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-[#E6DDCF]/50 flex items-center justify-between text-xs font-bold text-[#2C1B01]">
+                <span>Lihat Profil Detail</span>
+                <svg className="w-4 h-4 text-[#B6A587] group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
             </div>
           </Link>
         )

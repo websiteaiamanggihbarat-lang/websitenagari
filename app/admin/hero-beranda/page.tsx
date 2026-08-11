@@ -878,37 +878,33 @@ export default function AdminHeroBerandaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f7f2e8] via-white to-[#f0e8db] pb-16">
-      {/* Top Header Navigation (Cokelat Gelap khas Admin) */}
-      <div className="bg-[#2c1b01] text-white shadow-md mb-6">
+    <div className="min-h-screen bg-admin-warm pb-20 text-[#1F2937]">
+      {/* Top Header Panel - Warm Modern Government Theme */}
+      <header className="bg-gradient-to-r from-[#1A1200] via-[#2C1B01] to-[#3D2605] border-b border-[#B6A587]/30 shadow-lg text-white mb-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3.5">
             <Link
               href="/admin"
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-amber-200"
+              className="inline-flex items-center justify-center p-2.5 rounded-xl bg-[#B6A587]/15 hover:bg-[#B6A587]/30 text-[#B6A587] hover:text-white border border-[#B6A587]/30 transition-all transform hover:-translate-x-1 cursor-pointer"
               title="Kembali ke Dashboard Admin"
               aria-label="Kembali ke Dashboard Admin"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </Link>
+
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                Kelola Hero Beranda
-              </h1>
-              <p className="text-xs sm:text-sm text-amber-200/80">
-                Tambah dan atur gambar utama yang tampil bergantian pada beranda.
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                  Kelola Hero Beranda
+                </h1>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#B6A587]/20 text-[#B6A587] border border-[#B6A587]/30">
+                  Banner Utama
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-[#E6DDCF] font-medium mt-0.5">
+                Tambah &amp; atur gambar slide banner utama pada halaman beranda Nagari Aia Manggih Barat.
               </p>
             </div>
           </div>
@@ -919,35 +915,20 @@ export default function AdminHeroBerandaPage() {
                 type="button"
                 onClick={bukaFormTambah}
                 disabled={loadingForm}
-                className="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#B6A587] hover:bg-[#c9b99b] text-[#1A1200] font-bold px-4 py-2.5 text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer disabled:opacity-50"
               >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
+                <svg className="w-4 h-4 text-[#1A1200]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Tambah Gambar
+                <span>Tambah Gambar Hero</span>
               </button>
             )}
 
             <Link
               href="/auth/signout"
-              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500/15 hover:bg-red-600 text-red-200 hover:text-white font-semibold px-4 py-2.5 text-xs sm:text-sm border border-red-500/30 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
             >
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -959,7 +940,7 @@ export default function AdminHeroBerandaPage() {
             </Link>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Content Container */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">

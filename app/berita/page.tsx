@@ -57,39 +57,32 @@ export default async function Berita({
   const totalPages = Math.max(Math.ceil(count / PER_PAGE), 1)
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="pt-24 pb-32 px-6 lg:px-8">
+    <div className="min-h-screen bg-public-warm text-[#1F2937]">
+      <div className="pt-16 pb-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
-          <div className="text-center mb-16 scroll-slide-left">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
+          <div className="text-center mb-14 scroll-slide-left">
+            <span className="inline-block px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-[0.2em] bg-[#B6A587]/20 text-[#2C1B01] border border-[#B6A587]/30 mb-3">
+              Informasi Publik
+            </span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#1F2937] tracking-tight">
               Berita Nagari
             </h1>
-            <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] mx-auto rounded-full mb-6"></div>
-            <p className="text-xl text-gray-600 font-normal">
-              Informasi dan berita terkini dari Nagari Aia Manggih Barat
+            <p className="text-sm sm:text-base text-gray-600 font-medium max-w-xl mx-auto mt-2">
+              Kabar, pengumuman, dan informasi kegiatan terbaru dari Nagari Aia Manggih Barat
             </p>
+            <div className="gonjong-line max-w-xs mx-auto mt-4"></div>
           </div>
 
           {/* Tampilan Kosong jika belum ada berita */}
           {beritaList.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-gray-300 bg-white/70 p-12 text-center max-w-2xl mx-auto my-8">
-              <div className="w-16 h-16 bg-[#f0e8db] text-[#2c1b01] rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                  />
+            <div className="public-card p-12 text-center max-w-2xl mx-auto my-8">
+              <div className="w-16 h-16 bg-[#F0E8DB] text-[#2C1B01] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#B6A587]/40 shadow-sm">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl font-extrabold text-[#1F2937] mb-2">
                 Belum Ada Berita
               </h3>
               <p className="text-gray-600 text-sm max-w-md mx-auto leading-relaxed">
@@ -118,7 +111,7 @@ export default async function Berita({
                     key={berita.id}
                     href={`/berita/${berita.id}`}
                     aria-label={`Baca berita: ${berita.judul}`}
-                    className={`group block bg-white rounded-2xl overflow-hidden border border-gray-200/80 hover:border-[#c0ae86] shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6b4b1d] cursor-pointer flex flex-col h-full ${
+                    className={`group public-card-hover overflow-hidden flex flex-col h-full cursor-pointer ${
                       index % 3 === 0
                         ? "scroll-slide-left"
                         : index % 3 === 1
@@ -127,7 +120,7 @@ export default async function Berita({
                     }`}
                   >
                     {/* Foto Berita */}
-                    <div className="aspect-[16/9] relative overflow-hidden bg-gray-100 flex-shrink-0">
+                    <div className="aspect-[16/9] relative overflow-hidden bg-[#F0E8DB]/60 flex-shrink-0 border-b border-[#E6DDCF]">
                       {berita.foto_url ? (
                         <img
                           src={berita.foto_url}
@@ -135,34 +128,27 @@ export default async function Berita({
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#4a3210] via-[#2c1b01] to-[#1a1200] flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-                          <svg
-                            className="w-14 h-14 text-white/40"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={1.5}
-                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
+                        <div className="w-full h-full bg-gradient-to-br from-[#2C1B01] via-[#3D2605] to-[#1A1200] flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                          <svg className="w-12 h-12 text-[#B6A587]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </div>
                       )}
                     </div>
 
                     {/* Body Card Berita */}
-                    <div className="p-6 flex flex-col flex-1 justify-between">
+                    <div className="p-6 flex flex-col flex-1 justify-between bg-white">
                       <div>
                         {formattedDate && (
-                          <span className="text-xs text-gray-500 font-medium block mb-2">
-                            {formattedDate}
-                          </span>
+                          <div className="flex items-center gap-1.5 text-xs text-[#5A3B0D] font-bold mb-2">
+                            <svg className="w-3.5 h-3.5 text-[#B6A587]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>{formattedDate}</span>
+                          </div>
                         )}
 
-                        <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-[#6b4b1d] transition-colors tracking-tight leading-tight line-clamp-2">
+                        <h2 className="text-lg sm:text-xl font-extrabold text-[#1F2937] mb-2.5 group-hover:text-[#2C1B01] transition-colors tracking-tight leading-snug line-clamp-2">
                           {berita.judul}
                         </h2>
 
@@ -171,21 +157,11 @@ export default async function Berita({
                         </p>
                       </div>
 
-                      {/* Action Element Visual (Non-Link) */}
-                      <span className="text-[#6b4b1d] group-hover:text-[#2c1b01] font-semibold text-sm inline-flex items-center mt-auto pt-2 transition-colors">
+                      {/* Action Element Visual */}
+                      <span className="text-[#2C1B01] group-hover:text-[#5A3B0D] font-bold text-xs uppercase tracking-wider inline-flex items-center mt-auto pt-3 border-t border-[#E6DDCF]/50 transition-colors">
                         <span>Baca Selengkapnya</span>
-                        <svg
-                          className="w-4 h-4 ml-1.5 group-hover:translate-x-1 transition-transform"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2.5}
-                            d="M9 5l7 7-7 7"
-                          />
+                        <svg className="w-4 h-4 ml-1.5 text-[#B6A587] group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                         </svg>
                       </span>
                     </div>
@@ -201,25 +177,25 @@ export default async function Berita({
               <nav className="flex items-center space-x-2">
                 <Link
                   href={`/berita?page=${page - 1}`}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                  className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold border transition-all ${
                     page <= 1
                       ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-[#f7f2e8] hover:border-[#b6a587] shadow-xs"
+                      : "bg-white text-[#2C1B01] border-[#E6DDCF] hover:bg-[#F7F2E8] hover:border-[#B6A587] shadow-xs"
                   }`}
                 >
                   &larr; Sebelumnya
                 </Link>
 
-                <span className="px-5 py-2.5 bg-[#2c1b01] text-white rounded-xl text-sm font-semibold shadow-xs">
+                <span className="px-4 py-2.5 bg-[#2C1B01] text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs">
                   {page} / {totalPages}
                 </span>
 
                 <Link
                   href={`/berita?page=${page + 1}`}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                  className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold border transition-all ${
                     page >= totalPages
                       ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-[#f7f2e8] hover:border-[#b6a587] shadow-xs"
+                      : "bg-white text-[#2C1B01] border-[#E6DDCF] hover:bg-[#F7F2E8] hover:border-[#B6A587] shadow-xs"
                   }`}
                 >
                   Selanjutnya &rarr;

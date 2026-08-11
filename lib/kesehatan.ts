@@ -396,7 +396,7 @@ export async function fetchRingkasanKesehatanAktif(): Promise<RingkasanKesehatan
       jumlahKaderPosyandu,
       error: null,
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("fetchRingkasanKesehatanAktif catch error:", err)
     return {
       pendataan: null,
@@ -409,7 +409,7 @@ export async function fetchRingkasanKesehatanAktif(): Promise<RingkasanKesehatan
         lainnya: 0,
       },
       jumlahKaderPosyandu: 0,
-      error: err?.message || "Gagal membaca data kesehatan.",
+      error: err instanceof Error ? err.message : String(err) || "Gagal membaca data kesehatan.",
     }
   }
 }

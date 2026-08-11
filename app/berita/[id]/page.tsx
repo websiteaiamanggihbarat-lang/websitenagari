@@ -48,13 +48,13 @@ export default function BeritaDetail() {
   }, [id])
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="pt-24 pb-32 px-6 lg:px-8">
+    <div className="min-h-screen bg-public-warm text-[#1F2937]">
+      <div className="pt-16 pb-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Loading State */}
           {loading && (
             <div className="py-24 text-center" aria-live="polite" role="status">
-              <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-[#2c1b01] border-r-transparent"></div>
+              <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-[#2C1B01] border-r-transparent"></div>
               <p className="mt-4 text-base font-semibold text-gray-700">
                 Memuat detail berita...
               </p>
@@ -63,7 +63,7 @@ export default function BeritaDetail() {
 
           {/* Error State */}
           {error && !loading && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center shadow-sm my-8">
+            <div className="public-card p-8 text-center bg-red-50/50 border-red-200 shadow-sm my-8">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 mb-3">
                 <svg
                   className="h-6 w-6"
@@ -80,7 +80,7 @@ export default function BeritaDetail() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-gray-900">
+              <h3 className="text-lg font-extrabold text-[#1F2937]">
                 Gagal Memuat Detail Berita
               </h3>
               <p className="mt-1 text-sm text-gray-600">
@@ -91,21 +91,21 @@ export default function BeritaDetail() {
 
           {/* News Detail Content */}
           {berita && !loading && (
-            <article className="scroll-slide-left">
+            <article className="public-card p-6 sm:p-10 bg-white scroll-slide-left">
               {/* Header Artikel */}
-              <div className="mb-8 pb-6 border-b border-gray-200">
-                <span className="inline-block rounded-lg bg-[#f0e8db] px-3.5 py-1.5 text-xs font-bold text-[#2c1b01] mb-4">
+              <div className="mb-8 pb-6 border-b border-[#E6DDCF]">
+                <span className="inline-block rounded-full bg-[#B6A587]/20 border border-[#B6A587]/30 px-3.5 py-1 text-xs font-extrabold text-[#2C1B01] mb-4 uppercase tracking-wider">
                   Berita Nagari
                 </span>
 
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-4">
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-[#1F2937] tracking-tight leading-snug mb-4">
                   {berita.judul}
                 </h1>
 
                 {berita.created_at && (
-                  <div className="flex items-center text-sm text-gray-500 font-medium gap-2">
+                  <div className="flex items-center text-xs sm:text-sm text-[#5A3B0D] font-semibold gap-2">
                     <svg
-                      className="w-4 h-4 text-[#6b4b1d] flex-shrink-0"
+                      className="w-4 h-4 text-[#B6A587] flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -135,7 +135,7 @@ export default function BeritaDetail() {
 
               {/* Main Image */}
               {berita.foto_url ? (
-                <div className="aspect-[16/9] mb-10 rounded-2xl overflow-hidden bg-gray-100 shadow-md">
+                <div className="aspect-[16/9] mb-10 rounded-2xl overflow-hidden bg-[#F0E8DB]/60 border border-[#E6DDCF] shadow-md">
                   <img
                     src={berita.foto_url}
                     alt={berita.judul}
@@ -143,9 +143,9 @@ export default function BeritaDetail() {
                   />
                 </div>
               ) : (
-                <div className="aspect-[16/9] mb-10 rounded-2xl overflow-hidden bg-gradient-to-br from-[#4a3210] via-[#2c1b01] to-[#1a1200] flex items-center justify-center shadow-md">
+                <div className="aspect-[16/9] mb-10 rounded-2xl overflow-hidden bg-gradient-to-br from-[#2C1B01] via-[#3D2605] to-[#1A1200] flex items-center justify-center border border-[#B6A587]/30 shadow-md">
                   <svg
-                    className="w-20 h-20 text-white/40"
+                    className="w-16 h-16 text-[#B6A587]/40"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -161,7 +161,7 @@ export default function BeritaDetail() {
               )}
 
               {/* Isi Berita */}
-              <div className="text-gray-700 leading-relaxed text-base md:text-lg space-y-6 text-justify whitespace-pre-line">
+              <div className="text-gray-700 leading-relaxed text-base sm:text-lg space-y-6 text-justify whitespace-pre-line">
                 {berita.konten}
               </div>
             </article>
