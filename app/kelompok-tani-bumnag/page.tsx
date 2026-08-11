@@ -58,11 +58,11 @@ export default async function KelompokTaniBumnagIndexPage({
                 />
               </svg>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
               Kelompok Tani dan BUMNag
             </h1>
-            <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] mx-auto rounded-full mb-6"></div>
-            <p className="text-lg md:text-xl text-gray-600 font-normal max-w-3xl mx-auto leading-relaxed">
+            <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] mx-auto rounded-full mb-4"></div>
+            <p className="text-sm sm:text-base text-gray-600 font-medium max-w-2xl mx-auto leading-relaxed">
               Pemberdayaan ekonomi, kelompok tani, dan unit usaha Badan Usaha Milik Nagari Aia Manggih Barat.
             </p>
           </div>

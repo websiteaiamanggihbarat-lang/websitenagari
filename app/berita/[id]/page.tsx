@@ -98,7 +98,7 @@ export default function BeritaDetail() {
                   Berita Nagari
                 </span>
 
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-[#1F2937] tracking-tight leading-snug mb-4">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1F2937] tracking-tight leading-snug mb-4">
                   {berita.judul}
                 </h1>
 

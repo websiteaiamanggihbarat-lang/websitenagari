@@ -119,7 +119,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
               className="h-full w-full object-cover transition-all duration-500"
             />
           ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100/40 p-8 text-center">
+            <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-[#fcfaf7] via-[#f7f2ea] to-[#f0e8db]/60 p-8 text-center">
               <svg className="h-20 w-20 text-[#6b4b1d]/40 mb-3" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -148,7 +148,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
                 type="button"
                 onClick={handlePrevSlide}
                 aria-label="Foto sebelumnya"
-                className="absolute left-4 top-1/2 -translate-y-1/2 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#2c1b01]/85 text-white shadow-xl backdrop-blur-md transition-all hover:bg-[#2c1b01] hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500 z-10"
+                className="absolute left-4 top-1/2 -translate-y-1/2 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#2c1b01]/85 text-white shadow-xl backdrop-blur-md transition-all hover:bg-[#2c1b01] hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#b6a587] z-10"
               >
                 <svg className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -159,7 +159,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
                 type="button"
                 onClick={handleNextSlide}
                 aria-label="Foto berikutnya"
-                className="absolute right-4 top-1/2 -translate-y-1/2 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#2c1b01]/85 text-white shadow-xl backdrop-blur-md transition-all hover:bg-[#2c1b01] hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500 z-10"
+                className="absolute right-4 top-1/2 -translate-y-1/2 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#2c1b01]/85 text-white shadow-xl backdrop-blur-md transition-all hover:bg-[#2c1b01] hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#b6a587] z-10"
               >
                 <svg className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -176,16 +176,16 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
       )}
 
       {/* ========================================================================= */}
-      {/* 2. JUDUL IDENTITAS LEMBAGA                                                */}
+      {/* 2. JUDUL IDENTITAS LEMBAGA (Header Container Roomy & Soft Cream Accent)    */}
       {/* ========================================================================= */}
-      <div className="border-b border-[#d1c2a0]/60 pb-6 pt-2">
-        <div className="inline-block rounded-lg bg-amber-100/80 border border-amber-200/80 px-3 py-1 text-xs font-bold text-[#2c1b01] tracking-wide uppercase mb-3">
+      <div className="rounded-2xl border border-[#d1c2a0]/70 bg-gradient-to-br from-[#fbfaf7] via-white to-[#f7f2ea]/80 p-6 sm:p-8 lg:p-10 shadow-xs mb-8">
+        <div className="inline-block rounded-lg bg-[#f0e8db] border border-[#d1c2a0] px-3.5 py-1.5 text-xs font-bold text-[#2c1b01] tracking-wider uppercase mb-4 shadow-2xs">
           {detail.jenis === "lembaga" ? "Lembaga Nagari" : "Organisasi Nagari"}
         </div>
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight max-w-4xl">
           {detail.nama}
         </h1>
-        <div className="w-20 h-1 bg-gradient-to-r from-[#2c1b01] to-[#b6a587] rounded-full mt-4" />
+        <div className="w-24 h-1 bg-gradient-to-r from-[#2c1b01] via-[#b6a587] to-transparent rounded-full mt-5" />
       </div>
 
       {/* ========================================================================= */}
@@ -241,7 +241,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
                 aria-label={`Buka alamat ${detail.nama} di Google Maps`}
                 className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-pointer hover:border-[#6b4b1d]/50 hover:bg-[#fcfaf7] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#6b4b1d]/30 group"
               >
-                <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
                   <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -259,7 +259,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
               </a>
             ) : (
               <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default opacity-90">
-                <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
                   <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -281,7 +281,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
                 aria-label={`Hubungi ${detail.nama}: ${contactInfo.label}`}
                 className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-pointer hover:border-[#6b4b1d]/50 hover:bg-[#fcfaf7] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#6b4b1d]/30 group"
               >
-                <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
                   <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
@@ -298,7 +298,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
               </a>
             ) : (
               <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default opacity-90">
-                <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
                   <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
@@ -312,7 +312,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
 
             {/* Card 3: Jam Operasional */}
             <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default">
-              <div className="w-9 h-9 rounded-lg bg-amber-100/90 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
                 <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -359,7 +359,7 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
                               className="h-10 w-10 sm:h-11 sm:w-11 rounded-full object-cover ring-2 ring-[#2c1b01]/15 shadow-xs flex-shrink-0"
                             />
                           ) : (
-                            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-amber-100/90 text-[#2c1b01] flex items-center justify-center ring-2 ring-[#2c1b01]/15 shadow-xs flex-shrink-0 font-bold text-xs">
+                            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center ring-2 ring-[#2c1b01]/15 shadow-xs flex-shrink-0 font-bold text-xs">
                               <svg className="h-5 w-5 opacity-75" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>

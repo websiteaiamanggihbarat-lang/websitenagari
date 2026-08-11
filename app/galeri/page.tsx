@@ -23,7 +23,7 @@ export default async function GaleriPage() {
             <span className="inline-block px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-[0.2em] bg-[#B6A587]/20 text-[#2C1B01] border border-[#B6A587]/30 mb-3">
               Dokumentasi Visual
             </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#1F2937] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#1F2937] tracking-tight">
               Galeri Nagari
             </h1>
             <p className="text-sm sm:text-base text-gray-600 font-medium max-w-2xl mx-auto mt-2">

@@ -24,13 +24,13 @@ export default function HeroStatis() {
           </span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
           Nagari Aia Manggih Barat
         </h1>
 
         <div className="w-24 h-1 bg-gradient-to-r from-transparent via-[#B6A587] to-transparent mx-auto rounded-full"></div>
 
-        <p className="text-base sm:text-lg md:text-xl text-[#F7F2E8]/95 max-w-3xl mx-auto leading-relaxed drop-shadow-md font-medium">
+        <p className="text-sm sm:text-base md:text-lg text-[#F7F2E8]/95 max-w-3xl mx-auto leading-relaxed drop-shadow-md font-medium">
           &ldquo;Ramah, Amanah, Normatif, Cepat, Akurat, Kreatif, Bebas Biaya, Aman, Nyaman, dan Adil&rdquo;
         </p>
       </div>

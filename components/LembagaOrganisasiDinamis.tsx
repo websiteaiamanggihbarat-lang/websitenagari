@@ -50,7 +50,7 @@ export default function LembagaOrganisasiDinamis({ daftar, loadError }: Props) {
   if (daftar.length === 0) {
     return (
       <div className="mx-auto max-w-xl rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-[#6b4b1d] shadow-inner mb-4">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] shadow-inner mb-4">
           <svg className="h-8 w-8" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"

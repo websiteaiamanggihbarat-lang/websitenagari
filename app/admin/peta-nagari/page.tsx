@@ -724,100 +724,81 @@ export default function AdminPetaNagariPage() {
     const pdfPathLama = item.file_storage_path
 
     try {
-      if (item.is_active) {
-        const { error: errNonaktif } = await supabase
-          .from("peta_nagari")
-          .update({ is_active: false })
-          .eq("id", petaId)
-
-        if (errNonaktif) {
-          const msg = `Gagal menonaktifkan peta sebelum dihapus: ${errNonaktif.message}`
-          setPesanError(msg)
-          showError(msg)
-          setProcessingDeleteId(null)
-          return
-        }
-      }
-
-      if (pdfPathLama) {
-        const { error: errNullPdf } = await supabase
-          .from("peta_nagari")
-          .update({ file_url: null, file_storage_path: null })
-          .eq("id", petaId)
-
-        if (errNullPdf) {
-          const msg = `Gagal memperbarui database pasangan PDF: ${errNullPdf.message}. Hapus dibatalkan.`
-          setPesanError(msg)
-          showError(msg)
-          setProcessingDeleteId(null)
-          return
-        }
-
-        const resPdf = await hapusFileJikaAda(BUCKET_DOKUMEN_PETA_NAGARI, pdfPathLama)
-        if (!resPdf.berhasil) {
-          tambahCleanupTertunda(
-            petaId,
-            BUCKET_DOKUMEN_PETA_NAGARI,
-            pdfPathLama,
-            "dokumen",
-            `PDF peta "${item.judul_peta}" gagal dihapus saat penghapusan`
-          )
-        }
-      }
-
-      const { error: errNullGambar } = await supabase
-        .from("peta_nagari")
-        .update({ gambar_url: "", gambar_storage_path: "" })
-        .eq("id", petaId)
-
-      if (errNullGambar) {
-        const msg = `Gagal memperbarui database pasangan gambar: ${errNullGambar.message}. Hapus dibatalkan.`
-        setPesanError(msg)
-        showError(msg)
-        setProcessingDeleteId(null)
-        return
-      }
-
-      const resGambar = await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathLama)
-      if (!resGambar.berhasil) {
-        tambahCleanupTertunda(
-          petaId,
-          BUCKET_GAMBAR_PETA_NAGARI,
-          gambarPathLama,
-          "gambar",
-          `Gambar peta "${item.judul_peta}" gagal dihapus saat penghapusan`
-        )
-      }
-
+      // 1. DATABASE FIRST: Delete row from peta_nagari directly
       const { error: errDeleteDb } = await supabase
         .from("peta_nagari")
         .delete()
         .eq("id", petaId)
 
       if (errDeleteDb) {
-        if (!retryDeleteIds.includes(petaId)) {
-          setRetryDeleteIds((prev) => [...prev, petaId])
-        }
-        const msg = `Storage file berhasil dibersihkan, tetapi gagal menghapus record database: ${errDeleteDb.message}. Tombol 'Retry Hapus' telah diaktifkan.`
+        console.error("Delete peta_nagari failed:", {
+          code: errDeleteDb.code,
+          message: errDeleteDb.message,
+          details: errDeleteDb.details,
+          hint: errDeleteDb.hint,
+        })
+        const msg = "Data Peta Nagari gagal dihapus. Silakan coba kembali."
         setPesanError(msg)
         showError(msg)
         setProcessingDeleteId(null)
         return
       }
 
+      // 2. STORAGE CLEANUP SECOND: Clean up files in Supabase Storage only after DB delete succeeded
+      let storageWarning = false
+
+      if (gambarPathLama) {
+        const resGambar = await hapusFileJikaAda(BUCKET_GAMBAR_PETA_NAGARI, gambarPathLama)
+        if (!resGambar.berhasil) {
+          storageWarning = true
+          console.error("Storage cleanup failed for gambar:", resGambar.errorMessage)
+          tambahCleanupTertunda(
+            petaId,
+            BUCKET_GAMBAR_PETA_NAGARI,
+            gambarPathLama,
+            "gambar",
+            `Gambar peta "${item.judul_peta}" gagal dihapus dari penyimpanan`
+          )
+        }
+      }
+
+      if (pdfPathLama) {
+        const resPdf = await hapusFileJikaAda(BUCKET_DOKUMEN_PETA_NAGARI, pdfPathLama)
+        if (!resPdf.berhasil) {
+          storageWarning = true
+          console.error("Storage cleanup failed for PDF:", resPdf.errorMessage)
+          tambahCleanupTertunda(
+            petaId,
+            BUCKET_DOKUMEN_PETA_NAGARI,
+            pdfPathLama,
+            "dokumen",
+            `PDF peta "${item.judul_peta}" gagal dihapus dari penyimpanan`
+          )
+        }
+      }
+
       setRetryDeleteIds((prev) => prev.filter((id) => id !== petaId))
-      const msg = `Peta Nagari "${item.judul_peta}" berhasil dihapus.`
-      setPesanSukses(msg)
-      showSuccess(msg)
+
+      if (storageWarning) {
+        const msg = `Peta Nagari "${item.judul_peta}" berhasil dihapus dari database, tetapi beberapa file gagal dibersihkan dari penyimpanan.`
+        setPesanSukses(msg)
+        showSuccess(msg)
+      } else {
+        const msg = `Peta Nagari "${item.judul_peta}" berhasil dihapus.`
+        setPesanSukses(msg)
+        showSuccess(msg)
+      }
 
       if (editingId === petaId) {
         handleBatalForm()
       }
 
+      // Refetch data to immediately update table & count without manual browser reload
       await muatDataPeta()
     } catch (err: unknown) {
       const e = err as Error
-      const msg = `Terjadi kesalahan saat menghapus peta: ${e?.message || "Kesalahan tidak diketahui"}`
+      console.error("Terjadi kesalahan saat menghapus peta:", e)
+      const msg = "Data Peta Nagari gagal dihapus. Silakan coba kembali."
       setPesanError(msg)
       showError(msg)
     } finally {
