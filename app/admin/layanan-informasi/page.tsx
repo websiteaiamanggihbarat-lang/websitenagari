@@ -72,6 +72,7 @@ interface FormLayananState {
   estimasi_pembuatan: string
   biaya: string
   form_pendataan_url: string
+  contoh_surat_url: string
 }
 
 const INITIAL_LAYANAN_FORM: FormLayananState = {
@@ -79,6 +80,7 @@ const INITIAL_LAYANAN_FORM: FormLayananState = {
   estimasi_pembuatan: "",
   biaya: "Gratis",
   form_pendataan_url: "",
+  contoh_surat_url: "",
 }
 
 const REGEX_PHONE_CHAR = /^[0-9\+\-\s\(\)\.]*$/
@@ -726,6 +728,7 @@ export default function AdminLayananInformasiPage() {
       estimasi_pembuatan: item.estimasi_pembuatan,
       biaya: item.biaya || "Gratis",
       form_pendataan_url: item.form_pendataan_url,
+      contoh_surat_url: item.contoh_surat_url || "",
     })
 
     const rows: PersyaratanFormRow[] =
@@ -786,6 +789,17 @@ export default function AdminLayananInformasiPage() {
       errors.form_pendataan_url = "Link formulir pendataan harus berupa URL HTTPS yang valid."
     }
 
+    const contohUrlTrim = formLayanan.contoh_surat_url.trim()
+    if (contohUrlTrim !== "") {
+      if (contohUrlTrim.length > 2048) {
+        errors.contoh_surat_url = "Link contoh surat maksimal 2048 karakter."
+      } else if (/\s/.test(contohUrlTrim)) {
+        errors.contoh_surat_url = "Link contoh surat tidak boleh memuat spasi."
+      } else if (!getSafeHttpsUrl(contohUrlTrim)) {
+        errors.contoh_surat_url = "Link contoh surat harus berupa URL HTTPS yang valid."
+      }
+    }
+
     if (persyaratanRows.length === 0) {
       errors.persyaratan = "Minimal harus ada satu poin persyaratan."
     } else {
@@ -832,6 +846,10 @@ export default function AdminLayananInformasiPage() {
         return
       }
 
+      const contohSuratVal = formLayanan.contoh_surat_url.trim()
+        ? getSafeHttpsUrl(formLayanan.contoh_surat_url.trim())
+        : null
+
       if (editingId === null) {
         const nextUrutan =
           layananList.length === 0
@@ -845,6 +863,7 @@ export default function AdminLayananInformasiPage() {
             estimasi_pembuatan: formLayanan.estimasi_pembuatan.trim(),
             biaya: formLayanan.biaya.trim(),
             form_pendataan_url: getSafeHttpsUrl(formLayanan.form_pendataan_url.trim())!,
+            contoh_surat_url: contohSuratVal,
             is_active: false,
             urutan: nextUrutan,
           })
@@ -890,6 +909,7 @@ export default function AdminLayananInformasiPage() {
             estimasi_pembuatan: formLayanan.estimasi_pembuatan.trim(),
             biaya: formLayanan.biaya.trim(),
             form_pendataan_url: getSafeHttpsUrl(formLayanan.form_pendataan_url.trim())!,
+            contoh_surat_url: contohSuratVal,
             is_active: true,
           })
           .eq("id", editingId)
@@ -1687,10 +1707,37 @@ export default function AdminLayananInformasiPage() {
                   )}
                 </div>
 
+                {/* Contoh Surat URL (Opsional) */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="contoh_surat_url" className="block text-sm font-semibold text-gray-700 mb-1">
+                    Link Contoh Surat (Google Drive / PDF) <span className="text-gray-400 font-normal">(Opsional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    id="contoh_surat_url"
+                    name="contoh_surat_url"
+                    value={formLayanan.contoh_surat_url}
+                    onChange={handleLayananChange}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 ${
+                      fieldErrorsLayanan.contoh_surat_url
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-gray-300 focus:border-[#6b4b1d] focus:ring-[#6b4b1d]"
+                    }`}
+                    placeholder="https://drive.google.com/file/d/..."
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Masukkan tautan Google Drive/PDF contoh surat yang dapat diakses masyarakat.
+                  </p>
+                  {fieldErrorsLayanan.contoh_surat_url && (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrorsLayanan.contoh_surat_url}</p>
+                  )}
+                </div>
+
                 {/* Form Pendataan URL */}
                 <div className="sm:col-span-2">
                   <label htmlFor="form_pendataan_url" className="block text-sm font-semibold text-gray-700 mb-1">
-                    Link Formulir Pendataan Online (HTTPS) <span className="text-red-500">*</span>
+                    Link Formulir Pendataan / Pendaftaran Online (HTTPS) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="url"

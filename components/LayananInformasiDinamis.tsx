@@ -318,6 +318,7 @@ export default function LayananInformasiDinamis() {
               {layananList.map((item) => {
                 const isOpen = openIds.has(item.id)
                 const formUrl = getSafeHttpsUrl(item.form_pendataan_url)
+                const contohSuratUrl = item.contoh_surat_url ? getSafeHttpsUrl(item.contoh_surat_url) : null
 
                 return (
                   <div key={item.id} className="transition-colors">
@@ -353,10 +354,10 @@ export default function LayananInformasiDinamis() {
                         id={`panel-layanan-${item.id}`}
                         className="px-6 pb-6 pt-4 border-t border-[#d1c2a0]/40 bg-gradient-to-br from-white to-[#f7f2e8]/40 text-left"
                       >
-                        {/* Horizontal Grid on Desktop / Tablet (Persyaratan, Estimasi, Biaya, Form Button) */}
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-y-6 md:gap-x-8 lg:gap-x-10 items-start pt-1">
-                          {/* Column 1: Persyaratan Dokumen (col-span-5) */}
-                          <div className="md:col-span-5">
+                        {/* Horizontal Grid on Desktop / Tablet (Persyaratan, Estimasi, Biaya, Form Buttons) */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-y-6 md:gap-x-6 lg:gap-x-8 items-start pt-1">
+                          {/* Column 1: Persyaratan Dokumen (col-span-4) */}
+                          <div className="md:col-span-4">
                             <h4 className="font-bold text-gray-900 text-base mb-3">Persyaratan Dokumen</h4>
                             {item.persyaratan.length === 0 ? (
                               <p className="text-xs text-gray-500 italic">Persyaratan belum tersedia.</p>
@@ -384,14 +385,31 @@ export default function LayananInformasiDinamis() {
                             <p className="text-sm text-gray-700 font-semibold">{item.biaya}</p>
                           </div>
 
-                          {/* Column 4: Form Pendataan (col-span-2, No "Aksi" Label, Single-line whitespace-nowrap) */}
-                          <div className="md:col-span-2 md:flex md:justify-end md:items-start pt-1">
+                          {/* Column 4: Action Buttons (col-span-3, Secondary "Lihat Contoh Surat" + Primary "Isi Form Pendataan") */}
+                          <div className="md:col-span-3 flex flex-col sm:flex-row md:flex-col items-stretch sm:items-center md:items-end justify-start md:justify-end gap-2.5 pt-1">
+                            {contohSuratUrl && (
+                              <a
+                                href={contohSuratUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#d1c2a0] bg-[#f0e8db] px-4 py-2 text-xs sm:text-sm font-semibold text-[#2c1b01] shadow-xs hover:bg-[#ebdcc4] hover:border-[#b6a587] transition-all w-full sm:w-auto"
+                              >
+                                <svg className="h-4 w-4 text-[#6b4b1d] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span>Lihat Contoh Surat</span>
+                                <svg className="h-3.5 w-3.5 opacity-70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002 2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                            )}
+
                             {formUrl ? (
                               <a
                                 href={formUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#1a1200] px-4.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:from-[#3a2604] hover:to-[#100b00] hover:shadow transition-all w-full sm:w-auto"
+                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#1a1200] px-4.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-xs hover:from-[#3a2604] hover:to-[#100b00] hover:shadow-md transition-all w-full sm:w-auto"
                               >
                                 <span>Isi Form Pendataan</span>
                                 <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -399,7 +417,9 @@ export default function LayananInformasiDinamis() {
                                 </svg>
                               </a>
                             ) : (
-                              <span className="text-xs font-medium text-gray-400 italic">Form belum tersedia</span>
+                              !contohSuratUrl && (
+                                <span className="text-xs font-medium text-gray-400 italic">Form belum tersedia</span>
+                              )
                             )}
                           </div>
                         </div>
