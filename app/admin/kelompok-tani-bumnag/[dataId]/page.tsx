@@ -13,7 +13,6 @@ import {
   ProdukUsahaKelompokTaniBumnag,
   getLabelJenisItem,
 } from "@/lib/kelompokTaniBumnag"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface PageProps {
@@ -161,7 +160,6 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTargetFoto, setDeleteTargetFoto] = useState<GaleriKelompokTaniBumnag | null>(null)
   const [deleteTargetProduk, setDeleteTargetProduk] = useState<ProdukUsahaKelompokTaniBumnag | null>(null)
 
@@ -529,7 +527,6 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
         if (errStorage) {
           const msg = formatSupabaseError(errStorage, "Gagal menghapus file dari Storage.")
           setPesanError(msg)
-          showError(msg)
           setActionLoadingId(null)
           return
         }
@@ -543,18 +540,15 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
       if (errDeleteDB) {
         const msg = formatSupabaseError(errDeleteDB, "Gagal menghapus record database galeri.")
         setPesanError(msg)
-        showError(msg)
       } else {
         const msg = "Foto berhasil dihapus."
         setPesanSukses(msg)
-        showSuccess(msg)
         await fetchEntitasDetail()
       }
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       const msg = formatSupabaseError(e, "Terjadi kesalahan hapus foto")
       setPesanError(msg)
-      showError(msg)
     } finally {
       setActionLoadingId(null)
     }
@@ -676,18 +670,15 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
       if (errDelete) {
         const msg = formatSupabaseError(errDelete, "Gagal menghapus produk")
         setPesanError(msg)
-        showError(msg)
       } else {
         const msg = `Produk "${item.nama_produk_usaha}" berhasil dihapus.`
         setPesanSukses(msg)
-        showSuccess(msg)
         await fetchEntitasDetail()
       }
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       const msg = formatSupabaseError(e, "Terjadi kesalahan hapus produk")
       setPesanError(msg)
-      showError(msg)
     } finally {
       setActionLoadingId(null)
     }
@@ -924,7 +915,7 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
                 </svg>
                 <p className="text-sm font-medium">Belum Ada Foto Galeri</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Silakan pilih dan unggah foto melalui tombol 'Tambahkan Foto' di atas.
+                  Silakan pilih dan unggah foto melalui tombol &apos;Tambahkan Foto&apos; di atas.
                 </p>
               </div>
             ) : (

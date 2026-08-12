@@ -38,6 +38,17 @@ export type FasilitasSaranaPendidikan = {
   updated_at?: string | null
 }
 
+export type KegiatanSaranaPendidikan = {
+  id: string
+  sarana_pendidikan_id: string
+  nama_kegiatan: string
+  keterangan: string | null
+  urutan: number
+  is_active: boolean
+  created_at?: string | null
+  updated_at?: string | null
+}
+
 export type TingkatPendidikanItem = {
   slug: string
   label: string
@@ -257,6 +268,60 @@ export async function getFasilitasBySaranaId(
     return {
       fasilitas: [],
       error: "Terjadi kesalahan saat membaca data fasilitas.",
+    }
+  }
+}
+
+export async function getKegiatanBySaranaId(
+  saranaId: string
+): Promise<{
+  kegiatan: KegiatanSaranaPendidikan[]
+  error: string | null
+}> {
+  if (!saranaId) {
+    return { kegiatan: [], error: null }
+  }
+
+  const supabase = getSupabaseServerClient()
+  if (!supabase) {
+    return {
+      kegiatan: [],
+      error: "Konfigurasi Supabase belum tersedia.",
+    }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("kegiatan_sarana_pendidikan")
+      .select(`
+        id,
+        sarana_pendidikan_id,
+        nama_kegiatan,
+        keterangan,
+        urutan,
+        is_active,
+        created_at,
+        updated_at
+      `)
+      .eq("sarana_pendidikan_id", saranaId)
+      .eq("is_active", true)
+      .order("urutan", { ascending: true })
+      .order("nama_kegiatan", { ascending: true })
+
+    if (error) {
+      console.error("Gagal mengambil kegiatan sarana pendidikan:", error)
+      return { kegiatan: [], error: error.message }
+    }
+
+    return {
+      kegiatan: (data as KegiatanSaranaPendidikan[]) || [],
+      error: null,
+    }
+  } catch (err: unknown) {
+    console.error("Kesalahan membaca data kegiatan sarana pendidikan:", err)
+    return {
+      kegiatan: [],
+      error: "Terjadi kesalahan saat membaca data kegiatan.",
     }
   }
 }

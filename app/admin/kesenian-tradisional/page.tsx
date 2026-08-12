@@ -12,7 +12,6 @@ import {
   buatSlugJenisKesenian,
   getLabelKategoriKesenian,
 } from "@/lib/kesenian"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormKesenianState {
@@ -94,7 +93,6 @@ export default function AdminKesenianTradisionalPage() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState<KesenianTradisional | null>(null)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -277,12 +275,12 @@ export default function AdminKesenianTradisionalPage() {
       const extValid = ["jpg", "jpeg", "png", "webp"].includes(ext)
 
       if (!mimeValid && !extValid) {
-        showError(`Format file "${file.name}" tidak didukung. Harap pilih gambar JPG, PNG, atau WebP.`)
+        setPesanError(`Format file "${file.name}" tidak didukung. Harap pilih gambar JPG, PNG, atau WebP.`)
         return
       }
 
       if (file.size > 2 * 1024 * 1024) {
-        showError(`Ukuran file "${file.name}" melebihi batas 2 MB.`)
+        setPesanError(`Ukuran file "${file.name}" melebihi batas 2 MB.`)
         return
       }
 
@@ -573,17 +571,14 @@ export default function AdminKesenianTradisionalPage() {
       if (errDeleteMain) {
         const msg = `Gagal menghapus record database kesenian: ${errDeleteMain.message}`
         setPesanError(msg)
-        showError(msg)
       } else {
         const msg = `Kesenian "${item.nama_kesenian}" berhasil dihapus.`
         setPesanSukses(msg)
-        showSuccess(msg)
       }
       await fetchData()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setPesanError(`Terjadi kesalahan saat menghapus data: ${msg}`)
-      showError(`Terjadi kesalahan saat menghapus data: ${msg}`)
     } finally {
       setActionLoadingId(null)
     }
@@ -893,7 +888,7 @@ export default function AdminKesenianTradisionalPage() {
                 {/* Grid Photo Cards */}
                 {activeExistingGaleri.length === 0 && newPhotos.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-6 text-center text-gray-500 text-xs">
-                    Belum ada foto galeri yang ditambahkan. Klik tombol <strong>"Tambahkan Foto"</strong> di atas.
+                    Belum ada foto galeri yang ditambahkan. Klik tombol <strong>&quot;Tambahkan Foto&quot;</strong> di atas.
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const FORM_AWAL = {
@@ -108,7 +107,6 @@ export default function InformasiPendudukAdmin() {
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState("")
   const [pesanSukses, setPesanSukses] = useState(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [processingToggleId, setProcessingToggleId] = useState(null)
 
@@ -204,7 +202,7 @@ export default function InformasiPendudukAdmin() {
     } = await supabase.auth.getSession()
 
     if (sessionError || !session) {
-      showError("Sesi admin tidak terbaca. Silakan login ulang.")
+      setError("Sesi admin tidak terbaca. Silakan login ulang.")
       window.location.href = "/login"
       return false
     }
@@ -537,7 +535,6 @@ export default function InformasiPendudukAdmin() {
 
       const msg = "Informasi penduduk berhasil dihapus."
       setPesanSukses(msg)
-      showSuccess(msg)
       if (editingId === item.id) {
         handleBatalForm()
       }
@@ -546,7 +543,6 @@ export default function InformasiPendudukAdmin() {
       console.error("hapusData error:", err)
       const msg = err?.message || "Gagal menghapus data."
       setError(msg)
-      showError(msg)
     } finally {
       setLoading(false)
     }

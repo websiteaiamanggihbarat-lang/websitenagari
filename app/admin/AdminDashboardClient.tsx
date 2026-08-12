@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 
@@ -9,17 +9,22 @@ interface AdminDashboardClientProps {
 }
 
 export default function AdminDashboardClient({ userEmail }: AdminDashboardClientProps) {
-  const [isBerandaOpen, setIsBerandaOpen] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        return sessionStorage.getItem("admin_dashboard_beranda_open") === "true"
-      } catch {
-        return false
-      }
-    }
-    return false
-  })
+  const [isBerandaOpen, setIsBerandaOpen] = useState(false)
   const [loadingLogout, setLoadingLogout] = useState(false)
+
+  useEffect(() => {
+    try {
+      const savedState = sessionStorage.getItem("admin_dashboard_beranda_open")
+      if (savedState === "true") {
+        const timer = requestAnimationFrame(() => {
+          setIsBerandaOpen(true)
+        })
+        return () => cancelAnimationFrame(timer)
+      }
+    } catch {
+      /* ignore storage error */
+    }
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -58,6 +63,14 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
       }
       return nextState
     })
+  }
+
+  const handleExitToPublic = () => {
+    try {
+      sessionStorage.removeItem("admin_dashboard_beranda_open")
+    } catch {
+      /* ignore storage errors */
+    }
   }
 
   const berandaSubmenus = [
@@ -220,6 +233,7 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
           <div className="flex items-center gap-3">
             <Link
               href="/"
+              onClick={handleExitToPublic}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#B6A587] hover:bg-[#c9b99b] text-[#1A1200] font-bold px-4 py-2.5 text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
             >
               <svg className="h-4 w-4 text-[#1A1200]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

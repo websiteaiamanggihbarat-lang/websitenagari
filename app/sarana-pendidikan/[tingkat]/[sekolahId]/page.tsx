@@ -1,10 +1,10 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { connection } from "next/server"
 import {
   getTingkatBySlug,
   getAktifPendataanDanSarana,
   getFasilitasBySaranaId,
+  getKegiatanBySaranaId,
   formatAngka,
 } from "@/lib/saranaPendidikan"
 
@@ -49,8 +49,11 @@ export default async function RincianSekolahPage({ params }: PageProps) {
     notFound()
   }
 
-  // 5. Query Daftar Fasilitas Sekolah (Read-Only)
-  const { fasilitas } = await getFasilitasBySaranaId(sekolah.id)
+  // 5. Query Daftar Fasilitas dan Kegiatan Sekolah (Read-Only)
+  const [{ fasilitas }, { kegiatan }] = await Promise.all([
+    getFasilitasBySaranaId(sekolah.id),
+    getKegiatanBySaranaId(sekolah.id),
+  ])
 
   const nomorTelepon = String(sekolah.nomor_kontak || "").replace(/[^0-9+]/g, "")
   const keteranganTrimmed = (sekolah.keterangan || "").trim()
@@ -77,7 +80,7 @@ export default async function RincianSekolahPage({ params }: PageProps) {
           </div>
 
           {/* 2. Foto Utama Sekolah */}
-          <div className="mb-10 rounded-2xl overflow-hidden shadow-xs border border-[#d1c2a0]/70 bg-gray-50 scroll-slide-bottom">
+          <div className="mb-8 rounded-2xl overflow-hidden shadow-xs border border-[#d1c2a0]/70 bg-gray-50 scroll-slide-bottom">
             {sekolah.foto_url ? (
               <div className="relative aspect-[16/9] w-full overflow-hidden bg-gray-900">
                 <img
@@ -104,8 +107,65 @@ export default async function RincianSekolahPage({ params }: PageProps) {
             )}
           </div>
 
+          {/* 3. Statistik Sekolah (Langsung di bawah Foto Utama Sekolah) */}
+          <div className="mb-10">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 tracking-tight flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#5a3b0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span>Statistik Sekolah</span>
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-5 shadow-xs flex items-center gap-4">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#2c1b01] to-[#4a3210] text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <svg className="w-5.5 h-5.5 text-[#e6ddcf]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Jumlah Siswa</p>
+                  <p className="text-lg font-bold text-[#2c1b01] mt-0.5">
+                    {formatAngka(sekolah.jumlah_siswa)}{" "}
+                    <span className="text-xs font-medium text-gray-500">Siswa/i</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-5 shadow-xs flex items-center gap-4">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#2c1b01] to-[#4a3210] text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <svg className="w-5.5 h-5.5 text-[#e6ddcf]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 3v2m6-2v2m-6 4h10" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Jumlah Guru</p>
+                  <p className="text-lg font-bold text-[#2c1b01] mt-0.5">
+                    {formatAngka(sekolah.jumlah_guru)}{" "}
+                    <span className="text-xs font-medium text-gray-500">Guru</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-5 shadow-xs flex items-center gap-4">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#2c1b01] to-[#4a3210] text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <svg className="w-5.5 h-5.5 text-[#e6ddcf]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Jumlah Staf</p>
+                  <p className="text-lg font-bold text-[#2c1b01] mt-0.5">
+                    {formatAngka(jumlahStaf)}{" "}
+                    <span className="text-xs font-medium text-gray-500">Tendik/Staf</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-10">
-            {/* 3. Bagian Keterangan Sekolah (Di bawah foto) */}
+            {/* 4. Bagian Keterangan Sekolah */}
             {keteranganTrimmed && (
               <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 md:p-8 shadow-xs">
                 <h2 className="text-xl font-bold text-gray-900 mb-4 tracking-tight flex items-center gap-2">
@@ -120,7 +180,7 @@ export default async function RincianSekolahPage({ params }: PageProps) {
               </div>
             )}
 
-            {/* 4. Bagian Daftar Sarana Sekolah (Direct List) */}
+            {/* 5. Bagian Daftar Sarana Sekolah (Direct List) */}
             {fasilitas && fasilitas.length > 0 && (
               <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 md:p-8 shadow-xs overflow-hidden">
                 <h2 className="text-xl font-bold text-gray-900 mb-4 tracking-tight flex items-center gap-2">
@@ -146,64 +206,35 @@ export default async function RincianSekolahPage({ params }: PageProps) {
               </div>
             )}
 
-            {/* 5. Statistik jumlah siswa, guru, dan staf */}
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4 tracking-tight flex items-center gap-2">
-                <svg className="w-5 h-5 text-[#5a3b0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <span>Statistik Sekolah</span>
-              </h2>
+            {/* 6. Bagian Kegiatan & Ekstrakurikuler */}
+            {kegiatan && kegiatan.length > 0 && (
+              <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 md:p-8 shadow-xs overflow-hidden">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 tracking-tight flex items-center gap-2">
+                  <svg className="w-5 h-5 text-[#5a3b0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4V4z" />
+                  </svg>
+                  <span>Kegiatan & Ekstrakurikuler</span>
+                </h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-5 shadow-xs flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#2c1b01] to-[#4a3210] text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                    <svg className="w-5.5 h-5.5 text-[#e6ddcf]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Jumlah Siswa</p>
-                    <p className="text-lg font-bold text-[#2c1b01] mt-0.5">
-                      {formatAngka(sekolah.jumlah_siswa)}{" "}
-                      <span className="text-xs font-medium text-gray-500">Siswa/i</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-5 shadow-xs flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#2c1b01] to-[#4a3210] text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                    <svg className="w-5.5 h-5.5 text-[#e6ddcf]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 3v2m6-2v2m-6 4h10" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Jumlah Guru</p>
-                    <p className="text-lg font-bold text-[#2c1b01] mt-0.5">
-                      {formatAngka(sekolah.jumlah_guru)}{" "}
-                      <span className="text-xs font-medium text-gray-500">Guru</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-5 shadow-xs flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#2c1b01] to-[#4a3210] text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                    <svg className="w-5.5 h-5.5 text-[#e6ddcf]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Jumlah Staf</p>
-                    <p className="text-lg font-bold text-[#2c1b01] mt-0.5">
-                      {formatAngka(jumlahStaf)}{" "}
-                      <span className="text-xs font-medium text-gray-500">Tendik/Staf</span>
-                    </p>
-                  </div>
+                <div className="divide-y divide-[#e6ddcf]/60">
+                  {kegiatan.map((item, idx) => (
+                    <div key={item.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between text-sm gap-1 sm:gap-4">
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-gray-500">{idx + 1}.</span>
+                        <span className="font-semibold text-gray-900">{item.nama_kegiatan}</span>
+                      </div>
+                      {item.keterangan && (
+                        <span className="text-xs text-gray-600 sm:text-right pl-7 sm:pl-0 italic">
+                          {item.keterangan}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* 6. Bagian Kontak dan Akses Sekolah */}
+            {/* 7. Bagian Kontak dan Akses Sekolah */}
             {(sekolah.nomor_kontak || sekolah.lokasi_peta) && (
               <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white p-6 md:p-8 shadow-xs">
                 <h2 className="text-xl font-bold text-gray-900 mb-4 tracking-tight flex items-center gap-2">

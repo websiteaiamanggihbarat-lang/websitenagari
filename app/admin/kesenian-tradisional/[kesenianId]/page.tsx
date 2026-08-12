@@ -10,7 +10,6 @@ import {
   KesenianTradisional,
   getLabelKategoriKesenian,
 } from "@/lib/kesenian"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface PageProps {
@@ -99,7 +98,6 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState<GaleriKesenianTradisional | null>(null)
 
   // Multi-upload queue & report state
@@ -552,7 +550,6 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
       if (errStorage) {
         const msg = `Gagal menghapus file dari Storage: ${errStorage.message}.`
         setPesanError(msg)
-        showError(msg)
         await fetchKesenianDanGaleri()
         setActionLoadingId(null)
         return
@@ -567,20 +564,17 @@ export default function AdminGaleriKesenianPage({ params }: PageProps) {
       if (errDeleteDb) {
         const msg = `File foto di Storage terhapus, namun gagal menghapus baris database: ${errDeleteDb.message}.`
         setPesanError(msg)
-        showError(msg)
       } else {
         const msg = item.is_cover && item.is_active
           ? "Foto utama berhasil dihapus. Kesenian induk telah dinonaktifkan karena tidak lagi memiliki foto utama."
           : "Foto galeri berhasil dihapus secara permanen."
         setPesanSukses(msg)
-        showSuccess(msg)
       }
 
       await fetchKesenianDanGaleri()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setPesanError(`Terjadi kesalahan saat menghapus foto: ${msg}`)
-      showError(`Terjadi kesalahan saat menghapus foto: ${msg}`)
     } finally {
       setActionLoadingId(null)
     }

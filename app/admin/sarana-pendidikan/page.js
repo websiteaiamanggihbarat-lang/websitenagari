@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const BUCKET_FOTO = "foto-sarana-pendidikan"
@@ -80,7 +79,6 @@ export default function SaranaPendidikanAdminIndex() {
 
   const [pesanSukses, setPesanSukses] = useState(null)
   const [pesanError, setPesanError] = useState(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   const periksaSesi = async () => {
@@ -391,7 +389,6 @@ export default function SaranaPendidikanAdminIndex() {
 
       const msg = `Pendataan tahun ${item.tahun_pendataan} berhasil dihapus.`
       setPesanSukses(msg)
-      showSuccess(msg)
 
       if (editingPendataanId === item.id) {
         handleBatalForm()
@@ -402,7 +399,6 @@ export default function SaranaPendidikanAdminIndex() {
       console.error("hapus pendataan error:", hapusError)
       const msg = `Gagal menghapus pendataan: ${hapusError?.message || "Terjadi kesalahan."}`
       setPesanError(msg)
-      showError(msg)
     } finally {
       setLoading(false)
     }

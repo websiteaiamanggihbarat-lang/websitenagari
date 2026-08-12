@@ -12,7 +12,6 @@ import {
   fetchDetailLembagaOrganisasiAdmin,
   isValidLembagaOrganisasiId,
 } from "@/lib/lembagaOrganisasi"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface PageProps {
@@ -98,7 +97,6 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
   const [activeOperation, setActiveOperation] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [confirmModalState, setConfirmModalState] = useState<{
     isOpen: boolean
     title: string
@@ -308,7 +306,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       const file = e.target.files[0]
       const err = validateImageFile(file)
       if (err) {
-        showError(err)
+        setPesanError(err)
         return
       }
       setPengurusFotoFile(file)
@@ -513,7 +511,6 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       if (errRemove) {
         const msg = parseErrorMessage(errRemove, "Gagal menghapus foto dari storage.")
         setPesanError(msg)
-        showError(msg)
         setActiveOperation(null)
         return
       }
@@ -532,20 +529,17 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       if (errUpdate || !updatedRow) {
         const msg = "Foto di storage terhapus tetapi gagal memperbarui metadata database."
         setPesanError(msg)
-        showError(msg)
         setActiveOperation(null)
         return
       }
 
       const msg = "Foto pengurus berhasil dihapus."
       setPesanSukses(msg)
-      showSuccess(msg)
       await loadDetail()
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       const msg = parseErrorMessage(e, "Terjadi kesalahan saat menghapus foto pengurus.")
       setPesanError(msg)
-      showError(msg)
     } finally {
       setActiveOperation(null)
     }
@@ -588,20 +582,17 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       if (errDelete || !deletedRow) {
         const msg = parseErrorMessage(errDelete, "Gagal menghapus data pengurus dari database.")
         setPesanError(msg)
-        showError(msg)
         setActiveOperation(null)
         return
       }
 
       const msg = "Pengurus berhasil dihapus."
       setPesanSukses(msg)
-      showSuccess(msg)
       await loadDetail()
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       const msg = parseErrorMessage(e, "Terjadi kesalahan saat menghapus pengurus.")
       setPesanError(msg)
-      showError(msg)
     } finally {
       setActiveOperation(null)
     }
@@ -768,20 +759,17 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       if (error || !deletedRow) {
         const msg = parseErrorMessage(error, "Gagal menghapus tugas.")
         setPesanError(msg)
-        showError(msg)
         setActiveOperation(null)
         return
       }
 
       const msg = "Tugas berhasil dihapus."
       setPesanSukses(msg)
-      showSuccess(msg)
       await loadDetail()
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       const msg = parseErrorMessage(e, "Terjadi kesalahan saat menghapus tugas.")
       setPesanError(msg)
-      showError(msg)
     } finally {
       setActiveOperation(null)
     }
@@ -858,7 +846,7 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       for (const f of selected) {
         const err = validateImageFile(f)
         if (err) {
-          showError(`File '${f.name}': ${err}`)
+          setPesanError(`File '${f.name}': ${err}`)
         } else {
           validFiles.push(f)
         }
@@ -1066,7 +1054,6 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       if (errStorage) {
         const msg = parseErrorMessage(errStorage, "Gagal menghapus file foto dari storage. Penghapusan dibatalkan.")
         setPesanError(msg)
-        showError(msg)
         setActiveOperation(null)
         return
       }
@@ -1083,19 +1070,16 @@ export default function AdminDetailLembagaOrganisasiPage({ params }: PageProps) 
       if (errDelete || !deletedRow) {
         const msg = "File foto terhapus dari storage tetapi gagal menghapus metadata database."
         setPesanError(msg)
-        showError(msg)
         setActiveOperation(null)
         return
       }
 
       const msg = "Foto galeri berhasil dihapus."
       setPesanSukses(msg)
-      showSuccess(msg)
       await loadDetail()
     } catch {
       const msg = "Terjadi kesalahan saat menghapus foto galeri."
       setPesanError(msg)
-      showError(msg)
     } finally {
       setActiveOperation(null)
     }

@@ -14,7 +14,6 @@ import {
   fetchSemuaGaleriFotoAdmin,
   type GaleriFoto,
 } from "@/lib/galeri"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 export default function AdminGaleriPage() {
@@ -40,7 +39,6 @@ export default function AdminGaleriPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState<GaleriFoto | null>(null)
 
   // State cleanup upload tertunda (jika upload Storage berhasil tetapi insert DB gagal)
@@ -359,12 +357,10 @@ export default function AdminGaleriPage() {
       // Sukses Hapus
       const msg = "Foto galeri berhasil dihapus."
       setPesanSukses(msg)
-      showSuccess(msg)
       await loadData()
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus foto."
       setPesanError(msg)
-      showError(msg)
       await loadData()
     } finally {
       setDeletingId(null)

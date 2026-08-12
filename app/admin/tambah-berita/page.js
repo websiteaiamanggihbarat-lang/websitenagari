@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 function formatTanggal(nilai) {
@@ -75,7 +74,6 @@ export default function TambahBerita() {
 
   const [pesanSukses, setPesanSukses] = useState(null)
   const [pesanError, setPesanError] = useState(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   const periksaSesi = async () => {
@@ -396,14 +394,12 @@ export default function TambahBerita() {
       console.error("hapus berita error:", deleteError)
       const msg = `Gagal menghapus berita: ${deleteError.message}`
       setPesanError(msg)
-      showError(msg)
       setLoading(false)
       return
     }
 
     const msg = `Berita "${item.judul}" berhasil dihapus.`
     setPesanSukses(msg)
-    showSuccess(msg)
 
     if (editingId === item.id) {
       handleBatalForm()

@@ -4,15 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import {
-  BUCKET_FOTO_KESEHATAN,
-  PILIHAN_JENIS_SARANA,
-  JenisSlugKesehatan,
-  PendataanKesehatan,
-  SaranaKesehatan,
-  getLabelJenisSarana,
-} from "@/lib/kesehatan"
-import { useToast } from "@/components/ui/Toast"
+import { BUCKET_FOTO_KESEHATAN, PILIHAN_JENIS_SARANA, JenisSlugKesehatan, PendataanKesehatan, SaranaKesehatan, getLabelJenisSarana } from "@/lib/kesehatan"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const SARAN_FASILITAS = [
@@ -48,7 +40,7 @@ const SARAN_INDIKATOR = [
   "Status Akreditasi",
 ]
 
-function keAngka(nilai: any): number {
+function keAngka(nilai: unknown): number {
   const angka = Number(nilai)
   return Number.isFinite(angka) ? angka : 0
 }
@@ -121,17 +113,17 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
   const [saranaList, setSaranaList] = useState<SaranaKesehatan[]>([])
 
   // State Table Detail 1: Fasilitas
-  const [formFasilitasList, setFormFasilitasList] = useState<any[]>([])
+  const [formFasilitasList, setFormFasilitasList] = useState<Array<Record<string, any>>>([])
   const [existingFasilitasIds, setExistingFasilitasIds] = useState<string[]>([])
   const [loadingFasilitas, setLoadingFasilitas] = useState(false)
 
   // State Table Detail 2: Tenaga Kesehatan
-  const [formTenagaList, setFormTenagaList] = useState<any[]>([])
+  const [formTenagaList, setFormTenagaList] = useState<Array<Record<string, any>>>([])
   const [existingTenagaIds, setExistingTenagaIds] = useState<string[]>([])
   const [loadingTenaga, setLoadingTenaga] = useState(false)
 
   // State Table Detail 3: Indikator Tambahan
-  const [formIndikatorList, setFormIndikatorList] = useState<any[]>([])
+  const [formIndikatorList, setFormIndikatorList] = useState<Array<Record<string, any>>>([])
   const [existingIndikatorIds, setExistingIndikatorIds] = useState<string[]>([])
   const [loadingIndikator, setLoadingIndikator] = useState(false)
 
@@ -147,7 +139,6 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState<SaranaKesehatan | null>(null)
 
   const periksaSesi = async () => {
@@ -808,7 +799,7 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                 isFotoUploadSuccess = false
               }
             }
-          } catch (uploadErr: any) {
+          } catch (uploadErr: unknown) {
             console.error("Upload foto sarana baru gagal:", uploadErr)
             isFotoUploadSuccess = false
           }
@@ -959,9 +950,10 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
 
       handleBatalForm()
       await fetchSarana(pendataanId)
-    } catch (simpanErr: any) {
+    } catch (simpanErr: unknown) {
       console.error("simpan sarana error:", simpanErr)
-      setPesanError(`Gagal menyimpan sarana kesehatan: ${simpanErr?.message || "Terjadi kesalahan."}`)
+      const err = simpanErr as { message?: string }
+      setPesanError(`Gagal menyimpan sarana kesehatan: ${err?.message || "Terjadi kesalahan."}`)
     } finally {
       setLoading(false)
     }
@@ -1002,11 +994,9 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
       if (hapusError) {
         const msg = `Gagal menghapus sarana kesehatan: ${hapusError.message}`
         setPesanError(msg)
-        showError(msg)
       } else {
         const msg = `Sarana kesehatan "${item.nama_sarana}" berhasil dihapus.`
         setPesanSukses(msg)
-        showSuccess(msg)
       }
 
       if (editingSaranaId === item.id) {
@@ -1014,11 +1004,11 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
       }
 
       await fetchSarana(pendataanId)
-    } catch (hapusError: any) {
+    } catch (hapusError: unknown) {
       console.error("hapus sarana error:", hapusError)
-      const msg = `Gagal menghapus sarana kesehatan: ${hapusError?.message || "Terjadi kesalahan."}`
+      const err = hapusError as { message?: string }
+      const msg = `Gagal menghapus sarana kesehatan: ${err?.message || "Terjadi kesalahan."}`
       setPesanError(msg)
-      showError(msg)
     } finally {
       setLoading(false)
     }

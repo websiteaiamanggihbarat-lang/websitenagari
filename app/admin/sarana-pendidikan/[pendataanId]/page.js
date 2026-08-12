@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const BUCKET_FOTO = "foto-sarana-pendidikan"
@@ -187,7 +186,6 @@ export default function KelolaSaranaDetailAdmin() {
 
   const [pesanSukses, setPesanSukses] = useState(null)
   const [pesanError, setPesanError] = useState(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   const periksaSesi = async () => {
@@ -882,7 +880,6 @@ export default function KelolaSaranaDetailAdmin() {
 
       const msg = `Sarana pendidikan "${item.nama_sarana}" berhasil dihapus.`
       setPesanSukses(msg)
-      showSuccess(msg)
 
       if (editingSaranaId === item.id) {
         handleBatalForm()
@@ -893,7 +890,6 @@ export default function KelolaSaranaDetailAdmin() {
       console.error("hapus sekolah error:", hapusErr)
       const msg = `Gagal menghapus sarana pendidikan: ${hapusErr?.message || "Terjadi kesalahan."}`
       setPesanError(msg)
-      showError(msg)
     } finally {
       setLoading(false)
     }

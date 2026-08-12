@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { BUCKET_FOTO_KESEHATAN, PendataanKesehatan } from "@/lib/kesehatan"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const FORM_PENDATAAN_AWAL = {
@@ -18,7 +17,7 @@ const FORM_PENDATAAN_AWAL = {
   keterangan: "",
 }
 
-function keAngka(nilai: any): number {
+function keAngka(nilai: unknown): number {
   const angka = Number(nilai)
   return Number.isFinite(angka) ? angka : 0
 }
@@ -76,7 +75,6 @@ export default function KesehatanAdminIndex() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState<PendataanKesehatan | null>(null)
 
   const periksaSesi = async () => {
@@ -250,13 +248,14 @@ export default function KesehatanAdminIndex() {
 
       handleBatalForm()
       await fetchPendataan()
-    } catch (simpanError: any) {
+    } catch (simpanError: unknown) {
       console.error("simpan pendataan kesehatan error:", simpanError)
+      const err = simpanError as { code?: string; message?: string }
 
-      if (simpanError?.code === "23505") {
+      if (err?.code === "23505") {
         setPesanError("Data pendataan untuk tahun tersebut sudah ada.")
       } else {
-        setPesanError(`Gagal menyimpan pendataan kesehatan: ${simpanError?.message || "Terjadi kesalahan."}`)
+        setPesanError(`Gagal menyimpan periode pendataan: ${err?.message || "Terjadi kesalahan."}`)
       }
     } finally {
       setLoading(false)
@@ -378,11 +377,9 @@ export default function KesehatanAdminIndex() {
       if (hapusError) {
         const msg = `Gagal menghapus periode pendataan: ${hapusError.message}`
         setPesanError(msg)
-        showError(msg)
       } else {
         const msg = `Periode pendataan kesehatan tahun ${item.tahun_pendataan} berhasil dihapus.`
         setPesanSukses(msg)
-        showSuccess(msg)
       }
 
       if (editingPendataanId === item.id) {
@@ -390,11 +387,11 @@ export default function KesehatanAdminIndex() {
       }
 
       await fetchPendataan()
-    } catch (hapusErr: any) {
+    } catch (hapusErr: unknown) {
       console.error("hapus pendataan error:", hapusErr)
-      const msg = `Gagal menghapus periode pendataan: ${hapusErr?.message || "Terjadi kesalahan."}`
+      const err = hapusErr as { message?: string }
+      const msg = `Gagal menghapus periode pendataan: ${err?.message || "Terjadi kesalahan."}`
       setPesanError(msg)
-      showError(msg)
     } finally {
       setLoading(false)
     }

@@ -15,7 +15,6 @@ import {
   getObjectPositionHero,
   isPosisiGambarHero,
 } from "@/lib/heroBeranda"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 export type CleanupHeroTertunda = {
@@ -214,7 +213,6 @@ export default function AdminHeroBerandaPage() {
   const [daftarHero, setDaftarHero] = useState<HeroBeranda[]>([])
   const [loadingData, setLoadingData] = useState<boolean>(true)
   const [errorData, setErrorData] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState<HeroBeranda | null>(null)
 
   // State Form Admin
@@ -800,7 +798,6 @@ export default function AdminHeroBerandaPage() {
       if (deactivateError) {
         const msg = `Gagal menonaktifkan gambar sebelum penghapusan: ${deactivateError.message}`
         setErrorData(msg)
-        showError(msg)
         return
       }
 
@@ -813,7 +810,6 @@ export default function AdminHeroBerandaPage() {
         }
         const msg = `Gambar telah dinonaktifkan, tetapi file Storage belum berhasil dibersihkan (${hasilFolder.pesan ?? "Error Storage"}). Gunakan tombol Retry Hapus.`
         setErrorData(msg)
-        showError(msg)
         await muatDaftarHero()
         return
       }
@@ -830,7 +826,6 @@ export default function AdminHeroBerandaPage() {
         }
         const msg = `File Storage sudah dibersihkan, tetapi record database belum berhasil dihapus (${dbDeleteError.message}). Gunakan tombol Retry Hapus.`
         setErrorData(msg)
-        showError(msg)
         await muatDaftarHero()
         return
       }
@@ -839,12 +834,10 @@ export default function AdminHeroBerandaPage() {
       setRetryDeleteIds((prev) => prev.filter((id) => id !== heroId))
       const msg = `Gambar hero '${item.nama_internal}' berhasil dihapus secara permanen.`
       setPesanSuksesForm(msg)
-      showSuccess(msg)
       await muatDaftarHero()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setErrorData(`Terjadi kesalahan saat menghapus gambar hero: ${msg}`)
-      showError(`Terjadi kesalahan saat menghapus gambar hero: ${msg}`)
     } finally {
       setProcessingDeleteId(null)
     }

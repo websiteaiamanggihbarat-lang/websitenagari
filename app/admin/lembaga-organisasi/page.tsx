@@ -11,7 +11,6 @@ import {
   fetchDaftarLembagaOrganisasiAdmin,
   fetchDetailLembagaOrganisasiAdmin,
 } from "@/lib/lembagaOrganisasi"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormDataUtama {
@@ -108,8 +107,6 @@ function validateImageFile(file: File): string | null {
 export default function AdminLembagaOrganisasiPage() {
   const [checkingSession, setCheckingSession] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-
-  const { showSuccess, showError } = useToast()
 
   const [listData, setListData] = useState<DaftarLembagaOrganisasiAdmin[]>([])
   const [loadingList, setLoadingList] = useState(false)
@@ -838,20 +835,17 @@ export default function AdminLembagaOrganisasiPage() {
       if (errDelete || !delData) {
         const msg = parseErrorMessage(errDelete, "Gagal menghapus data utama.")
         setPesanError(msg)
-        showError(msg)
         setDeletingId(null)
         return
       }
 
       const msg = `Lembaga / Organisasi '${nama}' berhasil dihapus.`
       setPesanSukses(msg)
-      showSuccess(msg)
       await loadData()
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       const msg = parseErrorMessage(e, "Terjadi kesalahan saat menghapus data.")
       setPesanError(msg)
-      showError(msg)
     } finally {
       setDeletingId(null)
     }

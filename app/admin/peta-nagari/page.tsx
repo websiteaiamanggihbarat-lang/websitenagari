@@ -17,7 +17,6 @@ import {
   getLabelJenisPeta,
   isJenisPeta,
 } from "@/lib/petaNagari"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormPetaState {
@@ -134,7 +133,6 @@ export default function AdminPetaNagariPage() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState<PetaNagari | null>(null)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -739,7 +737,6 @@ export default function AdminPetaNagariPage() {
         })
         const msg = "Data Peta Nagari gagal dihapus. Silakan coba kembali."
         setPesanError(msg)
-        showError(msg)
         setProcessingDeleteId(null)
         return
       }
@@ -782,11 +779,9 @@ export default function AdminPetaNagariPage() {
       if (storageWarning) {
         const msg = `Peta Nagari "${item.judul_peta}" berhasil dihapus dari database, tetapi beberapa file gagal dibersihkan dari penyimpanan.`
         setPesanSukses(msg)
-        showSuccess(msg)
       } else {
         const msg = `Peta Nagari "${item.judul_peta}" berhasil dihapus.`
         setPesanSukses(msg)
-        showSuccess(msg)
       }
 
       if (editingId === petaId) {
@@ -800,7 +795,6 @@ export default function AdminPetaNagariPage() {
       console.error("Terjadi kesalahan saat menghapus peta:", e)
       const msg = "Data Peta Nagari gagal dihapus. Silakan coba kembali."
       setPesanError(msg)
-      showError(msg)
     } finally {
       setProcessingDeleteId(null)
     }

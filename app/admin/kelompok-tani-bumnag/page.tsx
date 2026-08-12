@@ -12,7 +12,6 @@ import {
   getLabelJenisEntitas,
   getLabelPimpinan,
 } from "@/lib/kelompokTaniBumnag"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormState {
@@ -122,7 +121,6 @@ export default function AdminKelompokTaniBumnagPage() {
 
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const { showSuccess, showError } = useToast()
   const [deleteTarget, setDeleteTarget] = useState<KelompokTaniBumnag | null>(null)
   const [newCreatedId, setNewCreatedId] = useState<string | null>(null)
 
@@ -394,17 +392,14 @@ export default function AdminKelompokTaniBumnagPage() {
       if (errDelete) {
         const msg = formatSupabaseError(errDelete, `Gagal menghapus data "${item.nama_entitas}"`)
         setPesanError(msg)
-        showError(msg)
       } else {
         const msg = `Data "${item.nama_entitas}" berhasil dihapus.`
         setPesanSukses(msg)
-        showSuccess(msg)
         await fetchData()
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setPesanError(`Terjadi kesalahan saat menghapus data: ${msg}`)
-      showError(`Terjadi kesalahan saat menghapus data: ${msg}`)
     } finally {
       setActionLoadingId(null)
     }

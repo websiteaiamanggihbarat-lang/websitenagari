@@ -16,7 +16,6 @@ import {
   HariPelayananKey,
   HARI_PELAYANAN_LABEL,
 } from "@/lib/layananInformasi"
-import { useToast } from "@/components/ui/Toast"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 interface FormState {
@@ -168,7 +167,6 @@ export default function AdminLayananInformasiPage() {
   // Global Toast Messages
   const [pesanSukses, setPesanSukses] = useState<string | null>(null)
   const [pesanError, setPesanError] = useState<string | null>(null)
-  const { showSuccess, showError, showWarning } = useToast()
   const [deleteTarget, setDeleteTarget] = useState<LayananSuratDenganPersyaratan | null>(null)
 
   const handleLogout = async () => {
@@ -702,7 +700,7 @@ export default function AdminLayananInformasiPage() {
 
   const handleRemovePersyaratanRow = (localId: string) => {
     if (persyaratanRows.length <= 1) {
-      showWarning("Layanan surat wajib memiliki minimal 1 persyaratan.")
+      setFieldErrorsLayanan((prev) => ({ ...prev, persyaratan: "Layanan surat wajib memiliki minimal 1 persyaratan." }))
       return
     }
     setPersyaratanRows((prev) => prev.filter((r) => r.localId !== localId))
@@ -997,7 +995,6 @@ export default function AdminLayananInformasiPage() {
       if (sessionError || !session) {
         const msg = "Sesi admin tidak tersedia. Silakan masuk kembali."
         setPesanError(msg)
-        showError(msg)
         return
       }
 
@@ -1013,7 +1010,6 @@ export default function AdminLayananInformasiPage() {
       if (!deletedRow) {
         const msg = "Gagal menghapus layanan surat: data tidak ditemukan."
         setPesanError(msg)
-        showError(msg)
         return
       }
 
@@ -1024,12 +1020,10 @@ export default function AdminLayananInformasiPage() {
       await loadAllData()
       const msg = `Layanan surat '${item.nama_layanan}' berhasil dihapus.`
       setPesanSukses(msg)
-      showSuccess(msg)
     } catch (err: unknown) {
       const e = err as SupabaseErrorLike
       const msg = parseErrorMessage(e, "Gagal menghapus layanan surat.")
       setPesanError(msg)
-      showError(msg)
     } finally {
       setDeletingLayananId(null)
     }
