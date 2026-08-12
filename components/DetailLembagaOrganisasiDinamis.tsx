@@ -96,9 +96,17 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
   // Evaluasi Alamat & Kontak
   const alamatVal = detail.alamat?.trim() || ""
   const hasAlamat = Boolean(alamatVal)
+  const isUrlAddress = Boolean(
+    alamatVal && (alamatVal.startsWith("http://") || alamatVal.startsWith("https://") || alamatVal.includes("maps"))
+  )
   const googleMapsUrl = hasAlamat
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(alamatVal)}`
+    ? isUrlAddress
+      ? alamatVal
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(alamatVal)}`
     : ""
+  const displayAlamatText = isUrlAddress
+    ? "Buka lokasi di Google Maps"
+    : alamatVal
 
   const kontakVal = detail.kontak?.trim() || ""
   const hasKontak = Boolean(kontakVal)
@@ -230,95 +238,99 @@ export default function DetailLembagaOrganisasiDinamis({ detail }: Props) {
 
         {/* Content Area di dalam Outer Card yang Sama */}
         <div className="p-6 sm:p-8 space-y-8">
-          {/* 1. BAGIAN ATAS: 3 Card Sejajar Desktop (Alamat, Kontak, Jam Operasional) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1: Alamat */}
+          {/* 1. BAGIAN ATAS: 3 Card Sejajar Desktop & Sama Lebar (Alamat, Kontak, Jam Operasional) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+            {/* Card 1: Alamat (Clickable 100%, Clean Display Text, Vertically Centered) */}
             {hasAlamat ? (
               <a
                 href={googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`Buka alamat ${detail.nama} di Google Maps`}
-                className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-pointer hover:border-[#6b4b1d]/50 hover:bg-[#fcfaf7] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#6b4b1d]/30 group"
+                className="flex items-center justify-between gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-pointer hover:border-[#6b4b1d]/50 hover:bg-[#fcfaf7] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#6b4b1d]/30 group"
               >
-                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0">
+                    <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-bold text-gray-900 mb-0.5 group-hover:text-[#6b4b1d] transition-colors">Alamat</h3>
+                    <p className="text-sm text-gray-700 font-medium whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
+                      {displayAlamatText}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#6b4b1d] transition-colors">Alamat</h3>
-                  <p className="text-sm text-gray-700 font-medium whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
-                    {alamatVal}
-                  </p>
-                </div>
-                <svg className="h-4 w-4 text-[#6b4b1d] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0 mt-1" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 text-[#6b4b1d] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002 2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
             ) : (
-              <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default opacity-90">
-                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="flex items-center gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default opacity-90">
+                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0">
                   <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-bold text-gray-900 mb-1">Alamat</h3>
+                  <h3 className="text-base font-bold text-gray-900 mb-0.5">Alamat</h3>
                   <p className="text-sm text-gray-400 italic">Alamat belum tersedia</p>
                 </div>
               </div>
             )}
 
-            {/* Card 2: Kontak */}
+            {/* Card 2: Kontak (Vertically Centered) */}
             {hasKontak && contactInfo ? (
               <a
                 href={contactInfo.href}
                 target={contactInfo.isExternal ? "_blank" : undefined}
                 rel={contactInfo.isExternal ? "noopener noreferrer" : undefined}
                 aria-label={`Hubungi ${detail.nama}: ${contactInfo.label}`}
-                className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-pointer hover:border-[#6b4b1d]/50 hover:bg-[#fcfaf7] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#6b4b1d]/30 group"
+                className="flex items-center justify-between gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-pointer hover:border-[#6b4b1d]/50 hover:bg-[#fcfaf7] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#6b4b1d]/30 group"
               >
-                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0">
+                    <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-bold text-gray-900 mb-0.5 group-hover:text-[#6b4b1d] transition-colors">Kontak</h3>
+                    <p className="text-sm text-[#6b4b1d] font-bold whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
+                      {contactInfo.label}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#6b4b1d] transition-colors">Kontak</h3>
-                  <p className="text-sm text-[#6b4b1d] font-bold whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
-                    {contactInfo.label}
-                  </p>
-                </div>
-                <svg className="h-4 w-4 text-[#6b4b1d] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0 mt-1" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 text-[#6b4b1d] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002 2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
             ) : (
-              <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default opacity-90">
-                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="flex items-center gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default opacity-90">
+                <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0">
                   <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-bold text-gray-900 mb-1">Kontak</h3>
+                  <h3 className="text-base font-bold text-gray-900 mb-0.5">Kontak</h3>
                   <p className="text-sm text-gray-400 italic">Kontak belum tersedia</p>
                 </div>
               </div>
             )}
 
-            {/* Card 3: Jam Operasional */}
-            <div className="flex items-start gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default">
-              <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0 mt-0.5">
+            {/* Card 3: Jam Operasional (Vertically Centered) */}
+            <div className="flex items-center gap-3.5 rounded-xl border border-[#d1c2a0]/60 bg-white p-5 shadow-xs transition-all duration-200 min-w-0 h-full cursor-default">
+              <div className="w-9 h-9 rounded-lg bg-[#f0e8db] border border-[#d1c2a0]/60 text-[#2c1b01] flex items-center justify-center flex-shrink-0">
                 <svg className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-base font-bold text-gray-900 mb-1">Jam Operasional</h3>
+                <h3 className="text-base font-bold text-gray-900 mb-0.5">Jam Operasional</h3>
                 <p className="text-sm text-gray-700 font-medium whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
                   {detail.jam_kerja?.trim() || "Senin - Jumat: 08:00 - 16:00 WIB"}
                 </p>
