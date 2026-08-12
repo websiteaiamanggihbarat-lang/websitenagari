@@ -256,7 +256,7 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
   )
 
   return (
-    <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-left">
+    <div className="public-card-hover p-6 sm:p-8 scroll-slide-left transition-all duration-300 hover:-translate-y-1 hover:border-[#b6a587] hover:shadow-md">
       {/* Judul kartu */}
       <div className="flex items-center mb-6">
         <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
@@ -378,7 +378,7 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
 
         {/* Tabel kelompok usia */}
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <p className="font-semibold mb-3">
+          <p className="font-semibold mb-3 text-gray-900">
             Jumlah penduduk berdasarkan kelompok
             usia pada tanggal{" "}
             {formatTanggal(
@@ -387,75 +387,59 @@ console.log("DATA INFORMASI PENDUDUK BERANDA:", {
             :
           </p>
 
-          <div className="overflow-x-auto scroll-slide-right">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-[#f0e8db] border-b border-gray-300">
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900">
-                    No.
-                  </th>
+          <div className="overflow-x-auto">
+            <div className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+              {/* Table Header */}
+              <div className="grid grid-cols-[45px_1fr_1fr_90px] bg-[#f0e8db] border-b border-gray-300 px-3.5 py-2.5 text-sm font-semibold text-gray-900">
+                <div>No.</div>
+                <div>Kelompok Usia</div>
+                <div>Rentang Usia</div>
+                <div className="text-right">Jumlah</div>
+              </div>
 
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900">
-                    Kelompok Usia
-                  </th>
-
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900">
-                    Rentang Usia
-                  </th>
-
-                  <th className="px-3 py-2 text-right font-semibold text-gray-900">
-                    Jumlah
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="text-gray-700">
+              {/* Table Body Rows */}
+              <div className="divide-y divide-gray-200 bg-white">
                 {kelompokUsia.length > 0 ? (
                   kelompokUsia.map(
                     (kelompok, index) => (
-                      <tr
+                      <div
                         key={
                           kelompok.id ||
                           `${kelompok.nama_kelompok}-${index}`
                         }
-                        className="border-b border-gray-200 last:border-b-0"
+                        className="grid grid-cols-[45px_1fr_1fr_90px] items-center px-3.5 py-3 text-sm text-gray-900 hover:bg-[#f7f2e8] transition-colors"
                       >
-                        <td className="px-3 py-2">
+                        <div className="font-medium text-gray-700">
                           {index + 1}.
-                        </td>
+                        </div>
 
-                        <td className="px-3 py-2 font-medium">
+                        <div className="font-semibold text-gray-900">
                           {
                             kelompok.nama_kelompok
                           }
-                        </td>
+                        </div>
 
-                        <td className="px-3 py-2">
+                        <div className="text-gray-700">
                           {kelompok.rentang_usia ||
                             "-"}
-                        </td>
+                        </div>
 
-                        <td className="px-3 py-2 text-right font-semibold">
+                        <div className="text-right font-semibold text-gray-900">
                           {formatAngka(
                             kelompok.jumlah
                           )}
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     )
                   )
                 ) : (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-3 py-5 text-center text-gray-500"
-                    >
-                      Rincian kelompok usia belum
-                      tersedia.
-                    </td>
-                  </tr>
+                  <div className="px-3.5 py-5 text-center text-gray-500 text-sm">
+                    Rincian kelompok usia belum
+                    tersedia.
+                  </div>
                 )}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>

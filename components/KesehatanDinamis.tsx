@@ -47,12 +47,12 @@ export default async function KesehatanDinamis() {
   const noKaderPosyandu = daftarSaranaRow.length + 1
 
   return (
-    <div className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200/50 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] transition-all duration-300 scroll-slide-right">
+    <div className="public-card-hover p-6 sm:p-8 scroll-slide-right transition-all duration-300 hover:-translate-y-1 hover:border-[#b6a587] hover:shadow-md">
       {/* 1. Header Kartu */}
-      <div className="flex items-center mb-6">
-        <div className="w-12 h-12 bg-gradient-to-br from-[#4a3210] to-[#2c1b01] rounded-xl flex items-center justify-center shadow-lg shadow-[rgba(44,27,1,0.25)] mr-4 group-hover:scale-110 transition-transform">
+      <div className="flex items-center mb-5">
+        <div className="w-11 h-11 bg-gradient-to-br from-[#2C1B01] to-[#1A1200] rounded-xl flex items-center justify-center shadow-md text-[#B6A587] mr-3.5 flex-shrink-0 border border-[#B6A587]/30">
           <svg
-            className="w-6 h-6 text-white"
+            className="w-5.5 h-5.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -66,15 +66,13 @@ export default async function KesehatanDinamis() {
           </svg>
         </div>
 
-        <div>
-          <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
+        <div className="min-w-0">
+          <h3 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] tracking-tight truncate">
             Kesehatan
           </h3>
-          {pendataan && (
-            <p className="text-xs text-gray-500 font-normal">
-              Periode {pendataan.tahun_pendataan}
-            </p>
-          )}
+          <p className="text-xs font-semibold text-[#5A3B0D]">
+            Posyandu &amp; Sarana Kesehatan Nagari
+          </p>
         </div>
       </div>
 

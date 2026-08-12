@@ -18,13 +18,13 @@ export default async function KelompokTaniBumnagDinamis() {
   const listValid = listEntitas.filter((item) => item.cover !== null)
 
   return (
-    <div className="group rounded-2xl border border-gray-200/50 bg-gradient-to-br from-white to-gray-50 p-6 sm:p-8 shadow-sm transition-all duration-300 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] scroll-slide-left">
+    <div className="public-card-hover p-6 sm:p-8 scroll-slide-left transition-all duration-300 hover:-translate-y-1 hover:border-[#b6a587] hover:shadow-md">
       {/* Header Container */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center">
-          <div className="mr-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#4a3210] to-[#2c1b01] shadow-lg shadow-[rgba(44,27,1,0.25)] transition-transform group-hover:scale-110">
+          <div className="w-11 h-11 bg-gradient-to-br from-[#2C1B01] to-[#1A1200] rounded-xl flex items-center justify-center shadow-md text-[#B6A587] mr-3.5 flex-shrink-0 border border-[#B6A587]/30">
             <svg
-              className="h-6 w-6 text-white"
+              className="w-5.5 h-5.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -38,12 +38,12 @@ export default async function KelompokTaniBumnagDinamis() {
             </svg>
           </div>
 
-          <div>
-            <h3 className="text-2xl font-bold tracking-tight text-gray-900">
+          <div className="min-w-0">
+            <h3 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] tracking-tight truncate">
               Kelompok Tani dan BUMNag
             </h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Kelompok tani masyarakat dan unit bisnis Badan Usaha Milik Nagari Aia Manggih Barat.
+            <p className="text-xs font-semibold text-[#5A3B0D]">
+              Kelompok Tani &amp; Unit Bisnis BUMNag
             </p>
           </div>
         </div>
@@ -69,7 +69,7 @@ export default async function KelompokTaniBumnagDinamis() {
             return (
               <div
                 key={item.id}
-                className="group/card flex flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm hover:shadow-md transition duration-200"
+                className="group/card flex flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-[#b6a587] transition-all duration-300"
               >
                 {/* Foto Cover */}
                 <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-100">

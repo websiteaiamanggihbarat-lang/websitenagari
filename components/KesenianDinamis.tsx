@@ -11,12 +11,12 @@ export default async function KesenianDinamis() {
   const ringkasanList = await fetchRekapKategoriKesenianAktif()
 
   return (
-    <div className="group rounded-2xl border border-gray-200/50 bg-gradient-to-br from-white to-gray-50 p-6 sm:p-8 shadow-sm transition-all duration-300 hover:border-[#c0ae86] hover:shadow-xl hover:shadow-[rgba(182,165,135,0.5)] scroll-slide-right">
+    <div className="public-card-hover p-6 sm:p-8 scroll-slide-right transition-all duration-300 hover:-translate-y-1 hover:border-[#b6a587] hover:shadow-md">
       {/* Header Container */}
-      <div className="mb-6 flex items-center">
-        <div className="mr-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#4a3210] to-[#2c1b01] shadow-lg shadow-[rgba(44,27,1,0.25)] transition-transform group-hover:scale-110">
+      <div className="flex items-center mb-5">
+        <div className="w-11 h-11 bg-gradient-to-br from-[#2C1B01] to-[#1A1200] rounded-xl flex items-center justify-center shadow-md text-[#B6A587] mr-3.5 flex-shrink-0 border border-[#B6A587]/30">
           <svg
-            className="h-6 w-6 text-white"
+            className="w-5.5 h-5.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -30,12 +30,12 @@ export default async function KesenianDinamis() {
           </svg>
         </div>
 
-        <div>
-          <h3 className="text-2xl font-bold tracking-tight text-gray-900">
+        <div className="min-w-0">
+          <h3 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] tracking-tight truncate">
             Kesenian Tradisional
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Sanggar seni, tari, dan musik kebudayaan Nagari Aia Manggih Barat.
+          <p className="text-xs font-semibold text-[#5A3B0D]">
+            Kategori &amp; Seni Budaya Nagari
           </p>
         </div>
       </div>
@@ -52,66 +52,41 @@ export default async function KesenianDinamis() {
         </div>
       ) : (
         <div className="my-5 space-y-3">
-          <p className="text-sm font-semibold text-gray-800">
+          <p className="text-sm font-semibold text-gray-900">
             Daftar kategori kesenian tradisional aktif:
           </p>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-[#f0e8db] border-b border-gray-300">
-                  <th className="px-3.5 py-2.5 text-left font-semibold text-gray-900 w-12">
-                    No.
-                  </th>
-                  <th className="px-3.5 py-2.5 text-left font-semibold text-gray-900">
-                    Kategori Kesenian
-                  </th>
-                  <th className="px-3.5 py-2.5 text-right font-semibold text-gray-900 w-28">
-                    Jumlah
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
+          <div className="overflow-x-auto">
+            <div className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+              {/* Table Header */}
+              <div className="grid grid-cols-[45px_1fr_90px] bg-[#f0e8db] border-b border-gray-300 px-3.5 py-2.5 text-sm font-semibold text-gray-900">
+                <div>No.</div>
+                <div>Kategori Kesenian</div>
+                <div className="text-right">Jumlah</div>
+              </div>
+
+              {/* Table Body Rows */}
+              <div className="divide-y divide-gray-200 bg-white">
                 {ringkasanList.map((item, index) => (
-                  <tr
+                  <Link
                     key={item.kategori}
-                    className="hover:bg-[#f7f2e8]/60 transition-colors group/row"
+                    href={`/kesenian-tradisional?kategori=${item.kategori}`}
+                    aria-label={`Lihat kesenian kategori ${item.label}`}
+                    className="grid grid-cols-[45px_1fr_90px] items-center px-3.5 py-3 text-sm text-gray-900 hover:bg-[#f7f2e8] transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#6b4b1d]"
                   >
-                    <td className="px-3.5 py-2.5 text-gray-600 font-medium">
+                    <div className="font-medium text-gray-700">
                       {index + 1}.
-                    </td>
-                    <td className="px-3.5 py-2.5">
-                      <Link
-                        href={`/kesenian-tradisional?kategori=${item.kategori}`}
-                        aria-label={`Lihat kesenian kategori ${item.label}`}
-                        className="font-semibold text-gray-900 group-hover/row:text-[#2c1b01] flex items-center justify-between hover:underline focus:outline-none focus:ring-2 focus:ring-[#5a3b0d] rounded-md px-1 py-0.5"
-                      >
-                        <span>{item.label}</span>
-                        <span className="text-xs text-[#5a3b0d] font-normal group-hover/row:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                          <span>Lihat</span>
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="px-3.5 py-2.5 text-right font-bold text-[#2c1b01]">
-                      {item.jumlah} kesenian
-                    </td>
-                  </tr>
+                    </div>
+                    <div className="font-semibold text-gray-900 group-hover:text-[#6b4b1d] transition-colors">
+                      {item.label}
+                    </div>
+                    <div className="text-right font-bold text-[#2c1b01]">
+                      {item.jumlah}
+                    </div>
+                  </Link>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
         </div>
       )}
