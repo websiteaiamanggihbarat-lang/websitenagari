@@ -9,7 +9,16 @@ interface AdminDashboardClientProps {
 }
 
 export default function AdminDashboardClient({ userEmail }: AdminDashboardClientProps) {
-  const [isBerandaOpen, setIsBerandaOpen] = useState(false)
+  const [isBerandaOpen, setIsBerandaOpen] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return sessionStorage.getItem("admin_dashboard_beranda_open") === "true"
+      } catch {
+        return false
+      }
+    }
+    return false
+  })
   const [loadingLogout, setLoadingLogout] = useState(false)
 
   const handleLogout = async () => {
@@ -40,7 +49,15 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
   }
 
   const toggleBeranda = () => {
-    setIsBerandaOpen((prev) => !prev)
+    setIsBerandaOpen((prev) => {
+      const nextState = !prev
+      try {
+        sessionStorage.setItem("admin_dashboard_beranda_open", String(nextState))
+      } catch {
+        /* ignore storage errors */
+      }
+      return nextState
+    })
   }
 
   const berandaSubmenus = [
@@ -121,7 +138,6 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
       nama: "Struktur Organisasi",
       deskripsi: "Perangkat nagari, BPRN, KAN & struktur pemerintahan",
       href: "/admin/struktur-organisasi",
-      badge: "Pemerintahan",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -132,7 +148,6 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
       nama: "Lembaga & Organisasi",
       deskripsi: "Lembaga adat, kemasyarakatan, PKK, Karang Taruna",
       href: "/admin/lembaga-organisasi",
-      badge: "Kemasyarakatan",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-4-4h-1m-4 6H2v-2a4 4 0 014-4h3m4 6v-2a4 4 0 00-4-4H6m7 6h4m-4-10a4 4 0 110-8 4 4 0 010 8zm-7 2a3 3 0 110-6 3 3 0 010 6z" />
@@ -143,7 +158,6 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
       nama: "Layanan Informasi",
       deskripsi: "Layanan surat publik, persyaratan & kontak admin",
       href: "/admin/layanan-informasi",
-      badge: "Pelayanan",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -154,7 +168,6 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
       nama: "Berita Nagari",
       deskripsi: "Pengumuman, publikasi artikel & kegiatan resmi nagari",
       href: "/admin/tambah-berita",
-      badge: "Publikasi",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-h-2m-4-3H9M7 3v2m6-2v2m-6 4h10" />
@@ -165,7 +178,6 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
       nama: "Galeri",
       deskripsi: "Dokumentasi foto & galeri kegiatan Nagari",
       href: "/admin/galeri",
-      badge: "Dokumentasi",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -233,7 +245,7 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
 
       {/* Hero Welcome Container */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#E6DDCF] pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#d1c2a0]/60 pb-4">
           <div>
             <h2 className="text-lg sm:text-xl font-extrabold text-[#2C1B01] tracking-tight">
               Pusat Navigasi &amp; Pengelolaan Data Admin
@@ -242,15 +254,12 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
               Pilih modul di bawah ini untuk mengelola informasi publik Nagari Aia Manggih Barat.
             </p>
           </div>
-          <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-semibold bg-[#F7F2E8] text-[#2C1B01] border border-[#E6DDCF] self-start sm:self-auto">
-            🏛 Sistem Informasi Nagari
-          </span>
         </div>
 
         {/* Main Navigation Container */}
         <div className="space-y-5">
           {/* PAGE 1: BERANDA (ACCORDION HYBRID) */}
-          <div className="rounded-2xl border border-[#E6DDCF] bg-white shadow-sm overflow-hidden transition-all duration-300">
+          <div className="rounded-2xl border border-[#d1c2a0]/70 bg-white shadow-xs overflow-hidden transition-all duration-300 hover:border-[#b6a587] hover:shadow-md">
             <button
               type="button"
               onClick={toggleBeranda}
@@ -258,15 +267,15 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
               aria-controls="beranda-accordion-panel"
               className={`w-full px-6 py-5 flex items-center justify-between text-left transition-all duration-200 cursor-pointer ${
                 isBerandaOpen
-                  ? "bg-[#F7F2E8] border-b border-[#E6DDCF]"
-                  : "hover:bg-[#FAF7F2]"
+                  ? "bg-[#f0e8db]/40 border-b border-[#d1c2a0]/60"
+                  : "hover:bg-[#fbfaf7]"
               }`}
             >
               <div className="flex items-center space-x-4">
                 <div className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
                   isBerandaOpen 
-                    ? "bg-[#2C1B01] text-[#B6A587]" 
-                    : "bg-[#F7F2E8] text-[#2C1B01] border border-[#2C1B01]/10"
+                    ? "bg-[#2C1B01] text-[#e6ddcf] border border-[#2C1B01] shadow-xs" 
+                    : "bg-[#f0e8db]/60 text-[#2C1B01] border border-[#d1c2a0]/60"
                 }`}>
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V10" />
@@ -283,13 +292,13 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
               </div>
 
               <div className="flex items-center space-x-3 text-gray-500">
-                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#E6DDCF]/60 text-[#2C1B01] hidden sm:inline-block">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#f0e8db]/70 text-[#2C1B01] border border-[#d1c2a0]/50 hidden sm:inline-block">
                   7 Pengelolaan
                 </span>
-                <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center border border-[#E6DDCF] shadow-sm">
+                <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center border border-[#d1c2a0]/70 shadow-xs">
                   <svg
                     className={`w-4 h-4 transition-transform duration-300 text-[#2C1B01] ${
-                      isBerandaOpen ? "rotate-180 text-[#B6A587]" : ""
+                      isBerandaOpen ? "rotate-180 text-[#2C1B01]" : ""
                     }`}
                     fill="none"
                     stroke="currentColor"
@@ -303,15 +312,15 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
 
             {/* Submenu Panel (Expand / Accordion) */}
             {isBerandaOpen && (
-              <div id="beranda-accordion-panel" className="p-5 sm:p-6 bg-[#FCFAF7] border-t border-[#E6DDCF]/40 animate-fade-in">
+              <div id="beranda-accordion-panel" className="p-5 sm:p-6 bg-[#fbfaf7]/60 border-t border-[#d1c2a0]/40 animate-fade-in">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {berandaSubmenus.map((sub) => (
                     <Link
                       key={sub.href}
                       href={sub.href}
-                      className="group flex items-start space-x-3.5 p-4 rounded-xl border border-[#E6DDCF] bg-white hover:border-[#B6A587] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                      className="group flex items-start space-x-3.5 p-4 rounded-xl border border-[#d1c2a0]/60 bg-white hover:bg-[#f0e8db]/30 hover:border-[#b6a587] hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                     >
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#F7F2E8] text-[#2C1B01] group-hover:bg-[#2C1B01] group-hover:text-[#B6A587] transition-colors duration-200">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#f0e8db]/60 text-[#2C1B01] group-hover:bg-[#2C1B01] group-hover:text-[#e6ddcf] border border-[#d1c2a0]/40 group-hover:border-[#2C1B01] transition-all duration-200">
                         {sub.icon}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -319,7 +328,7 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
                           <span className="text-sm font-bold text-[#1F2937] group-hover:text-[#2C1B01] transition-colors">
                             {sub.nama}
                           </span>
-                          <svg className="w-4 h-4 text-gray-300 group-hover:text-[#B6A587] group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-gray-300 group-hover:text-[#2C1B01] group-hover:translate-x-1 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </div>
@@ -340,32 +349,27 @@ export default function AdminDashboardClient({ userEmail }: AdminDashboardClient
               <Link
                 key={mod.href}
                 href={mod.href}
-                className="group relative flex items-start space-x-4 p-5 sm:p-6 rounded-2xl border border-[#E6DDCF] bg-white shadow-sm hover:shadow-xl hover:border-[#B6A587] hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+                className="group relative flex items-start space-x-4 p-5 sm:p-6 rounded-2xl border border-[#d1c2a0]/70 bg-white shadow-xs hover:shadow-md hover:border-[#b6a587] hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
                 style={{ animationDelay: `${idx * 50}ms` }}
               >
                 {/* Decorative Subtle Accent Bar */}
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-[#E6DDCF] group-hover:bg-[#2C1B01] transition-colors duration-300" />
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-[#d1c2a0]/60 group-hover:bg-[#2C1B01] transition-colors duration-300" />
 
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[#F7F2E8] text-[#2C1B01] group-hover:bg-[#2C1B01] group-hover:text-[#B6A587] border border-[#2C1B01]/10 transition-all duration-300">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[#f0e8db]/60 text-[#2C1B01] group-hover:bg-[#2C1B01] group-hover:text-[#e6ddcf] border border-[#d1c2a0]/60 group-hover:border-[#2C1B01] transition-all duration-300 shadow-2xs group-hover:scale-105">
                   {mod.icon}
                 </div>
 
                 <div className="flex-1 min-w-0 pr-6">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-bold text-[#1F2937] group-hover:text-[#2C1B01] transition-colors">
-                      {mod.nama}
-                    </h3>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#F7F2E8] text-[#5A3B0D] border border-[#E6DDCF]">
-                      {mod.badge}
-                    </span>
-                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-[#1F2937] group-hover:text-[#2C1B01] transition-colors">
+                    {mod.nama}
+                  </h3>
                   <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2">
                     {mod.deskripsi}
                   </p>
                 </div>
 
-                <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center justify-center h-8 w-8 rounded-full bg-[#FAF7F2] group-hover:bg-[#2C1B01] transition-colors duration-300 shadow-xs">
-                  <svg className="w-4 h-4 text-gray-400 group-hover:text-[#B6A587] group-hover:translate-x-0.5 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center justify-center h-8 w-8 rounded-full bg-[#f0e8db]/40 group-hover:bg-[#2C1B01] transition-all duration-300 shadow-2xs">
+                  <svg className="w-4 h-4 text-[#2C1B01] group-hover:text-white group-hover:translate-x-0.5 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>

@@ -318,6 +318,10 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
     }, 50)
   }
 
+  const shouldFocusFasilitasRef = useRef<number | null>(null)
+  const shouldFocusTenagaRef = useRef<number | null>(null)
+  const shouldFocusIndikatorRef = useRef<number | null>(null)
+
   const handleBatalForm = () => {
     resetFormSarana()
     setIsFormOpen(false)
@@ -326,18 +330,19 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
   // --- HANDLER BARIS FASILITAS ---
   const tambahBarisFasilitas = () => {
     const tempId = `temp-fas-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    shouldFocusFasilitasRef.current = formFasilitasList.length
     setFormFasilitasList((prev) => [
       ...prev,
       {
         tempId,
         nama_fasilitas: "",
-        jumlah: "1",
+        jumlah: "",
         urutan: (prev.length + 1).toString(),
         is_active: true,
       },
     ])
   }
-  const ubahBarisFasilitas = (index: number, field: string, value: any) => {
+  const ubahBarisFasilitas = (index: number, field: string, value: string | number | boolean) => {
     setFormFasilitasList((prev) => {
       const copy = [...prev]
       copy[index] = { ...copy[index], [field]: value }
@@ -351,18 +356,19 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
   // --- HANDLER BARIS TENAGA KESEHATAN ---
   const tambahBarisTenaga = () => {
     const tempId = `temp-tng-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    shouldFocusTenagaRef.current = formTenagaList.length
     setFormTenagaList((prev) => [
       ...prev,
       {
         tempId,
         jenis_tenaga: "",
-        jumlah: "1",
+        jumlah: "",
         urutan: (prev.length + 1).toString(),
         is_active: true,
       },
     ])
   }
-  const ubahBarisTenaga = (index: number, field: string, value: any) => {
+  const ubahBarisTenaga = (index: number, field: string, value: string | number | boolean) => {
     setFormTenagaList((prev) => {
       const copy = [...prev]
       copy[index] = { ...copy[index], [field]: value }
@@ -376,6 +382,7 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
   // --- HANDLER BARIS INDIKATOR TAMBAHAN ---
   const tambahBarisIndikator = () => {
     const tempId = `temp-ind-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    shouldFocusIndikatorRef.current = formIndikatorList.length
     setFormIndikatorList((prev) => [
       ...prev,
       {
@@ -389,7 +396,7 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
       },
     ])
   }
-  const ubahBarisIndikator = (index: number, field: string, value: any) => {
+  const ubahBarisIndikator = (index: number, field: string, value: string | number | boolean) => {
     setFormIndikatorList((prev) => {
       const copy = [...prev]
       copy[index] = { ...copy[index], [field]: value }
@@ -1322,6 +1329,12 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                                 </span>
                                 <div className="flex-1 min-w-[160px]">
                                   <input
+                                    ref={(el) => {
+                                      if (el && shouldFocusFasilitasRef.current === index) {
+                                        el.focus()
+                                        shouldFocusFasilitasRef.current = null
+                                      }
+                                    }}
                                     type="text"
                                     list="saran-fasilitas-kes-list"
                                     placeholder="Nama fasilitas (mis. Ruang Periksa)"
@@ -1330,11 +1343,12 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                                     className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                   />
                                 </div>
-                                <div className="w-28 flex items-center gap-1">
-                                  <span className="text-xs text-gray-500">Jumlah:</span>
+                                <div className="w-36 flex items-center gap-1.5 shrink-0">
+                                  <span className="text-xs text-gray-500 whitespace-nowrap font-medium">Jumlah:</span>
                                   <input
                                     type="number"
                                     min="1"
+                                    placeholder="0"
                                     value={item.jumlah}
                                     onChange={(e) => ubahBarisFasilitas(index, "jumlah", e.target.value)}
                                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
@@ -1405,6 +1419,12 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                                 </span>
                                 <div className="flex-1 min-w-[160px]">
                                   <input
+                                    ref={(el) => {
+                                      if (el && shouldFocusTenagaRef.current === index) {
+                                        el.focus()
+                                        shouldFocusTenagaRef.current = null
+                                      }
+                                    }}
                                     type="text"
                                     list="saran-tenaga-kes-list"
                                     placeholder="Jenis tenaga (mis. Kader Posyandu)"
@@ -1413,11 +1433,12 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                                     className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                   />
                                 </div>
-                                <div className="w-28 flex items-center gap-1">
-                                  <span className="text-xs text-gray-500">Jumlah:</span>
+                                <div className="w-36 flex items-center gap-1.5 shrink-0">
+                                  <span className="text-xs text-gray-500 whitespace-nowrap font-medium">Jumlah:</span>
                                   <input
                                     type="number"
                                     min="1"
+                                    placeholder="0"
                                     value={item.jumlah}
                                     onChange={(e) => ubahBarisTenaga(index, "jumlah", e.target.value)}
                                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
@@ -1500,6 +1521,12 @@ export default function KelolaSaranaKesehatanDetailAdmin() {
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                   <input
+                                    ref={(el) => {
+                                      if (el && shouldFocusIndikatorRef.current === index) {
+                                        el.focus()
+                                        shouldFocusIndikatorRef.current = null
+                                      }
+                                    }}
                                     type="text"
                                     list="saran-indikator-kes-list"
                                     placeholder="Nama (mis. Posyandu Binaan)"

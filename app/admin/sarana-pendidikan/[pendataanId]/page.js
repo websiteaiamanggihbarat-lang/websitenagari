@@ -157,6 +157,8 @@ export default function KelolaSaranaDetailAdmin() {
 
   const formRef = useRef(null)
   const fileInputRef = useRef(null)
+  const shouldFocusFasilitasRef = useRef(null)
+  const shouldFocusKegiatanRef = useRef(null)
 
   const [detailPendataan, setDetailPendataan] = useState(null)
   const [loadingPendataan, setLoadingPendataan] = useState(true)
@@ -220,12 +222,8 @@ export default function KelolaSaranaDetailAdmin() {
       .maybeSingle()
 
     if (fetchErr) {
-      console.error("fetchDetailPendataan error:", fetchErr)
-      setDetailPendataan(null)
-      setPendataanError("Gagal membaca data pendataan.")
-    } else if (!data) {
-      setDetailPendataan(null)
-      setPendataanError("Data pendataan tidak ditemukan atau sudah dihapus.")
+      console.error("fetch detail error:", fetchErr)
+      setPendataanError("Gagal memuat detail pendataan.")
     } else {
       setDetailPendataan(data)
     }
@@ -248,7 +246,6 @@ export default function KelolaSaranaDetailAdmin() {
       return
     }
 
-    // Newest first based on created_at DESC
     const { data, error: fetchError } = await supabase
       .from("sarana_pendidikan")
       .select("*")
@@ -258,21 +255,16 @@ export default function KelolaSaranaDetailAdmin() {
     if (fetchError) {
       console.error("fetch sarana error:", fetchError)
       setPesanError(fetchError.message || "Gagal memuat daftar sarana pendidikan.")
-      setSaranaList([])
     } else {
       setSaranaList(data || [])
     }
+
     setLoadingSarana(false)
   }
 
   useEffect(() => {
-    if (pendataanId) {
-      fetchDetailPendataan(pendataanId)
-      fetchSarana(pendataanId)
-    } else {
-      setLoadingPendataan(false)
-      setPendataanError("ID Pendataan tidak ditemukan pada URL.")
-    }
+    fetchDetailPendataan(pendataanId)
+    fetchSarana(pendataanId)
   }, [pendataanId])
 
   // Auto dismiss success toast message after 4000ms
@@ -399,12 +391,13 @@ export default function KelolaSaranaDetailAdmin() {
         ? crypto.randomUUID()
         : `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
+    shouldFocusFasilitasRef.current = formFasilitasList.length
     setFormFasilitasList((prev) => [
       ...prev,
       {
         tempId,
         nama_fasilitas: "",
-        jumlah: "1",
+        jumlah: "",
         urutan: (prev.length + 1).toString(),
         is_active: true,
       },
@@ -429,6 +422,7 @@ export default function KelolaSaranaDetailAdmin() {
         ? crypto.randomUUID()
         : `temp-keg-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
+    shouldFocusKegiatanRef.current = formKegiatanList.length
     setFormKegiatanList((prev) => [
       ...prev,
       {
@@ -1322,6 +1316,12 @@ export default function KelolaSaranaDetailAdmin() {
                                 </span>
                                 <div className="flex-1 min-w-[160px]">
                                   <input
+                                    ref={(el) => {
+                                      if (el && shouldFocusFasilitasRef.current === index) {
+                                        el.focus()
+                                        shouldFocusFasilitasRef.current = null
+                                      }
+                                    }}
                                     type="text"
                                     list="saran-fasilitas-list"
                                     placeholder="Nama fasilitas (mis. Ruang Kelas)"
@@ -1330,11 +1330,12 @@ export default function KelolaSaranaDetailAdmin() {
                                     className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
                                   />
                                 </div>
-                                <div className="w-28 flex items-center gap-1">
-                                  <span className="text-xs text-gray-500">Jumlah:</span>
+                                <div className="w-36 flex items-center gap-1.5 shrink-0">
+                                  <span className="text-xs text-gray-500 whitespace-nowrap font-medium">Jumlah:</span>
                                   <input
                                     type="number"
                                     min="1"
+                                    placeholder="0"
                                     value={item.jumlah}
                                     onChange={(e) => ubahBarisFasilitas(index, "jumlah", e.target.value)}
                                     className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-[#6b4b1d]"
@@ -1405,6 +1406,12 @@ export default function KelolaSaranaDetailAdmin() {
                                 </span>
                                 <div className="flex-1 min-w-[160px]">
                                   <input
+                                    ref={(el) => {
+                                      if (el && shouldFocusKegiatanRef.current === index) {
+                                        el.focus()
+                                        shouldFocusKegiatanRef.current = null
+                                      }
+                                    }}
                                     type="text"
                                     list="saran-kegiatan-list"
                                     placeholder="Nama kegiatan (mis. Pramuka)"

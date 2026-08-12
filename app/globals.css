@@ -296,14 +296,20 @@ input, button, select, textarea, option, table, th, td {
 
 /* Warm Modern Government Dashboard Utility Design Tokens with Visible Geometric Minangkabau Pattern */
 .bg-admin-warm {
-  background-color: #f8f5ef;
+  background-color: #fbfaf7;
   background-image: 
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cpath d='M48 0 L96 48 L48 96 L0 48 Z' fill='none' stroke='%232c1b01' stroke-width='1.2' stroke-opacity='0.06'/%3E%3Cpath d='M48 16 L80 48 L48 80 L16 48 Z' fill='none' stroke='%23b6a587' stroke-width='1' stroke-opacity='0.08'/%3E%3Cpath d='M0 0 L96 96 M96 0 L0 96' fill='none' stroke='%232c1b01' stroke-width='0.75' stroke-opacity='0.03'/%3E%3C/svg%3E"),
-    radial-gradient(circle at 10% 20%, rgba(230, 221, 207, 0.4) 0px, transparent 40%),
-    radial-gradient(circle at 90% 70%, rgba(240, 232, 219, 0.5) 0px, transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.5) 0px, transparent 100%);
+    /* Layer 1: Main Pucuk Rebung Flow & Woven Geometry (140px) */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cpath d='M70 10 L125 65 L70 120 L15 65 Z' fill='none' stroke='%232c1b01' stroke-width='1.2' stroke-opacity='0.14'/%3E%3Cpath d='M70 28 L102 65 L70 102 L38 65 Z' fill='none' stroke='%23b6a587' stroke-width='1.0' stroke-opacity='0.18'/%3E%3Cpath d='M70 45 L85 65 L70 85 L55 65 Z' fill='none' stroke='%235a3b0d' stroke-width='0.8' stroke-opacity='0.14'/%3E%3Cpath d='M0 25 L45 70 M95 70 L140 25 M0 115 L45 70 M95 70 L140 115' fill='none' stroke='%235a3b0d' stroke-width='0.8' stroke-opacity='0.12'/%3E%3Cpath d='M25 0 L70 45 L115 0 M25 140 L70 95 L115 140' fill='none' stroke='%232c1b01' stroke-width='1.0' stroke-opacity='0.10'/%3E%3C/svg%3E"),
+    /* Layer 2: Secondary Large-Scale Ornaments (480px) */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='480' viewBox='0 0 480 480'%3E%3Cpath d='M240 20 L440 220 L240 420 L40 220 Z' fill='none' stroke='%232c1b01' stroke-width='1.5' stroke-opacity='0.08'/%3E%3Cpath d='M240 60 L400 220 L240 380 L80 220 Z' fill='none' stroke='%23b6a587' stroke-width='1.2' stroke-opacity='0.10'/%3E%3Cpath d='M240 120 L320 200 L240 280 L160 200 Z' fill='none' stroke='%235a3b0d' stroke-width='1.0' stroke-opacity='0.08'/%3E%3Cpath d='M0 0 L120 120 M480 0 L360 120 M480 480 L360 360 M0 480 L120 360' fill='none' stroke='%232c1b01' stroke-width='1.0' stroke-opacity='0.07'/%3E%3C/svg%3E"),
+    /* Layer 3: Warm Radial Depth Glows */
+    radial-gradient(circle at 10% 15%, rgba(182, 165, 135, 0.18) 0px, transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba(90, 59, 13, 0.10) 0px, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(251, 250, 247, 0.4) 0px, transparent 100%);
   background-attachment: fixed;
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+  background-repeat: repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-position: 0 0, 0 0, center, center, center;
+  background-size: 140px 140px, 480px 480px, auto, auto, auto;
 }
 
 /* Decorative subtle gold line divider */
