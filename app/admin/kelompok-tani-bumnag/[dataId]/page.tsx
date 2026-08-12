@@ -521,27 +521,6 @@ export default function AdminDetailKelompokTaniBumnagPage({ params }: PageProps)
     setPesanError(null)
 
     try {
-      if (item.is_cover && item.is_active && entitas?.is_active) {
-        const otherActiveCovers = galeriList.filter(
-          (g) => g.id !== item.id && g.is_cover && g.is_active
-        )
-
-        if (otherActiveCovers.length === 0) {
-          const { error: errParent } = await supabase
-            .from("kelompok_tani_bumnag")
-            .update({ is_active: false })
-            .eq("id", dataId)
-
-          if (errParent) {
-            const msg = formatSupabaseError(errParent, "Gagal menonaktifkan entitas induk sebelum menghapus foto cover terakhir")
-            setPesanError(msg)
-            showError(msg)
-            setActionLoadingId(null)
-            return
-          }
-        }
-      }
-
       if (item.storage_path) {
         const { error: errStorage } = await supabase.storage
           .from(BUCKET_KELOMPOK_TANI_BUMNAG)

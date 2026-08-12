@@ -90,29 +90,6 @@ export default async function KesenianDinamis() {
           </div>
         </div>
       )}
-
-      {/* Tombol Lihat Semua Kesenian Tradisional */}
-      <div className="pt-2">
-        <Link
-          href="/kesenian-tradisional"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2c1b01] to-[#5a3b0d] px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-[#1a1200] hover:to-[#2c1b01] hover:shadow-lg"
-        >
-          <span>Lihat Semua Kesenian Tradisional</span>
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M14 5l7 7m0 0l-7 7m7-7H3"
-            />
-          </svg>
-        </Link>
-      </div>
     </div>
   )
 }

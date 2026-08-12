@@ -73,22 +73,9 @@ export default async function DetailKesenianPage({ params }: PageProps) {
   const isPhoneValid = numDigits.length >= 8
 
   return (
-    <div className="min-h-screen bg-public-warm text-[#1F2937]">
+    <div className="min-h-screen bg-transparent text-[#1F2937]">
       <div className="pt-24 pb-32 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          {/* Navigasi Breadcrumb */}
-          <div className="mb-6 flex items-center gap-2 text-xs font-medium text-gray-500">
-            <Link href="/" className="hover:text-gray-900 transition">
-              Beranda
-            </Link>
-            <span>/</span>
-            <Link href="/kesenian-tradisional" className="hover:text-gray-900 transition">
-              Kesenian Tradisional
-            </Link>
-            <span>/</span>
-            <span className="text-gray-900 font-semibold truncate">{detail.nama_kesenian}</span>
-          </div>
-
           {/* Carousel Galeri Foto */}
           <div className="mb-10">
             <KesenianCarousel

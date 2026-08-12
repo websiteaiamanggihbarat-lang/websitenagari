@@ -1,5 +1,4 @@
 import { Metadata } from "next"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { connection } from "next/server"
 import KesenianCarousel, { KesenianSlide } from "@/components/KesenianCarousel"
@@ -80,31 +79,20 @@ export default async function DetailKelompokTaniBumnagPage({ params }: PageProps
     : null
 
   return (
-    <div className="min-h-screen bg-public-warm text-[#1F2937]">
+    <div className="min-h-screen bg-transparent text-[#1F2937]">
       <div className="pt-24 pb-32 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          {/* Navigasi Breadcrumb */}
-          <div className="mb-6 flex items-center gap-2 text-xs font-medium text-gray-500">
-            <Link href="/" className="hover:text-gray-900 transition">
-              Beranda
-            </Link>
-            <span>/</span>
-            <Link href="/kelompok-tani-bumnag" className="hover:text-gray-900 transition">
-              Kelompok Tani & BUMNag
-            </Link>
-            <span>/</span>
-            <span className="text-gray-900 font-semibold truncate">{detail.nama_entitas}</span>
-          </div>
-
-          {/* Carousel Galeri Foto */}
-          <div className="mb-10">
-            <KesenianCarousel
-              slides={slides}
-              aspectRatio="aspect-[16/9]"
-              autoPlayInterval={5000}
-              className="shadow-2xl"
-            />
-          </div>
+          {/* Carousel Galeri Foto (Jika ada foto) */}
+          {slides.length > 0 && (
+            <div className="mb-10">
+              <KesenianCarousel
+                slides={slides}
+                aspectRatio="aspect-[16/9]"
+                autoPlayInterval={5000}
+                className="shadow-2xl"
+              />
+            </div>
+          )}
 
           {/* Main Layout Grid (2 Columns) */}
           <div className="grid grid-cols-1 gap-8 sm:gap-10 lg:grid-cols-3">
